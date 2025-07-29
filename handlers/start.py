@@ -1,4 +1,4 @@
-# handlers/start.py
+# handlers/start.py (نسخة جديدة محسّنة)
 
 from aiogram import Router
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
@@ -10,17 +10,18 @@ router = Router()
 async def start_handler(message: Message):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📥 Download App", url="https://t.me/snakeengine/123")],
-        [InlineKeyboardButton(text="🛠 Tools & Cheats", callback_data="tools")],
-        [InlineKeyboardButton(text="📞 Support", url="https://t.me/snakeengine_support")],
-        [InlineKeyboardButton(text="🌐 Language", callback_data="change_lang")],
+        [InlineKeyboardButton(text="🧰 Game Tools & Cheats", callback_data="tools")],
+        [InlineKeyboardButton(text="🆘 Contact Support", url="https://t.me/snakeengine_support")],
+        [InlineKeyboardButton(text="🌐 Change Language", callback_data="change_lang")],
     ])
 
     welcome_text = (
-        "👋 Welcome to <b>Snake Engine - The Official Game Mod Assistant</b>!\n\n"
-        "⚙️ Used by <b>5,000,000+</b> gamers.\n"
-        "📦 Powered by <b>40+ global resellers</b>.\n"
-        "🎯 Providing the most advanced tools for Android game mods.\n\n"
-        "Select an option below to get started ⬇️"
+        "<b>👋 Welcome to Snake Engine</b>\n"
+        "🚀 <i>The Official Game Mod Assistant</i>\n\n"
+        "👾 <b>Used by:</b> 5,000,000+ gamers\n"
+        "🌍 <b>Resellers:</b> 40+ trusted global partners\n"
+        "🎯 <b>Mission:</b> Delivering elite tools for Android game mods\n\n"
+        "👇 <b>Choose an option to continue</b>"
     )
 
     await message.answer(welcome_text, reply_markup=keyboard)
