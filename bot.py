@@ -1,20 +1,24 @@
+# bot.py
+
 import asyncio
 import os
 from aiogram import Bot, Dispatcher
-from aiogram.filters import Command
-from aiogram.types import Message
 from dotenv import load_dotenv
+
+# ⬅️ استدعاء ملف الأمر /start
+from handlers import start
 
 load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
 
+# إنشاء البوت والموزّع (Dispatcher)
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-@dp.message(Command("start"))
-async def start_handler(message: Message):
-    await message.answer("✅ Hello! The bot is running on Railway!")
+# ⬅️ تسجيل أوامر start من ملف handlers/start.py
+dp.include_router(start.router)
 
+# بدء التشغيل
 async def main():
     await dp.start_polling(bot)
 
