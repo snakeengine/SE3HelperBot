@@ -4,7 +4,7 @@ import asyncio
 import os
 from aiogram import Bot, Dispatcher
 from dotenv import load_dotenv
-from handlers import start, help, about, support, download
+from handlers import start, help, about, support, download, tools
 
 # ⬅️ استدعاء ملف الأمر /start
 from handlers import start
@@ -22,6 +22,8 @@ dp.include_router(help.router)
 dp.include_router(about.router)
 dp.include_router(support.router)
 dp.include_router(download.router)
+dp.include_router(tools.router)
+
 # بدء التشغيل
 async def main():
     await dp.start_polling(bot)
