@@ -9,11 +9,15 @@ router = Router()
 @router.message(Command("start"))
 async def start_handler(message: Message):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📥 Download App", url=" https://www.mediafire.com/file/11nrqjpa6tj7ca5/SE.V2.0.0.apk/file")],
-        [InlineKeyboardButton(text="🧰 Game Tools & Cheats", callback_data="tools")],
-        [InlineKeyboardButton(text="🆘 Contact Support", url="https://t.me/snakeengine_support")],
-        [InlineKeyboardButton(text="🌐 Change Language", callback_data="change_lang")],
+    [InlineKeyboardButton(
+        text="📥 Download App",
+        url="https://www.mediafire.com/file/11nrqjpa6tj7ca5/SE.V2.0.0.apk/file"
+    )],
+    [InlineKeyboardButton(text="🧰 Game Tools & Cheats", callback_data="tools")],
+    [InlineKeyboardButton(text="🆘 Contact Support", url="https://t.me/snakeengine_support")],
+    [InlineKeyboardButton(text="🌐 Change Language", callback_data="change_lang")],
     ])
+
 
     welcome_text = (
         "<b>👋 Welcome to Snake Engine</b>\n"
