@@ -10,7 +10,7 @@ router = Router()
 async def start_handler(message: Message):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(
-        text="📥 Download App",
+        text="📥 Download App Snake",
         url="https://www.mediafire.com/file/11nrqjpa6tj7ca5/SE.V2.0.0.apk/file"
     )],
     [InlineKeyboardButton(text="🧰 Game Tools & Cheats", callback_data="tools")],
