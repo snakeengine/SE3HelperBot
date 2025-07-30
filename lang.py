@@ -16,12 +16,4 @@ def load_translations():
 translations = load_translations()
 
 def t(lang_code, key):
-    return translations.get(lang_code, translations.get("en", {})).get(key, key)
-
-def get_user_lang(user_id: int):
-    try:
-        with open("user_langs.json", "r", encoding="utf-8") as f:
-            data = json.load(f)
-        return data.get(str(user_id), "en")
-    except FileNotFoundError:
-        return "en"
+    return translations.get(lang_code, translations.get("en", {})).get(key, f"[{key}]")
