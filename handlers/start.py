@@ -2,7 +2,7 @@ from aiogram import Router, F
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from aiogram.filters import Command
 from lang import t
-from handlers.lang import get_user_lang
+from lang import get_user_lang
 
 router = Router()
 
