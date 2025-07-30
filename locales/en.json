@@ -1,8 +1,8 @@
 {
-  "start_message": "👋 Welcome to Snake Engine!\n🚀 The Official Game Mod Assistant",
-  "download_app": "Download App Snake",
-  "tools": "Game Tools & Cheats",
-  "support": "Contact Support",
-  "vip": "Get VIP Access",
-  "language": "Change Language"
+  "start_welcome": "Welcome to Snake Engine!",
+  "start_description": "The Official Game Mod Assistant",
+  "btn_download": "Download App Snake",
+  "btn_tools": "Game Tools & Cheats",
+  "btn_vip": "Get VIP Access",
+  "btn_lang": "Change Language"
 }

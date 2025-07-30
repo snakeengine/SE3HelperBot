@@ -16,4 +16,15 @@ def load_translations():
 translations = load_translations()
 
 def t(lang_code, key):
-    return translations.get(lang_code, translations.get("en", {})).get(key, f"[{key}]")
+    return translations.get(lang_code, translations.get("en", {})).get(key, key)
+
+# ✅ أضف هذا الجزء:
+USER_LANG_FILE = "user_langs.json"
+
+def get_user_lang(user_id: int):
+    try:
+        with open(USER_LANG_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data.get(str(user_id), "en")
+    except FileNotFoundError:
+        return "en"
