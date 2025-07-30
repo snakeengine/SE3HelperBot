@@ -1,14 +1,18 @@
 from aiogram import Router, F
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from aiogram.filters import Command
+from lang import t
+from handlers.lang import get_user_lang
 
 router = Router()
 
 @router.message(Command("start"))
 async def start_handler(message: Message):
+    lang = get_user_lang(message.from_user.id)
+    
     text = (
-        "👋 <b>Welcome to Snake Engine</b>\n"
-        "🚀 <i>The Official Game Mod Assistant</i>\n\n"
+        f"👋 <b>{t(lang, 'start_welcome')}</b>\n"
+        f"🚀 <i>{t(lang, 'start_description')}</i>\n\n"
         "👾 <b>Used by:</b> 5,000,000+ gamers\n"
         "🌐 <b>Resellers:</b> 40+ trusted global partners\n"
         "🎯 <b>Mission:</b> Delivering elite tools for Android game mods\n\n"
@@ -16,10 +20,10 @@ async def start_handler(message: Message):
     )
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📥 Download App Snake", url="https://www.mediafire.com/file/11nrqjpa6tj7ca5/SE.V2.0.0.apk/file")],
-        [InlineKeyboardButton(text="🧰 Game Tools & Cheats", callback_data="tools")],
-        [InlineKeyboardButton(text="💎 Get VIP Access", callback_data="vip_info")],
-        [InlineKeyboardButton(text="🌐 Change Language", callback_data="change_lang")]
+        [InlineKeyboardButton(text=f"📥 {t(lang, 'btn_download')}", url="https://www.mediafire.com/file/11nrqjpa6tj7ca5/SE.V2.0.0.apk/file")],
+        [InlineKeyboardButton(text=f"🧰 {t(lang, 'btn_tools')}", callback_data="tools")],
+        [InlineKeyboardButton(text=f"💎 {t(lang, 'btn_vip')}", callback_data="vip_info")],
+        [InlineKeyboardButton(text=f"🌐 {t(lang, 'btn_lang')}", callback_data="change_lang")]
     ])
 
     await message.answer(text, reply_markup=keyboard, parse_mode="HTML")
