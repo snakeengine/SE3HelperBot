@@ -8,14 +8,16 @@ router = Router()
 @router.callback_query(lambda c: c.data == "tools")
 async def tools_handler(callback: CallbackQuery):
     await callback.message.answer(
-        "🧰 <b>Available Game Tools:</b>\n\n"
-        "🎱 8Ball Pool ✅ (Ready)\n"
-        "🟤 Carrom Pool – Coming soon\n"
-        "🔥 Free Fire – Coming soon\n"
-        "🚗 Car Parking Multiplayer – Coming soon\n"
-        "🔫 Call of Duty Mobile – Coming soon\n"
-        "🧠 Mobile Legends – Coming soon\n"
-        "🎮 Others – Coming soon\n\n"
-        "Use /support if you need help using a tool."
+        "🧰 <b>Game Tools Catalog</b>\n\n"
+        "<b>✅ Now Available:</b>\n"
+        "• 🎱 <b>8Ball Pool</b>  — Ready to use\n\n"
+        "<b>🕓 Coming Soon:</b>\n"
+        "• 🟤 Carrom Pool\n"
+        "• 🔥 Free Fire\n"
+        "• 🚗 Car Parking Multiplayer\n"
+        "• 🔫 Call of Duty Mobile\n"
+        "• 🧠 Mobile Legends\n"
+        "• 🎮 Other Games\n\n"
+        "📌 Stay tuned for upcoming releases!"
     )
     await callback.answer()
