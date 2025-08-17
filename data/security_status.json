@@ -1,0 +1,26 @@
+{
+  "global": {
+    "status": "safe",
+    "note": "",
+    "updated_by": 7360982123,
+    "updated_at": "2025-08-13T00:06:59Z"
+  },
+  "games": {
+    "8bp": {
+      "name": {
+        "ar": "8Ball Pool",
+        "en": "8Ball Pool"
+      },
+      "status": "safe",
+      "note": ""
+    },
+    "car": {
+      "name": {
+        "ar": "Carrom Pool",
+        "en": "Carrom Pool"
+      },
+      "status": "safe",
+      "note": ""
+    }
+  }
+}

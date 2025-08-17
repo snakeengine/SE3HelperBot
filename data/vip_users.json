@@ -1,0 +1,18 @@
+{
+  "users": {
+    "7360982123": {
+      "app_id": "1000",
+      "added_by": 7360982123,
+      "ts": 1755359230,
+      "expiry_ts": 1757956230,
+      "notified": {
+        "d1": false,
+        "h12": false,
+        "h6": false,
+        "h1": false
+      },
+      "freeze_started_at": 1755382477,
+      "freeze_max_sec": 1209600
+    }
+  }
+}

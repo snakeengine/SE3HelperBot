@@ -1,0 +1,53 @@
+{
+  "users": {
+    "7360982123": {
+      "status": "approved",
+      "rejects": 1,
+      "attempts": [
+        1755389257,
+        1755397744,
+        1755397810
+      ],
+      "cooldown_until": 0,
+      "submitted_at": 1755397810,
+      "name": "Jdjdhd",
+      "links": [
+        "@jdjdhdhd"
+      ],
+      "telegram": {
+        "declared": "@DevSE2",
+        "real": "@DevSE2",
+        "match": true
+      },
+      "proof": {
+        "photos": [
+          "AgACAgIAAxkBAAIpo2ihPa3jiJUChlO9xM36zTo95vnWAALR-TEb9oQJScpCK9H5nzkwAQADAgADcwADNgQ",
+          "AgACAgIAAxkBAAIpo2ihPa3jiJUChlO9xM36zTo95vnWAALR-TEb9oQJScpCK9H5nzkwAQADAgADbQADNgQ",
+          "AgACAgIAAxkBAAIpo2ihPa3jiJUChlO9xM36zTo95vnWAALR-TEb9oQJScpCK9H5nzkwAQADAgADeAADNgQ",
+          "AgACAgIAAxkBAAIpo2ihPa3jiJUChlO9xM36zTo95vnWAALR-TEb9oQJScpCK9H5nzkwAQADAgADeQADNgQ",
+          "AgACAgIAAxkBAAIpo2ihPa3jiJUChlO9xM36zTo95vnWAALR-TEb9oQJScpCK9H5nzkwAQADAgADdwADNgQ"
+        ],
+        "videos": []
+      },
+      "banned_until": 0,
+      "app_id": "1000",
+      "subscription": {
+        "status": "active",
+        "requested_at": 1755399162,
+        "started_at": 1755399173,
+        "expires_at": 1757991173
+      },
+      "activities": [
+        {
+          "t": 1755399217,
+          "kind": "photo",
+          "photo": "AgACAgIAAxkBAAIpo2ihPa3jiJUChlO9xM36zTo95vnWAALR-TEb9oQJScpCK9H5nzkwAQADAgADdwADNgQ"
+        }
+      ]
+    },
+    "6403644551": {
+      "status": "approved",
+      "submitted_at": 1755435830
+    }
+  }
+}

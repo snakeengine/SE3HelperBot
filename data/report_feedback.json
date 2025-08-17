@@ -1,0 +1,74 @@
+[
+  {
+    "user_id": 7360982123,
+    "result": "not_solved",
+    "reason": "ايرور",
+    "time": "2025-08-13T01:59:03Z"
+  },
+  {
+    "user_id": 7360982123,
+    "result": "skipped",
+    "reason": "",
+    "time": "2025-08-13T01:59:16Z"
+  },
+  {
+    "user_id": 7360982123,
+    "result": "solved",
+    "reason": "",
+    "time": "2025-08-13T02:01:24Z"
+  },
+  {
+    "user_id": 7360982123,
+    "result": "not_solved",
+    "reason": "اخطاء في تطبيق",
+    "time": "2025-08-13T02:02:06Z"
+  },
+  {
+    "user_id": 7360982123,
+    "result": "solved",
+    "reason": "",
+    "time": "2025-08-13T02:06:33Z"
+  },
+  {
+    "user_id": 6403644551,
+    "result": "solved",
+    "reason": "",
+    "time": "2025-08-13T02:11:48Z"
+  },
+  {
+    "user_id": 7360982123,
+    "result": "solved",
+    "reason": "",
+    "time": "2025-08-13T02:16:57Z"
+  },
+  {
+    "user_id": 7360982123,
+    "result": "not_solved",
+    "reason": "هوبي",
+    "time": "2025-08-13T02:18:06Z"
+  },
+  {
+    "user_id": 7360982123,
+    "result": "skipped",
+    "reason": "",
+    "time": "2025-08-13T02:29:04Z"
+  },
+  {
+    "user_id": 7360982123,
+    "result": "solved",
+    "reason": "",
+    "time": "2025-08-13T02:30:10Z"
+  },
+  {
+    "user_id": 6403644551,
+    "result": "solved",
+    "reason": "",
+    "time": "2025-08-15T13:06:02Z"
+  },
+  {
+    "user_id": 6403644551,
+    "result": "solved",
+    "reason": "",
+    "time": "2025-08-16T02:56:53Z"
+  }
+]

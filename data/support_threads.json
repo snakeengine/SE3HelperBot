@@ -1,0 +1,12 @@
+{
+  "users": {
+    "7360982123": {
+      "open": true,
+      "admin_id": null
+    },
+    "6403644551": {
+      "open": false,
+      "admin_id": 7360982123
+    }
+  }
+}
