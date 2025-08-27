@@ -1,7 +1,7 @@
 # config.py
 
 # توكن البوت من BotFather
-BOT_TOKEN = "8400071388:AAE7NVz2icNm-rEgLaRN_Rk2JtFWlXwMUik"
+BOT_TOKEN = "8400071388:AAEogF1cXnr4rHNXUDkNALUhvbPAp1eCB-4"
 
 # أيديات الأدمن الذين يستقبلون الطلبات (ممكن أكثر من واحد)
 ADMIN_IDS = [7360982123]  # أضف IDs أخرى لو في أكثر من أدمن

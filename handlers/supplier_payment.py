@@ -12,6 +12,12 @@ from aiogram.types import (
     InlineKeyboardButton,
 )
 from lang import t, get_user_lang
+# نافذة السماح المؤقتة للإيصالات
+try:
+    from utils.receipt_gate import open_window as _open_receipt_window, close_window as _close_receipt_window
+except Exception:
+    def _open_receipt_window(*args, **kwargs): ...
+    def _close_receipt_window(*args, **kwargs): ...
 
 router = Router(name="supplier_payment")
 
@@ -37,11 +43,17 @@ def _is_admin(uid: int) -> bool:
 
 
 def _tr(lang: str, key: str, en: str, ar: str) -> str:
-    """ترجمة مع Fallback لو المفتاح ناقص."""
-    v = t(lang, key)
-    if v and v != key:
-        return v
-    return ar if lang == "ar" else en
+    """
+    ترجمة بمفتاح موجود مسبقًا مع قيمة احتياطية.
+    لا نغيّر المفاتيح القديمة؛ فقط نوفّر نصًا افتراضيًا لو المفتاح ناقص.
+    """
+    try:
+        v = t(lang, key)
+        if isinstance(v, str) and v and v != key:
+            return v
+    except Exception:
+        pass
+    return ar if (lang or "ar").startswith("ar") else en
 
 
 # ================= واجهة المستخدم: رسالة الدفع =================
@@ -53,13 +65,32 @@ async def prompt_user_payment(bot, user_id: int, lang: str | None = None):
     """
     lang = lang or get_user_lang(user_id) or "en"
 
-    title = t(lang, "pay_title")
-    body  = t(lang, "pay_intro").format(amount=SUPPLIER_FEE, binance=BINANCE_ID)
-    tail  = t(lang, "pay_after_note")
-    text  = f"💳 <b>{title}</b>\n{body}\n\n{tail}"
+    title = _tr(
+        lang, "pay_title",
+        "Supplier payment",
+        "دفع تفعيل المورد"
+    )
+    body_template = _tr(
+        lang, "pay_intro",
+        "To activate your supplier account, send <b>${amount}</b> in USDT to Binance ID <code>{binance}</code>, "
+        "then tap the button below.",
+        "لتفعيل حساب المورد، أرسل <b>{amount}$</b> USDT إلى معرف باينانس <code>{binance}</code> "
+        "ثم اضغط الزر بالأسفل."
+    )
+    tail = _tr(
+        lang, "pay_after_note",
+        "After payment, verification is manual and may take some time.",
+        "بعد التحويل، يتم التحقق يدويًا وقد يستغرق بعض الوقت."
+    )
+    body = body_template.format(amount=SUPPLIER_FEE, binance=BINANCE_ID)
+
+    text = f"💳 <b>{title}</b>\n{body}\n\n{tail}"
 
     kb = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text=t(lang, "btn_i_paid"), callback_data="supplier_paid")
+        InlineKeyboardButton(
+            text=_tr(lang, "btn_i_paid", "I paid ✅", "تم الدفع ✅"),
+            callback_data="supplier_paid"
+        )
     ]])
 
     await bot.send_message(user_id, text, reply_markup=kb, disable_web_page_preview=True)
@@ -95,7 +126,12 @@ async def supplier_paid_done(
 
     # إشعار الأدمن
     uname = f"@{username}" if username else ""
-    title = "🪙 إشعار دفع مورد" if lang == "ar" else "🪙 Supplier Payment Notice"
+    title = _tr(
+        lang,
+        "supplier_payment_notice_title",
+        "🪙 Supplier Payment Notice",
+        "🪙 إشعار دفع مورد"
+    )
     body  = (
         f"<b>{title}</b>\n"
         f"{_tr(lang,'supplier_paid_user','User','المستخدم')} {first_name or ''} ({uname}) "
@@ -114,8 +150,6 @@ async def supplier_paid_done(
             InlineKeyboardButton(text=_tr(lang,"adm_btn_ask_receipt","Ask receipt 🧾","طلب إيصال 🧾"), callback_data=f"suppverify:askreceipt:{user_id}"),
             InlineKeyboardButton(text=_tr(lang,"adm_btn_contact","Contact user 🗣️","تواصل مع المستخدم 🗣️"), callback_data=f"suppverify:contact:{user_id}"),
         ],
-        # (اختياري) زر إلغاء المورد سريعًا من نفس البطاقة:
-        # [InlineKeyboardButton(text="Demote ⛔", callback_data=f"suppverify:demote:{user_id}")]
     ])
 
     for aid in ADMIN_IDS:
@@ -127,13 +161,13 @@ async def supplier_paid_done(
 
 # =============== المستخدم ضغط زر "تم الدفع ✅" ===============
 @router.callback_query(F.data == "supplier_paid")
-async def user_says_paid(cb: CallbackQuery):
+async def _fallback_supplier_paid(cb: CallbackQuery):
     await supplier_paid_done(
         cb.message.bot,
         cb.from_user.id,
         first_name=cb.from_user.first_name or "",
         username=cb.from_user.username or "",
-        lang=get_user_lang(cb.from_user.id) or "en",
+        lang=get_user_lang(cb.from_user.id) or "ar",
     )
     try:
         await cb.message.edit_reply_markup(reply_markup=None)
@@ -155,6 +189,9 @@ async def admin_verify_actions(cb: CallbackQuery):
     user_lang  = get_user_lang(target_uid) or "en"
 
     if action == "confirm":
+        # أغلق نافذة السماح إن كانت مفتوحة
+        _close_receipt_window(target_uid)
+
         if _set_supplier:
             try:
                 _set_supplier(target_uid, True)
@@ -185,20 +222,22 @@ async def admin_verify_actions(cb: CallbackQuery):
         return await cb.answer("OK")
 
     if action == "reject":
-    # ⬇️ ألغي اعتماد المورد لو كان مفعَّلًا
-     if _set_supplier:
-        try:
-            _set_supplier(target_uid, False)
-        except Exception as e:
-            logging.warning(f"set_supplier(False) failed for {target_uid}: {e}")
+        # أغلق نافذة السماح إن كانت مفتوحة
+        _close_receipt_window(target_uid)
+
+        # ⬇️ ألغي اعتماد المورد لو كان مفعَّلًا
+        if _set_supplier:
+            try:
+                _set_supplier(target_uid, False)
+            except Exception as e:
+                logging.warning(f"set_supplier(False) failed for {target_uid}: {e}")
 
         msg_user = _tr(
-        user_lang,
-        "supplier_verify_reject_user",
-        f"⛔ We couldn't verify your payment. If you already paid, please send the receipt or contact {DEV_HANDLE}.",
-        f"⛔ تعذّر التحقق من الدفع. إن كنت دفعت بالفعل، الرجاء إرسال إيصال التحويل أو التواصل مع {DEV_HANDLE}."
+            user_lang,
+            "supplier_verify_reject_user",
+            f"⛔ We couldn't verify your payment. If you already paid, please send the receipt or contact {DEV_HANDLE}.",
+            f"⛔ تعذّر التحقق من الدفع. إن كنت دفعت بالفعل، الرجاء إرسال إيصال التحويل أو التواصل مع {DEV_HANDLE}."
         )
-    
 
         try:
             await cb.message.bot.send_message(target_uid, msg_user, disable_web_page_preview=True)
@@ -218,6 +257,9 @@ async def admin_verify_actions(cb: CallbackQuery):
         return await cb.answer("OK")
 
     if action == "askreceipt":
+        # اسمح للمستخدم بإرسال صورة/مستند/نص لمدة 60 دقيقة (يمكن تعديلها)
+        _open_receipt_window(target_uid, types=("photo", "document", "text"), ttl=3600)
+
         ask = _tr(
             user_lang,
             "supplier_verify_askreceipt_user",
@@ -322,7 +364,8 @@ async def admin_demote_cb(cb: CallbackQuery):
 
     # تحديث رسالة الأدمن
     try:
-        await cb.message.edit_text(cb.message.text + "\n\n✅ Supplier access removed.", disable_web_page_preview=True)
+        note = _tr(admin_lang, "supplier_demoted_admin_short", "✅ Supplier access removed.", "✅ تم إلغاء اعتماد المورد.")
+        await cb.message.edit_text(cb.message.text + f"\n\n{note}", disable_web_page_preview=True)
     except Exception:
         pass
     try:

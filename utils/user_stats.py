@@ -1,27 +1,75 @@
 # 📁 utils/user_stats.py
-import json, os, csv
+from __future__ import annotations
+import json, os, csv, time, threading
 from datetime import datetime, timezone, date
 from typing import Dict, Any, Optional, Set, List
 
-DATA_DIR   = os.path.join(os.path.dirname(__file__), "..", "data")
+# مسار مجلد data مطلق لتفادي أي غرابة في المسارات
+DATA_DIR   = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
 USERS_LIST = os.path.join(DATA_DIR, "users.json")        # [123, 456, ...] أو {"users":[...]} أو {"123": {...}}
 USER_STATS = os.path.join(DATA_DIR, "user_stats.json")   # {"123": {"last_seen": "...", "visits": N, "username": "..."}, ...}
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
-# ---------- I/O آمن ----------
-def _safe_load(path, default):
+# ---------- قفل ملفات داخل العملية (يمنع السباق داخل نفس البروسس) ----------
+_LOCKS: dict[str, threading.Lock] = {}
+def _get_lock(path: str) -> threading.Lock:
+    lock = _LOCKS.get(path)
+    if lock is None:
+        lock = threading.Lock()
+        _LOCKS[path] = lock
+    return lock
+
+# ---------- I/O آمن مع إعادة محاولات على ويندوز ----------
+def _atomic_replace(src: str, dst: str, retries: int = 20, delay: float = 0.12):
+    """
+    يستبدل src بـ dst بشكل ذرّي مع إعادة محاولات قصيرة للتعامل مع
+    WinError 5/32 (Access is denied / Sharing violation) على ويندوز.
+    """
+    last_exc = None
+    for _ in range(retries):
+        try:
+            os.replace(src, dst)
+            return
+        except PermissionError as e:
+            last_exc = e
+            time.sleep(delay)
+        except OSError as e:
+            # بعض الحالات تظهر OSError: [WinError 32] sharing violation
+            if getattr(e, "winerror", None) in (5, 32):
+                last_exc = e
+                time.sleep(delay)
+            else:
+                raise
+    # محاولة أخيرة؛ إن فشلت نرمي آخر استثناء
+    os.replace(src, dst)
+    # لو وصلنا هنا لن يحدث شيء (نجحت)، السطر أعلاه سيرمي إن فشل
+
+def _safe_load(path: str, default):
     try:
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception:
         return default
 
-def _safe_save(path, data):
-    tmp = f"{path}.tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-    os.replace(tmp, path)
+def _safe_save(path: str, data):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = f"{path}.tmp.{os.getpid()}"
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+            f.flush()
+            os.fsync(f.fileno())
+        # قفل داخل العملية لمنع تداخل كتابات متعددة في نفس اللحظة
+        with _get_lock(path):
+            _atomic_replace(tmp, path)
+    finally:
+        # لا نترك ملفًا مؤقتًا متبقّيًا إذا حصل استثناء
+        if os.path.exists(tmp):
+            try:
+                os.remove(tmp)
+            except Exception:
+                pass
 
 # ---------- أدوات وقت ----------
 def _now_iso() -> str:
@@ -61,7 +109,6 @@ def log_user(user_id: int, *, username: Optional[str] = None):
     entry["last_seen"] = _now_iso()
     entry["visits"] = int(entry.get("visits", 0)) + 1
     if username is not None:
-        # نخزن آخر يوزرنيم معروف بشكل اختياري
         entry["username"] = str(username)
     stats[str(user_id)] = entry
     _safe_save(USER_STATS, stats)
@@ -103,7 +150,6 @@ def get_active_users_today() -> int:
     stats = _safe_load(USER_STATS, {})
     if not isinstance(stats, dict):
         return 0
-
     today_utc = datetime.now(timezone.utc).date()
     active = 0
     for v in stats.values():
@@ -120,9 +166,7 @@ def get_all_users_list() -> List[int]:
     return sorted(_all_user_ids())
 
 def get_user_stats(user_id: int) -> Dict[str, Any]:
-    """
-    يعيد سجل مستخدم واحد: {"last_seen": "...", "visits": N, "username": "..."} أو {} إن لم يوجد.
-    """
+    """يعيد سجل مستخدم واحد أو {} إن لم يوجد."""
     stats = _safe_load(USER_STATS, {})
     if not isinstance(stats, dict):
         return {}
@@ -137,29 +181,39 @@ def export_users_csv(path: Optional[str] = None) -> str:
     يصدّر المستخدمين إلى CSV (UTF-8). يرجّع المسار النهائي.
     الأعمدة: user_id, username, visits, last_seen
     """
-    out_path = path or os.path.join(DATA_DIR, "users_export.csv")
+    out_path = os.path.abspath(path or os.path.join(DATA_DIR, "users_export.csv"))
     stats = _safe_load(USER_STATS, {})
     ids = get_all_users_list()
 
-    tmp = out_path + ".tmp"
-    with open(tmp, "w", encoding="utf-8", newline="") as f:
-        w = csv.writer(f)
-        w.writerow(["user_id", "username", "visits", "last_seen"])
-        for uid in ids:
-            rec = stats.get(str(uid), {}) if isinstance(stats, dict) else {}
-            w.writerow([
-                uid,
-                rec.get("username", "") if isinstance(rec, dict) else "",
-                int(rec.get("visits", 0)) if isinstance(rec, dict) else 0,
-                rec.get("last_seen", "") if isinstance(rec, dict) else "",
-            ])
-    os.replace(tmp, out_path)
+    tmp = out_path + f".tmp.{os.getpid()}"
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    try:
+        with open(tmp, "w", encoding="utf-8", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["user_id", "username", "visits", "last_seen"])
+            for uid in ids:
+                rec = stats.get(str(uid), {}) if isinstance(stats, dict) else {}
+                w.writerow([
+                    uid,
+                    rec.get("username", "") if isinstance(rec, dict) else "",
+                    int(rec.get("visits", 0)) if isinstance(rec, dict) else 0,
+                    rec.get("last_seen", "") if isinstance(rec, dict) else "",
+                ])
+            f.flush()
+            os.fsync(f.fileno())
+        with _get_lock(out_path):
+            _atomic_replace(tmp, out_path)
+    finally:
+        if os.path.exists(tmp):
+            try:
+                os.remove(tmp)
+            except Exception:
+                pass
     return out_path
 
 def build_admin_stats_text(lang: str = "en") -> str:
     """
     يُنشئ نص HTML بسيط لعرضه في لوحة الأدمن أو رد أمر /stats.
-    يعتمد مفاتيح ترجمة عامة؛ إن لم تتوفر سيظهر نص إنجليزي افتراضي.
     """
     try:
         from lang import t as _t

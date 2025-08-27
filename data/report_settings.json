@@ -1,5 +1,5 @@
 {
   "enabled": true,
-  "cooldown_days": 0,
+  "cooldown_days": 3,
   "banned": []
 }

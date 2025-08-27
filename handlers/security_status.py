@@ -7,6 +7,7 @@ from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.exceptions import TelegramBadRequest
+from aiogram.enums import ParseMode
 from lang import t, get_user_lang
 
 # دعم المنطقة الزمنية (Python 3.9+). في حال عدم توفرها نستخدم تعويض +3
@@ -138,6 +139,44 @@ def status_human(lang: str, st: str) -> str:
     }[st]
     return STATUS_ICON.get(st, "") + " " + t(lang, key)
 
+# ========= مساعد: تعديل ذكي أو إرسال جديد =========
+async def _smart_edit_or_send(msg: Message, text: str, reply_markup=None):
+    try:
+        # جرّب تعديل نص
+        if msg.text is not None:
+            return await msg.edit_text(
+                text,
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True,
+            )
+        # جرّب تعديل وصف الوسائط
+        if msg.caption is not None:
+            return await msg.edit_caption(
+                caption=text,
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.HTML,
+            )
+        # لا يوجد نص/وصف → أرسل رسالة جديدة
+        return await msg.answer(
+            text,
+            reply_markup=reply_markup,
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True,
+        )
+    except TelegramBadRequest as e:
+        low = str(e).lower()
+        if ("there is no text in the message to edit" in low or
+            "message can't be edited" in low or
+            "message is not modified" in low):
+            return await msg.answer(
+                text,
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True,
+            )
+        raise
+
 # ========= واجهة المستخدم =========
 def _kb_main(lang: str, as_admin: bool, *, src: str) -> InlineKeyboardBuilder:
     """
@@ -264,14 +303,9 @@ def _game_text(lang: str, code: str) -> str:
 async def security_menu(cb: CallbackQuery):
     lang = L(cb.from_user.id)
     src = "vip" if cb.data == "security_status:vip" else "main"
-    try:
-        await cb.message.edit_text(
-            _main_text(lang),
-            reply_markup=_kb_main(lang, is_admin(cb.from_user.id), src=src).as_markup()
-        )
-    except TelegramBadRequest as e:
-        if "message is not modified" not in str(e).lower():
-            raise
+    text = _main_text(lang)
+    kb = _kb_main(lang, is_admin(cb.from_user.id), src=src).as_markup()
+    await _smart_edit_or_send(cb.message, text, kb)
     await cb.answer()
 
 # تحديث الشاشة الرئيسية (يحافظ على مصدر الفتح)
@@ -279,11 +313,10 @@ async def security_menu(cb: CallbackQuery):
 async def security_refresh(cb: CallbackQuery):
     lang = L(cb.from_user.id)
     _, _, src = cb.data.split(":")
+    text = _main_text(lang, ping_now=True)
+    kb = _kb_main(lang, is_admin(cb.from_user.id), src=src).as_markup()
     try:
-        await cb.message.edit_text(
-            _main_text(lang, ping_now=True),
-            reply_markup=_kb_main(lang, is_admin(cb.from_user.id), src=src).as_markup()
-        )
+        await _smart_edit_or_send(cb.message, text, kb)
         await cb.answer(t(lang, "sec.refreshed"))
     except TelegramBadRequest as e:
         if "message is not modified" in str(e).lower():
@@ -296,14 +329,11 @@ async def security_refresh(cb: CallbackQuery):
 async def security_game(cb: CallbackQuery):
     lang = L(cb.from_user.id)
     _, _, code, src = cb.data.split(":")
+    text = _game_text(lang, code)
     kb = InlineKeyboardBuilder()
     kb.button(text=f"{t(lang, 'sec.btn_back_list')}", callback_data=f"sec:back_list:{src}")
     kb.adjust(1)
-    try:
-        await cb.message.edit_text(_game_text(lang, code), reply_markup=kb.as_markup())
-    except TelegramBadRequest as e:
-        if "message is not modified" not in str(e).lower():
-            raise
+    await _smart_edit_or_send(cb.message, text, kb.as_markup())
     await cb.answer()
 
 # رجوع إلى القائمة (يحافظ على المصدر)
@@ -311,14 +341,9 @@ async def security_game(cb: CallbackQuery):
 async def security_back_list(cb: CallbackQuery):
     lang = L(cb.from_user.id)
     _, _, src = cb.data.split(":")
-    try:
-        await cb.message.edit_text(
-            _main_text(lang),
-            reply_markup=_kb_main(lang, is_admin(cb.from_user.id), src=src).as_markup()
-        )
-    except TelegramBadRequest as e:
-        if "message is not modified" not in str(e).lower():
-            raise
+    text = _main_text(lang)
+    kb = _kb_main(lang, is_admin(cb.from_user.id), src=src).as_markup()
+    await _smart_edit_or_send(cb.message, text, kb)
     await cb.answer()
 
 # ====== لوحة تحكم الأدمن (إنلاين) ======
@@ -327,11 +352,9 @@ async def security_admin(cb: CallbackQuery):
     lang = L(cb.from_user.id)
     if not is_admin(cb.from_user.id):
         return await cb.answer(t(lang, "sec.admin.only_admin"), show_alert=True)
-    try:
-        await cb.message.edit_text("🛠 " + t(lang, "sec.admin.title"), reply_markup=_kb_admin(lang).as_markup())
-    except TelegramBadRequest as e:
-        if "message is not modified" not in str(e).lower():
-            raise
+    text = "🛠 " + t(lang, "sec.admin.title")
+    kb = _kb_admin(lang).as_markup()
+    await _smart_edit_or_send(cb.message, text, kb)
     await cb.answer()
 
 # تحديث لوحة التحكم
@@ -340,8 +363,10 @@ async def security_admin_refresh(cb: CallbackQuery):
     lang = L(cb.from_user.id)
     if not is_admin(cb.from_user.id):
         return await cb.answer(t(lang, "sec.admin.only_admin"), show_alert=True)
+    text = "🛠 " + t(lang, "sec.admin.title")
+    kb = _kb_admin(lang).as_markup()
     try:
-        await cb.message.edit_text("🛠 " + t(lang, "sec.admin.title"), reply_markup=_kb_admin(lang).as_markup())
+        await _smart_edit_or_send(cb.message, text, kb)
         await cb.answer(t(lang, "sec.refreshed"))
     except TelegramBadRequest as e:
         if "message is not modified" in str(e).lower():
@@ -366,11 +391,9 @@ async def security_admin_action(cb: CallbackQuery):
     else:
         _set_game(scope_or_code, status, None, cb.from_user.id)
 
-    try:
-        await cb.message.edit_text("🛠 " + t(lang, "sec.admin.updated_ok"), reply_markup=_kb_admin(lang).as_markup())
-    except TelegramBadRequest as e:
-        if "message is not modified" not in str(e).lower():
-            raise
+    text = "🛠 " + t(lang, "sec.admin.updated_ok")
+    kb = _kb_admin(lang).as_markup()
+    await _smart_edit_or_send(cb.message, text, kb)
     await cb.answer()
 
 @router.callback_query(F.data == "sec:nop")

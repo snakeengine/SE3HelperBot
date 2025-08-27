@@ -9,6 +9,7 @@ from aiogram import Router, F
 from aiogram.types import (
     Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, ContentType
 )
+    # ContentType import is correct for aiogram v3
 from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
@@ -119,9 +120,10 @@ def _panel_text(lang: str, u: Dict[str, Any]) -> str:
     return (
         f"🧑‍💼 <b>{_tf(lang,'promp.title','لوحة المروّجين')}</b>\n\n"
         f"{_tf(lang,'promp.name','الاسم')}: <code>{u.get('name','-')}</code>\n"
-        f"Telegram: <code>{tg_real}</code> (declared: <code>{tg_decl}</code>)\n"
+        f"{_tf(lang,'promp.tg.real_label','تيليجرام')}: <code>{tg_real}</code> "
+        f"({_tf(lang,'promp.tg.declared_label','المعلن')}: <code>{tg_decl}</code>)\n"
         f"{_tf(lang,'promp.links','الروابط')}:\n{links_s}\n"
-        f"App ID: <code>{u.get('app_id') or '-'}</code>\n"
+        f"{_tf(lang,'promp.app_id','معرّف التطبيق')} : <code>{u.get('app_id') or '-'}</code>\n"
         f"{_tf(lang,'promp.sub','الاشتراك')}: {sub_line}\n"
         f"{_tf(lang,'promp.sub.exp','ينتهي في')}: <code>{_ts_to_str(sub.get('expires_at'))}</code>\n"
     )
@@ -139,16 +141,102 @@ def _panel_kb(lang: str) -> InlineKeyboardMarkup:
         ],
     ])
 
-def _profile_text(lang: str, u: Dict[str, Any]) -> str:
-    links = u.get("links") or []
-    links_s = "\n".join(f"• {x}" for x in links) if links else "—"
-    tg = u.get("telegram", {}) or {}
+# ========= Helpers =========
+def _fmt_links(links: list[str]) -> str:
+    if not links:
+        return "—"
+    out = []
+    for x in links:
+        s = (x or "").strip()
+        if not s:
+            continue
+        if s.startswith(("http://", "https://", "tg://")):
+            out.append(f"• <a href=\"{s}\">{s}</a>")
+        else:
+            out.append(f"• {s}")
+    return "\n".join(out) if out else "—"
+
+def _chip(text: str) -> str:
+    # شارة صغيرة للحالة
+    return f"<span class=\"tg-spoiler\">{text}</span>"
+
+def _status_chip(lang: str, status: str, left_s: str | None = None) -> str:
+    s = (status or "none").lower()
+    if s == "active":
+        base = "✅ " + _tf(lang, "promp.sub.active", "نشط")
+        if left_s:
+            base += f" — {_tf(lang,'promp.sub.left','تبقّى')}: {left_s}"
+        return _chip(base)
+    if s == "pending":
+        return _chip("⏳ " + _tf(lang, "promp.sub.pending", "بانتظار التفعيل"))
+    if s == "denied":
+        return _chip("❌ " + _tf(lang, "promp.sub.denied", "مرفوض"))
+    return _chip("🚫 " + _tf(lang, "promp.sub.none", "لا يوجد"))
+
+def _tg_line(lang: str, tg: dict) -> str:
+    decl = tg.get("declared") or "-"
+    real = tg.get("real") or "-"
+    match = bool(tg.get("match"))
+    mark = "✅" if match else "❗️"
+    real_lbl = _tf(lang, "promp.tg.real_label", "المعرّف الفعلي على تيليجرام")
+    decl_lbl = _tf(lang, "promp.tg.declared_label", "المعرّف المعلن على تيليجرام")
     return (
-        f"🪪 <b>{_tf(lang,'promp.profile','الملف')}</b>\n\n"
-        f"{_tf(lang,'promp.name','الاسم')}: <code>{u.get('name','-')}</code>\n"
-        f"{_tf(lang,'promp.links','الروابط')}:\n{links_s}\n"
-        f"Telegram declared: <code>{tg.get('declared') or '-'}</code>\n"
-        f"Telegram real: <code>{tg.get('real') or '-'}</code>\n"
+        f"{real_lbl}: <code>{real}</code> {mark}\n"
+        f"({decl_lbl}: <code>{decl}</code>)"
+    )
+
+# ========= Profile Card =========
+def _panel_text(lang: str, u: Dict[str, Any]) -> str:
+    title = _tf(lang, "promp.title", "لوحة المروّجين")
+    name_label = _tf(lang, "promp.name", "الاسم")
+    links_label = _tf(lang, "promp.links", "الروابط")
+    app_label = _tf(lang, "promp.app_id", "معرّف التطبيق")
+    sub_label = _tf(lang, "promp.sub", "الاشتراك")
+    exp_label = _tf(lang, "promp.sub.expires", "ينتهي في")
+
+    # اشتراك
+    sub = u.get("subscription", {}) or {}
+    left = max(0, int(sub.get("expires_at", 0) or 0) - _now())
+    left_s = _format_duration(left, lang) if left else None
+    status = (sub.get("status") or "none").lower()
+    chip = _status_chip(lang, status, left_s)
+    expires_at = _ts_to_str(sub.get("expires_at"))
+
+    # تيليجرام وروابط
+    tg = u.get("telegram", {}) or {}
+    tg_block = _tg_line(lang, tg)
+    links_s = _fmt_links(u.get("links") or [])
+
+    return (
+        "🧑‍💼 <b>" + title + "</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        f"{name_label}: <b>{u.get('name','-')}</b>\n"
+        f"{tg_block}\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        f"{links_label}:\n{links_s}\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        f"{app_label}: <code>{u.get('app_id') or '-'}</code>\n"
+        f"{sub_label}: {chip}\n"
+        f"{exp_label}: <code>{expires_at}</code>\n"
+    )
+
+def _profile_text(lang: str, u: Dict[str, Any]) -> str:
+    title = _tf(lang, "promp.profile", "الملف الشخصي")
+    name_label = _tf(lang, "promp.name", "الاسم")
+    links_label = _tf(lang, "promp.links", "الروابط")
+
+    tg = u.get("telegram", {}) or {}
+    tg_block = _tg_line(lang, tg)
+    links_s = _fmt_links(u.get("links") or [])
+
+    return (
+        "🪪 <b>" + title + "</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        f"{name_label}: <b>{u.get('name','-')}</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        f"{links_label}:\n{links_s}\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        f"{tg_block}\n"
     )
 
 def _profile_kb(lang: str) -> InlineKeyboardMarkup:
@@ -192,10 +280,35 @@ def _sub_kb(lang: str) -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="🔔 72h", callback_data="promp:remind:72"),
             InlineKeyboardButton(text="🔕 " + _tf(lang,"promp.remind.off","إيقاف"), callback_data="promp:remind:0"),
         ],
-        # ← بدون مدة ثابتة
         [InlineKeyboardButton(text="📨 " + _tf(lang,"promp.sub.renew","طلب تجديد"), callback_data="promp:renew")],
         [InlineKeyboardButton(text="⬅️ " + _tf(lang,"promp.btn.back","رجوع"), callback_data="promp:open")],
     ])
+
+# === تجديد الاشتراك: أدوات مساعدة ===
+def _renew_menu_kb(uid: int, lang: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="7d",  callback_data=f"promp:adm:renew:{uid}:7"),
+            InlineKeyboardButton(text="30d", callback_data=f"promp:adm:renew:{uid}:30"),
+            InlineKeyboardButton(text="60d", callback_data=f"promp:adm:renew:{uid}:60"),
+            InlineKeyboardButton(text="90d", callback_data=f"promp:adm:renew:{uid}:90"),
+        ],
+        [InlineKeyboardButton(text=_tf(lang, "promp.renew.custom", "مدة مخصصة"), callback_data=f"promp:adm:renew_custom:{uid}")],
+    ])
+
+def _apply_extend_seconds(u: Dict[str, Any], add_seconds: int) -> int:
+    """يمدّد الاشتراك: من تاريخ الانتهاء إن كان نشطًا، أو من الآن إن كان منتهيًا. يعيد expires_at الجديد."""
+    sub = u.setdefault("subscription", {})
+    now = _now()
+    expires_at = int(sub.get("expires_at", 0) or 0)
+    base_ts = expires_at if (sub.get("status") == "active" and expires_at > now) else now
+    new_expires = base_ts + max(0, int(add_seconds))
+    sub["status"] = "active"
+    if not int(sub.get("started_at", 0) or 0):
+        sub["started_at"] = now
+    sub["expires_at"] = new_expires
+    return new_expires
+
 
 # ===== حالات FSM =====
 class EditProfile(StatesGroup):
@@ -215,6 +328,11 @@ class SupportUser(StatesGroup):
 
 class SupportAdmin(StatesGroup):
     chatting = State()
+
+# دعم مباشر (مستخدم/أدمن)
+class RenewAdmin(StatesGroup):
+    wait_days = State()
+
 
 # ===== فتح اللوحة =====
 @router.callback_query(F.data.in_({"prom:panel", "promp:open"}))
@@ -311,18 +429,22 @@ async def sub_set_remind(cb: CallbackQuery):
     _save(d)
     await cb.answer(_tf(lang,"promp.saved","تم الحفظ ✅"), show_alert=False)
 
-@router.callback_query(F.data.startswith("promp:renew:"))
+# طلب تجديد من المستخدم (بدون مدة ثابتة)
+@router.callback_query(F.data == "promp:renew")
 async def sub_request_renew(cb: CallbackQuery):
     lang = L(cb.from_user.id)
-    days = int(cb.data.split(":")[-1])
+    # أرسل لكل الأدمنين طلبًا مع أزرار مدد سريعة + مدة مخصصة
     for admin_id in ADMIN_IDS:
         try:
+            head = _tf(lang, "promp.renew.head", "🔁 طلب تجديد")
             await cb.bot.send_message(
                 admin_id,
-                f"🔁 طلب تجديد من <code>{cb.from_user.id}</code> لمدّة {days} يوم.",
-                parse_mode=ParseMode.HTML
+                f"{head} — {_tf(lang,'promp.renew.user_id','المستخدم')}: <code>{cb.from_user.id}</code>",
+                parse_mode=ParseMode.HTML,
+                reply_markup=_renew_menu_kb(cb.from_user.id, lang)
             )
-        except Exception: pass
+        except Exception:
+            pass
     await cb.answer(_tf(lang, "promp.renew.sent", "تم إرسال طلب التجديد إلى الإدارة ✅"), show_alert=True)
 
 # ===== تفعيل الاشتراك (App ID) =====
@@ -353,9 +475,10 @@ async def activate_receive(m: Message, state: FSMContext):
         [InlineKeyboardButton(text="❌ رفض", callback_data=f"promp:adm:deny:{m.from_user.id}")],
     ])
     txt = (
-        f"🚀 <b>طلب تفعيل اشتراك مروّج</b>\n"
-        f"ID: <code>{m.from_user.id}</code> — <a href='tg://user?id={m.from_user.id}'>[open chat]</a>\n"
-        f"App ID: <code>{appid}</code>\n"
+        f"🚀 <b>{_tf(L(m.from_user.id),'promp.adm.activate_req','طلب تفعيل اشتراك مروّج')}</b>\n"
+        f"{_tf(L(m.from_user.id),'promp.user_id','المستخدم')}: <code>{m.from_user.id}</code> — "
+        f"<a href='tg://user?id={m.from_user.id}'>{_tf(L(m.from_user.id),'promp.open_chat','فتح المحادثة')}</a>\n"
+        f"{_tf(L(m.from_user.id),'promp.app_id','معرّف التطبيق')} : <code>{appid}</code>\n"
     )
     for admin_id in ADMIN_IDS:
         try:
@@ -367,12 +490,12 @@ async def activate_receive(m: Message, state: FSMContext):
 @router.callback_query(F.data.startswith("promp:adm:activate:"))
 async def adm_activate(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
-        return await cb.answer("Admins only.", show_alert=True)
+        return await cb.answer(_tf(L(cb.from_user.id),"common.admins_only","Admins only."), show_alert=True)
     parts = cb.data.split(":")  # promp:adm:activate:<uid>:<days>
     uid = parts[-2]; days = int(parts[-1])
     d = _load()
     u = d.get("users", {}).get(uid)
-    if not u: return await cb.answer("Not found.", show_alert=True)
+    if not u: return await cb.answer(_tf(L(cb.from_user.id),"common.not_found","Not found."), show_alert=True)
     start = _now()
     expires = start + days * 24 * 3600
     sub = u.setdefault("subscription", {})
@@ -385,16 +508,16 @@ async def adm_activate(cb: CallbackQuery):
             f"\n{_tf(lang,'promp.sub.expires','ينتهي في')}: {_ts_to_str(expires)}"
         )
     except Exception: pass
-    await cb.answer("Done ✅", show_alert=True)
+    await cb.answer(_tf(L(cb.from_user.id),"common.done","Done ✅"), show_alert=True)
 
 @router.callback_query(F.data.startswith("promp:adm:deny:"))
 async def adm_deny(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
-        return await cb.answer("Admins only.", show_alert=True)
+        return await cb.answer(_tf(L(cb.from_user.id),"common.admins_only","Admins only."), show_alert=True)
     uid = cb.data.split(":")[-1]
     d = _load()
     u = d.get("users", {}).get(uid)
-    if not u: return await cb.answer("Not found.", show_alert=True)
+    if not u: return await cb.answer(_tf(L(cb.from_user.id),"common.not_found","Not found."), show_alert=True)
     sub = u.setdefault("subscription", {})
     sub["status"] = "denied"
     _save(d)
@@ -402,7 +525,104 @@ async def adm_deny(cb: CallbackQuery):
         lang = L(int(uid))
         await cb.bot.send_message(int(uid), _tf(lang,"promp.sub.denied_msg","عذرًا، رُفض طلب تفعيل الاشتراك."))
     except Exception: pass
-    await cb.answer("Denied", show_alert=True)
+    await cb.answer(_tf(L(cb.from_user.id),"common.denied","Denied"), show_alert=True)
+
+# تجديد سريع من الأدمن: promp:adm:renew:<uid>:<days>
+@router.callback_query(F.data.startswith("promp:adm:renew:"))
+async def adm_renew_quick(cb: CallbackQuery):
+    if cb.from_user.id not in ADMIN_IDS:
+        return await cb.answer(_tf(L(cb.from_user.id),"common.admins_only","Admins only."), show_alert=True)
+    parts = cb.data.split(":")  # promp:adm:renew:<uid>:<days>
+    uid = parts[-2]
+    days = int(parts[-1])
+    d = _load()
+    u = d.get("users", {}).get(uid)
+    if not u:
+        return await cb.answer(_tf(L(cb.from_user.id),"common.not_found","Not found."), show_alert=True)
+
+    new_expires = _apply_extend_seconds(u, days * 24 * 3600)
+    _save(d)
+
+    # أخطر المستخدم
+    try:
+        lang_user = L(int(uid))
+        await cb.bot.send_message(
+            int(uid),
+            _tf(lang_user, "promp.renew.approved", "تم تجديد اشتراكك ✅") +
+            f"\n{_tf(lang_user, 'promp.sub.expires', 'ينتهي في')}: {_ts_to_str(new_expires)}"
+        )
+    except Exception:
+        pass
+
+    await cb.answer(_tf(L(cb.from_user.id),"common.ok","OK ✅"), show_alert=True)
+
+# بدء المدة المخصصة: promp:adm:renew_custom:<uid>
+@router.callback_query(F.data.startswith("promp:adm:renew_custom:"))
+async def adm_renew_custom_start(cb: CallbackQuery, state: FSMContext):
+    if cb.from_user.id not in ADMIN_IDS:
+        return await cb.answer(_tf(L(cb.from_user.id),"common.admins_only","Admins only."), show_alert=True)
+    uid = int(cb.data.split(":")[-1])
+    await state.set_state(RenewAdmin.wait_days)
+    await state.update_data(target_uid=uid)
+    await cb.message.answer(_tf(L(cb.from_user.id),
+        "promp.renew.custom.ask",
+        "أدخل مدة التجديد (أيام) مثل 45 أو 120. يمكنك أيضًا استخدام h للساعات مثل 12h:"
+    ))
+    await cb.answer()
+
+# استقبال المدة المخصصة من الأدمن
+@router.message(RenewAdmin.wait_days)
+async def adm_renew_custom_value(m: Message, state: FSMContext):
+    if m.from_user.id not in ADMIN_IDS:
+        return
+    data = await state.get_data()
+    uid = data.get("target_uid")
+    if not uid:
+        await state.clear()
+        return
+
+    s = (m.text or "").strip().lower()
+    seconds = 0
+    try:
+        if s.endswith("h"):
+            hours = int(s[:-1])
+            seconds = hours * 3600
+        elif s.endswith("d"):
+            days = int(s[:-1])
+            seconds = days * 24 * 3600
+        else:
+            # اعتبره أيامًا إذا لم يُذكر لاحقة
+            days = int(s)
+            seconds = days * 24 * 3600
+    except Exception:
+        return await m.reply(_tf(L(m.from_user.id), "promp.renew.custom.invalid", "قيمة غير صالحة. أعد المحاولة."))
+
+    if seconds <= 0:
+        return await m.reply(_tf(L(m.from_user.id), "promp.renew.custom.invalid", "قيمة غير صالحة. أعد المحاولة."))
+
+    d = _load()
+    u = d.get("users", {}).get(str(uid))
+    if not u:
+        await state.clear()
+        return await m.reply(_tf(L(m.from_user.id),"common.not_found","Not found."))
+
+    new_expires = _apply_extend_seconds(u, seconds)
+    _save(d)
+    await state.clear()
+
+    # أخطر المستخدم
+    try:
+        lang_user = L(int(uid))
+        await m.bot.send_message(
+            int(uid),
+            _tf(lang_user, "promp.renew.approved", "تم تجديد اشتراكك ✅") +
+            f"\n{_tf(lang_user, 'promp.sub.expires', 'ينتهي في')}: {_ts_to_str(new_expires)}"
+        )
+    except Exception:
+        pass
+
+    await m.reply(_tf(L(m.from_user.id), "promp.renew.custom.done", "تم التجديد ✅"))
+
 
 # ===== إثبات نشاط =====
 @router.callback_query(F.data == "promp:proof")
@@ -428,7 +648,7 @@ async def proof_receive(m: Message, state: FSMContext):
     _save(d)
     await state.clear()
     # إخطار الأدمن
-    txt = f"📣 إثبات نشاط من <code>{m.from_user.id}</code>\n"
+    txt = f"{_tf(lang,'promp.proof.head','📣 إثبات نشاط')} {_tf(lang,'promp.user_id','المستخدم')}: <code>{m.from_user.id}</code>\n"
     for admin_id in ADMIN_IDS:
         try:
             if m.photo:
@@ -523,43 +743,65 @@ async def support_cancel_user(m: Message, state: FSMContext):
 # رسائل المروّج أثناء الجلسة
 @router.message(SupportUser.chatting)
 async def support_user_message(m: Message, state: FSMContext):
-    lang = L(m.from_user.id)
+    lang_user = L(m.from_user.id)
     uid = m.from_user.id
     admin_id = ACTIVE_SUPPORT.get(uid)
 
     # إن كانت الجلسة مستلمة — وجّه للأدمن فقط
     if admin_id:
-        # لا توجّه للأدمن لو كان هو نفس الشخص (حماية إضافية)
+        # حماية إضافية: لا توجّه للأدمن لو كان هو نفس الشخص
         if admin_id == uid:
             return
         try:
-            await m.copy_to(admin_id, caption=m.caption, parse_mode=ParseMode.HTML)
+            copy_kwargs = dict(parse_mode=ParseMode.HTML)
+            if m.caption:
+                copy_kwargs["caption"] = m.caption
+            await m.copy_to(admin_id, **copy_kwargs)
         except Exception:
             pass
         return
 
     # لم تُستلم بعد: أرسل لجميع الأدمن (عدا نفس المستخدم إن كان أدمن)
-    head = f"🆘 <b>رسالة دعم من مروّج</b>\nID: <code>{uid}</code>"
-    for a in ADMIN_IDS:
-        if a == uid:
-            continue
+    recipients = [a for a in ADMIN_IDS if a != uid]
+    if not recipients:
+        await m.answer(_tf(lang_user, "promp.support.no_admins",
+                           "لا يوجد أعضاء دعم متاحون حاليًا."))
+        return
+
+    for a in recipients:
+        adm_lang = L(a)
+        head = (
+            f"🆘 <b>{_tf(adm_lang,'promp.support.head','رسالة دعم من مروّج')}</b>\n"
+            f"{_tf(adm_lang,'promp.user_id','المستخدم')}: <code>{uid}</code>"
+        )
         try:
-            await m.bot.send_message(a, head, parse_mode=ParseMode.HTML)
-            await m.copy_to(
+            await m.bot.send_message(
                 a,
-                caption=(m.caption or ""),
+                head,
                 parse_mode=ParseMode.HTML,
-                reply_markup=_claim_kb(uid, lang),
+                disable_web_page_preview=True,
             )
+            copy_kwargs = dict(
+                parse_mode=ParseMode.HTML,
+                reply_markup=_claim_kb(uid, adm_lang),
+            )
+            if m.caption:
+                copy_kwargs["caption"] = m.caption
+
+            await m.copy_to(a, **copy_kwargs)
         except Exception:
+            # تجاهل أخطاء الإرسال لأدمن معيّن
             pass
-    await m.answer(_tf(lang, "promp.support.wait_admin", "تم إرسال رسالتك. بانتظار انضمام أحد أعضاء الدعم…"))
+
+    await m.answer(_tf(lang_user, "promp.support.wait_admin",
+                       "تم إرسال رسالتك. بانتظار انضمام أحد أعضاء الدعم…"))
 
 # أدمن يضغط "استلام المحادثة"
 @router.callback_query(F.data.startswith("promp:support:claim:"))
 async def support_claim(cb: CallbackQuery, state: FSMContext):
     if cb.from_user.id not in ADMIN_IDS:
-        return await cb.answer("Admins only.", show_alert=True)
+        lang_admin = L(cb.from_user.id)
+        return await cb.answer(_tf(lang_admin,'common.admins_only','Admins only.'), show_alert=True)
 
     lang_admin = L(cb.from_user.id)
     uid = int(cb.data.split(":")[-1])
@@ -606,15 +848,15 @@ async def support_claim(cb: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("promp:support:end:"))
 async def support_end_btn(cb: CallbackQuery, state: FSMContext):
     if cb.from_user.id not in ADMIN_IDS:
-        return await cb.answer("Admins only.", show_alert=True)
+        return await cb.answer(_tf(L(cb.from_user.id),'common.admins_only','Admins only.'), show_alert=True)
 
     uid = int(cb.data.split(":")[-1])
     admin_id = cb.from_user.id
     if ACTIVE_SUPPORT.get(uid) != admin_id:
-        return await cb.answer("Not your session.", show_alert=True)
+        return await cb.answer(_tf(L(cb.from_user.id),'promp.support.not_yours','هذه الجلسة ليست لك.'), show_alert=True)
 
     await _end_chat(cb.bot, uid, admin_id, L(uid), L(admin_id), state.storage)
-    await cb.answer("OK")
+    await cb.answer(_tf(L(cb.from_user.id),'common.ok','OK'))
 
 # رسائل الأدمن أثناء الجلسة
 @router.message(SupportAdmin.chatting)

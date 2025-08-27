@@ -1,7 +1,7 @@
 # handlers/supplier_directory.py
 from __future__ import annotations
 
-import os, json, math, logging
+import os, json, math, logging, html
 from datetime import datetime
 from aiogram import Router, F
 from aiogram.filters import Command
@@ -9,7 +9,9 @@ from aiogram.types import (
     Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 )
 from aiogram.fsm.state import State, StatesGroup
+    # aiogram v3
 from aiogram.fsm.context import FSMContext
+from aiogram.enums import ParseMode
 
 from lang import t, get_user_lang
 
@@ -43,9 +45,9 @@ def _now_iso() -> str:
     return datetime.utcnow().isoformat()
 
 def _L(lang: str, key: str, en: str, ar: str) -> str:
-    """ترجمة مع fallback لو المفتاح ناقص."""
+    """ترجمة بمفتاح مع fallback."""
     v = t(lang, key)
-    if v and v != key:
+    if isinstance(v, str) and v and v != key:
         return v
     return ar if lang == "ar" else en
 
@@ -88,24 +90,22 @@ def _load_pub(uid: int) -> dict:
         with open(_pub_path(uid), "r", encoding="utf-8") as f:
             d = json.load(f)
             if isinstance(d, dict):
-                # ترقية قديمة: ضمّن الحقول الجديدة لو ناقصة
                 d.setdefault("languages", "")
                 d.setdefault("whatsapp", "")
                 return d
     except Exception:
         pass
-    # قالب افتراضي
     return {
         "user_id": uid,
         "username": "",
         "name": "",
         "country": "",
-        "languages": "",  # NEW
-        "contact": "",    # Telegram: @username أو رقم
-        "whatsapp": "",   # NEW
+        "languages": "",
+        "contact": "",     # @user أو رقم
+        "whatsapp": "",
         "channel": "",
         "bio": "",
-        "status": "draft",      # draft|pending|approved|hidden
+        "status": "draft", # draft|pending|approved|hidden
         "visible": False,
         "created_at": _now_iso(),
         "updated_at": _now_iso(),
@@ -132,16 +132,15 @@ def _rebuild_public_directory():
         try:
             with open(up, "r", encoding="utf-8") as f:
                 d = json.load(f)
-            # ننشر فقط الموافق عليه والمرئي
             if d.get("status") == "approved" and d.get("visible"):
                 items.append({
                     "user_id": d.get("user_id"),
                     "username": d.get("username"),
                     "name": d.get("name"),
                     "country": d.get("country"),
-                    "languages": d.get("languages", ""),  # NEW
+                    "languages": d.get("languages", ""),
                     "contact": d.get("contact"),
-                    "whatsapp": d.get("whatsapp", ""),    # NEW
+                    "whatsapp": d.get("whatsapp", ""),
                     "channel": d.get("channel"),
                     "bio": d.get("bio"),
                     "verified": True,
@@ -156,9 +155,9 @@ def _rebuild_public_directory():
 class PubStates(StatesGroup):
     name = State()
     country = State()
-    languages = State()  # NEW
+    languages = State()
     contact = State()
-    whatsapp = State()   # NEW
+    whatsapp = State()
     channel = State()
     bio = State()
 
@@ -187,23 +186,28 @@ def _kb_supplier(lang: str, status: str, visible: bool) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 def _card(lang: str, d: dict) -> str:
+    name = html.escape(d.get("name", "") or "")
+    country = html.escape(d.get("country", "") or "")
+    languages = html.escape((d.get("languages") or "").strip())
+    contact = html.escape(d.get("contact", "") or "")
+    whatsapp = html.escape((d.get("whatsapp") or "").strip())
+    channel = html.escape(d.get("channel", "") or "")
+    bio = html.escape((d.get("bio") or "").strip())
+
     lines = [
         f"🧾 <b>{_L(lang,'spub_title','Supplier public card','بطاقة المورد العامة')}</b>",
-        f"{_L(lang,'spub_field_name','Name','الاسم')}: <b>{d.get('name','')}</b>",
-        f"{_L(lang,'spub_field_country','Country','الدولة')}: <b>{d.get('country','')}</b>",
+        f"{_L(lang,'spub_field_name','Name','الاسم')}: <b>{name}</b>",
+        f"{_L(lang,'spub_field_country','Country','الدولة')}: <b>{country}</b>",
     ]
-    langs = (d.get("languages") or "").strip()
-    if langs:
-        lines.append(f"{_L(lang,'spub_field_languages','Languages','اللغات')}: <b>{langs}</b>")
+    if languages:
+        lines.append(f"{_L(lang,'spub_field_languages','Languages','اللغات')}: <b>{languages}</b>")
     lines += [
-        f"{_L(lang,'spub_field_contact','Telegram','تيليجرام')}: <code>{d.get('contact','')}</code>",
+        f"{_L(lang,'spub_field_contact','Telegram','تيليجرام')}: <code>{contact}</code>",
     ]
-    whats = (d.get("whatsapp") or "").strip()
-    if whats:
-        lines.append(f"{_L(lang,'spub_field_whatsapp','WhatsApp','واتساب')}: <code>{whats}</code>")
-    lines.append(f"{_L(lang,'spub_field_channel','Channel','القناة/المجموعة')}: <code>{d.get('channel','')}</code>")
+    if whatsapp:
+        lines.append(f"{_L(lang,'spub_field_whatsapp','WhatsApp','واتساب')}: <code>{whatsapp}</code>")
+    lines.append(f"{_L(lang,'spub_field_channel','Channel','القناة/المجموعة')}: <code>{channel}</code>")
 
-    bio = (d.get("bio") or "").strip()
     if bio:
         lines.append(f"{_L(lang,'spub_field_bio','Bio','النبذة')}: {bio}")
     lines.append("")
@@ -231,7 +235,12 @@ async def supplier_public_cmd(msg: Message, state: FSMContext):
     d["username"] = msg.from_user.username or d.get("username","")
     _save_pub(msg.from_user.id, d)
 
-    await msg.answer(_card(lang, d), reply_markup=_kb_supplier(lang, d.get("status","draft"), d.get("visible", False)))
+    await msg.answer(
+        _card(lang, d),
+        reply_markup=_kb_supplier(lang, d.get("status","draft"), d.get("visible", False)),
+        parse_mode=ParseMode.HTML,
+        disable_web_page_preview=True
+    )
 
 # فتح لوحة المورد من زر الواجهة
 @router.callback_query(F.data == "supplier_public")
@@ -248,12 +257,14 @@ async def supplier_public_cb(cb: CallbackQuery, state: FSMContext):
         await cb.message.edit_text(
             _card(lang, d),
             reply_markup=_kb_supplier(lang, d.get("status","draft"), d.get("visible", False)),
+            parse_mode=ParseMode.HTML,
             disable_web_page_preview=True
         )
     except Exception:
         await cb.message.answer(
             _card(lang, d),
             reply_markup=_kb_supplier(lang, d.get("status","draft"), d.get("visible", False)),
+            parse_mode=ParseMode.HTML,
             disable_web_page_preview=True
         )
     await cb.answer()
@@ -294,7 +305,7 @@ async def spub_save_field(msg: Message, state: FSMContext):
     d[field] = value
     _save_pub(msg.from_user.id, d)
 
-    # ✅ NEW: حدّث قائمة الموردين فورًا إذا كانت البطاقة منشورة
+    # حدّث القائمة مباشرة إذا كانت منشورة
     if d.get("status") == "approved" and d.get("visible"):
         _rebuild_public_directory()
 
@@ -302,7 +313,9 @@ async def spub_save_field(msg: Message, state: FSMContext):
     await msg.answer(_L(lang, "spub_saved", "Saved ✅", "تم الحفظ ✅"))
     await msg.answer(
         _card(lang, d),
-        reply_markup=_kb_supplier(lang, d.get("status","draft"), d.get("visible", False))
+        reply_markup=_kb_supplier(lang, d.get("status","draft"), d.get("visible", False)),
+        parse_mode=ParseMode.HTML,
+        disable_web_page_preview=True
     )
 
 # إرسال للمراجعة
@@ -323,7 +336,12 @@ async def spub_submit(cb: CallbackQuery):
     d["username"] = cb.from_user.username or d.get("username","")
     _save_pub(cb.from_user.id, d)
 
-    await cb.message.edit_text(_card(lang, d), reply_markup=_kb_supplier(lang, d["status"], d["visible"]))
+    await cb.message.edit_text(
+        _card(lang, d),
+        reply_markup=_kb_supplier(lang, d["status"], d["visible"]),
+        parse_mode=ParseMode.HTML,
+        disable_web_page_preview=True
+    )
     await cb.answer(_L(lang, "spub_submitted_ok", "Sent for admin review ✅", "تم الإرسال للمراجعة ✅"))
 
     # إشعار الأدمنين
@@ -344,7 +362,7 @@ async def spub_submit(cb: CallbackQuery):
     ]])
     for aid in ADMIN_IDS:
         try:
-            await cb.message.bot.send_message(aid, adm_text, reply_markup=kb_adm, disable_web_page_preview=True)
+            await cb.message.bot.send_message(aid, adm_text, reply_markup=kb_adm, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
         except Exception:
             pass
 
@@ -357,10 +375,15 @@ async def spub_unpublish(cb: CallbackQuery):
     d["visible"] = False
     _save_pub(cb.from_user.id, d)
     _rebuild_public_directory()
-    await cb.message.edit_text(_card(lang, d), reply_markup=_kb_supplier(lang, d["status"], d["visible"]))
+    await cb.message.edit_text(
+        _card(lang, d),
+        reply_markup=_kb_supplier(lang, d["status"], d["visible"]),
+        parse_mode=ParseMode.HTML,
+        disable_web_page_preview=True
+    )
     await cb.answer(_L(lang, "spub_hidden_ok", "Unpublished.", "تم الإخفاء."))
 
-# ================= واجهة المستخدم العامة =================
+# ================= واجهة المستخدم العامة (قائمة + بروفايل) =================
 PUB_PER_PAGE = 6
 
 def _read_public_items():
@@ -372,37 +395,27 @@ def _read_public_items():
     items.sort(key=lambda x: x.get("updated_at",""), reverse=True)
     return items
 
+def _shorten(s: str, n: int) -> str:
+    s = (s or "").strip()
+    return s if len(s) <= n else s[: max(0, n - 1)] + "…"
+
+def _btn_text_with_country(it: dict) -> str:
+    uid = it.get("user_id")
+    name = _shorten(it.get("name") or f"#{uid}", 22)
+    country = _shorten(it.get("country") or "", 18)
+    return f"• {name}  —  🌍 {country}" if country else f"• {name}"
+
+
 def _kb_public_list(lang: str, page: int, total_pages: int, items: list[dict]) -> InlineKeyboardMarkup:
     rows: list[list[InlineKeyboardButton]] = []
 
+    # أزرار بأسماء الموردين + الدولة — الضغط يفتح بروفايل المورد
     for it in items:
-        name = it.get("name","")
-        contact = (it.get("contact") or "").strip()
-        whatsapp = (it.get("whatsapp") or "").strip()
-        channel = (it.get("channel") or "").strip()
+        uid = it.get("user_id")
+        text = _btn_text_with_country(it)
+        rows.append([InlineKeyboardButton(text=text, callback_data=f"td:view:{uid}:{page}")])
 
-        # عنوان
-        rows.append([InlineKeyboardButton(text=f"• {name}", callback_data="noop")])
-
-        line_btns = []
-        if contact:
-            if contact.startswith("@"):
-                line_btns.append(InlineKeyboardButton(text=_L(lang,"td_contact","Contact","مراسلة"),
-                                                      url=f"https://t.me/{contact[1:]}"))
-            else:
-                uid = it.get("user_id")
-                if uid:
-                    line_btns.append(InlineKeyboardButton(text=_L(lang,"td_contact","Contact","مراسلة"),
-                                                          url=f"tg://user?id={uid}"))
-        if whatsapp:
-            wurl = whatsapp if whatsapp.startswith("http") else f"https://wa.me/{whatsapp.lstrip('+').replace(' ','')}"
-            line_btns.append(InlineKeyboardButton(text=_L(lang,"td_whatsapp","WhatsApp","واتساب"), url=wurl))
-        if channel:
-            url = channel if channel.startswith("http") else f"https://t.me/{channel.lstrip('@')}"
-            line_btns.append(InlineKeyboardButton(text=_L(lang,"td_channel","Channel","القناة"), url=url))
-        if line_btns:
-            rows.append(line_btns)
-
+    # تنقّل الصفحات
     nav = []
     if page > 1:
         nav.append(InlineKeyboardButton(text="«", callback_data=f"td:list:{page-1}"))
@@ -411,21 +424,59 @@ def _kb_public_list(lang: str, page: int, total_pages: int, items: list[dict]) -
         nav.append(InlineKeyboardButton(text="»", callback_data=f"td:list:{page+1}"))
     rows.append(nav)
 
-    rows.append([InlineKeyboardButton(text=t(lang,"back_to_menu"), callback_data="back_to_menu")])
+    rows.append([InlineKeyboardButton(text=t(lang, "back_to_menu"), callback_data="back_to_menu")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
-def _format_item_block(lang: str, it: dict, idx: int) -> str:
-    # نص مفصل لكل مورد داخل الرسالة
-    lines = [
-        f"{idx}. <b>{it.get('name','')}</b>",
-    ]
-    if it.get("country"):
-        lines.append(f"   🌍 { _L(lang,'spub_field_country','Country','الدولة') }: {it.get('country')}")
-    if (it.get('languages') or '').strip():
-        lines.append(f"   🗣 { _L(lang,'spub_field_languages','Languages','اللغات') }: {it.get('languages')}")
-    if (it.get('bio') or '').strip():
-        lines.append(f"   📝 {it.get('bio')}")
+
+def _profile_text(lang: str, it: dict) -> str:
+    name = html.escape(it.get("name", "") or "")
+    country = html.escape((it.get("country") or "").strip())
+    languages = html.escape((it.get("languages") or "").strip())
+    bio = html.escape((it.get("bio") or "").strip())
+
+    lines = [f"👤 <b>{name}</b> {'✅' if it.get('verified') else ''}"]
+    if country:
+        lines.append(f"🌍 { _L(lang,'spub_field_country','Country','الدولة') }: {country}")
+    if languages:
+        lines.append(f"🗣 { _L(lang,'spub_field_languages','Languages','اللغات') }: {languages}")
+    if bio:
+        lines.append(f"📝 {bio}")
+    lines.append("")
+    lines.append(_L(lang, "td_profile_hint",
+                    "Use the buttons below to contact this supplier.",
+                    "استخدم الأزرار بالأسفل للتواصل مع هذا المورد."))
     return "\n".join(lines)
+
+def _kb_profile(lang: str, it: dict, page: int) -> InlineKeyboardMarkup:
+    rows: list[list[InlineKeyboardButton]] = []
+
+    contact = (it.get("contact") or "").strip()
+    whatsapp = (it.get("whatsapp") or "").strip()
+    channel = (it.get("channel") or "").strip()
+
+    line: list[InlineKeyboardButton] = []
+    if contact:
+        if contact.startswith("@"):
+            line.append(InlineKeyboardButton(text=_L(lang, "td_contact", "Contact", "مراسلة"),
+                                             url=f"https://t.me/{contact[1:]}"))
+        else:
+            uid = it.get("user_id")
+            if uid:
+                line.append(InlineKeyboardButton(text=_L(lang, "td_contact", "Contact", "مراسلة"),
+                                                 url=f"tg://user?id={uid}"))
+    if whatsapp:
+        wurl = whatsapp if whatsapp.startswith("http") else f"https://wa.me/{whatsapp.lstrip('+').replace(' ', '')}"
+        line.append(InlineKeyboardButton(text=_L(lang, "td_whatsapp", "WhatsApp", "واتساب"), url=wurl))
+    if channel:
+        url = channel if channel.startswith("http") else f"https://t.me/{channel.lstrip('@')}"
+        line.append(InlineKeyboardButton(text=_L(lang, "td_channel", "Channel", "القناة"), url=url))
+    if line:
+        rows.append(line)
+
+    rows.append([InlineKeyboardButton(text=_L(lang, "td_back_list", "« Back to list", "« الرجوع للقائمة"),
+                                      callback_data=f"td:list:{page}")])
+    rows.append([InlineKeyboardButton(text=t(lang, "back_to_menu"), callback_data="back_to_menu")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 async def _render_public_list(target, lang: str, page: int):
     items = _read_public_items()
@@ -433,21 +484,22 @@ async def _render_public_list(target, lang: str, page: int):
     page = max(1, min(page, total_pages))
     view = items[(page-1)*PUB_PER_PAGE : page*PUB_PER_PAGE]
 
-    header = f"📇 <b>{_L(lang,'td_title','Trusted suppliers','الموردون الموثوقون')}</b>"
+    header = f"📇 <b>{_L(lang,'td_title','Trusted suppliers','الموردون الموثوقون')}</b>\n"
     if not items:
-        header += "\n\n" + _L(lang,"td_empty","No suppliers published yet.","لا يوجد موردون منشورون حالياً.")
+        header += "\n" + _L(lang,"td_empty","No suppliers published yet.","لا يوجد موردون منشورون حالياً.")
         text = header
     else:
-        header += "\n" + _L(lang,"td_hint","Tap a contact/WhatsApp/channel below to reach a supplier.","اضغط على مراسلة/واتساب/القناة للتواصل مع المورد.")
-        blocks = [ _format_item_block(lang, it, i+1+(page-1)*PUB_PER_PAGE) for i, it in enumerate(view) ]
-        text = header + "\n\n" + "\n\n".join(blocks)
+        header += _L(lang,"td_pick_supplier",
+                     "Choose a supplier from the buttons below to view their profile.",
+                     "اختر مورّدًا من الأزرار بالأسفل لعرض ملفه.")
+        text = header
 
     kb = _kb_public_list(lang, page, total_pages, view)
 
     if isinstance(target, Message):
-        return await target.answer(text, reply_markup=kb, disable_web_page_preview=True)
+        return await target.answer(text, reply_markup=kb, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
     else:
-        return await target.edit_text(text, reply_markup=kb, disable_web_page_preview=True)
+        return await target.edit_text(text, reply_markup=kb, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
 
 # زر الواجهة لفتح القائمة العامة
 @router.callback_query(F.data == "trusted_suppliers")
@@ -462,6 +514,28 @@ async def td_list_cb(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
     page = int(cb.data.split(":")[2])
     await _render_public_list(cb.message, lang, page)
+    await cb.answer()
+
+# عرض بروفايل مورد
+@router.callback_query(F.data.regexp(r"^td:view:\d+(:\d+)?$"))
+async def td_view_cb(cb: CallbackQuery):
+    lang = get_user_lang(cb.from_user.id) or "en"
+    parts = cb.data.split(":")
+    uid = int(parts[2])
+    page = int(parts[3]) if len(parts) >= 4 and parts[3].isdigit() else 1
+
+    items = _read_public_items()
+    it = next((x for x in items if int(x.get("user_id", 0)) == uid), None)
+    if not it:
+        return await cb.answer(_L(lang, "td_not_found", "Supplier not found.", "المورد غير موجود."), show_alert=True)
+
+    text = _profile_text(lang, it)
+    kb = _kb_profile(lang, it, page)
+
+    try:
+        await cb.message.edit_text(text, reply_markup=kb, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
+    except Exception:
+        await cb.message.answer(text, reply_markup=kb, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
     await cb.answer()
 
 # ================= إدارة الأدمن =================
@@ -520,15 +594,15 @@ async def _render_admin_list(target, lang: str, status: str, page: int):
     page = max(1, min(page, total_pages))
     page_items = all_items[(page-1)*PER_PAGE: (page)*PER_PAGE]
 
-    header = f"📇 <b>{t(lang,'sd_title')}</b>\n{t(lang,'sd_current_status')}: <b>{status}</b>"
+    header = f"📇 <b>{t(lang,'sd_title')}</b>\n{t(lang,'sd_current_status')}: <b>{html.escape(status)}</b>"
     if not all_items:
         header += f"\n\n{t(lang,'sd_no_results')}"
     kb = _kb_admin_list(lang, status, page, total_pages, page_items)
 
     if isinstance(target, Message):
-        return await target.answer(header, reply_markup=kb, disable_web_page_preview=True)
+        return await target.answer(header, reply_markup=kb, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
     else:
-        return await target.edit_text(header, reply_markup=kb, disable_web_page_preview=True)
+        return await target.edit_text(header, reply_markup=kb, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
 
 @router.message(Command("supdir"))
 async def cmd_supdir(msg: Message):
@@ -540,7 +614,7 @@ async def cmd_supdir(msg: Message):
 @router.callback_query(F.data.regexp(r"^sd:list:(published|pending|hidden|banned):\d+$"))
 async def sd_list_cb(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
-        return await cb.answer("Admins only.", show_alert=True)
+        return await cb.answer(_L("en","admins_only","Admins only.","خاص بالأدمن."), show_alert=True)
     lang = get_user_lang(cb.from_user.id) or "en"
     _, _, status, page_s = cb.data.split(":")
     await _render_admin_list(cb.message, lang, status, int(page_s))
@@ -549,7 +623,7 @@ async def sd_list_cb(cb: CallbackQuery):
 @router.callback_query(F.data.regexp(r"^sd:view:\d+$"))
 async def sd_view_cb(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
-        return await cb.answer("Admins only.", show_alert=True)
+        return await cb.answer(_L("en","admins_only","Admins only.","خاص بالأدمن."), show_alert=True)
     lang = get_user_lang(cb.from_user.id) or "en"
     uid = int(cb.data.split(":")[2])
 
@@ -568,14 +642,14 @@ async def sd_view_cb(cb: CallbackQuery):
     ],[
         InlineKeyboardButton(text="« Back", callback_data="sd:list:pending:1"),
     ]]
-    await cb.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=rows), disable_web_page_preview=True)
+    await cb.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=rows), parse_mode=ParseMode.HTML, disable_web_page_preview=True)
     await cb.answer()
 
 # إجراءات الأدمن
 @router.callback_query(F.data.regexp(r"^spubadm:(approve|hide|delete|ban|unban|demote):\d+$"))
 async def spub_admin_actions(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
-        return await cb.answer("Admins only.", show_alert=True)
+        return await cb.answer(_L("en","admins_only","Admins only.","خاص بالأدمن."), show_alert=True)
     _, action, uid_s = cb.data.split(":")
     uid = int(uid_s)
     lang = get_user_lang(cb.from_user.id) or "en"
@@ -628,7 +702,7 @@ async def spub_admin_actions(cb: CallbackQuery):
     if changed:
         _save_pub(uid, d)
         _rebuild_public_directory()
-        try: await cb.message.edit_text(_card(lang, d), disable_web_page_preview=True)
+        try: await cb.message.edit_text(_card(lang, d), parse_mode=ParseMode.HTML, disable_web_page_preview=True)
         except: pass
         try: await cb.message.edit_reply_markup(reply_markup=None)
         except: pass

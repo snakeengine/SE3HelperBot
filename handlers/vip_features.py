@@ -1,7 +1,7 @@
 # handlers/vip_features.py
 from __future__ import annotations
 
-import os, asyncio, time, json, datetime as dt, re, logging, random
+import os, asyncio, time, json, datetime as dt, re, logging, random, contextlib
 from typing import Optional, Tuple, List, Dict
 
 from aiogram import Router, F
@@ -22,7 +22,6 @@ def _lang(uid: int) -> str:
     return get_user_lang(uid) or "en"
 
 def _t_safe(lang: str, key: str, ar_fallback: str | None = None, en_fallback: str | None = None) -> str:
-    """يحاول t(lang,key). عند الفشل يرجع النص وفق اللغة."""
     try:
         s = t(lang, key)
         if isinstance(s, str) and s.strip():
@@ -59,7 +58,6 @@ _SNAKE_ONLY = os.getenv("SNAKE_ONLY", "0").strip() not in ("0", "false", "False"
 _SNAKE_PATTERNS = [r"com\.snake\.[A-Za-z0-9._\-]{2,60}", r"snake\-[A-Za-z0-9._\-]{2,60}", r"\d{4,10}"]
 _SNAKE_RX   = re.compile(r"^(?:%s)$" % "|".join(_SNAKE_PATTERNS))
 _GENERIC_RX = re.compile(r"^[A-Za-z0-9._\-]{3,80}$")
-
 def _valid_app_id(s: str) -> bool:
     s = (s or "").strip()
     if not s:
@@ -70,16 +68,15 @@ def _valid_app_id(s: str) -> bool:
 
 # ====================== إعدادات العدّاد ======================
 VIP_STATUS_REFRESH_SEC = max(1, int(os.getenv("VIP_STATUS_REFRESH_SEC") or os.getenv("VIP_CRON_INTERVAL_SEC", "5")))
-VIP_STATUS_MAX_MIN = max(1, int(os.getenv("VIP_STATUS_MAX_MIN", "120")))  # سقف زمني أمان
+VIP_STATUS_MAX_MIN = max(1, int(os.getenv("VIP_STATUS_MAX_MIN", "120")))
 
 # ====================== ملفات التخزين الخفيفة ======================
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
 os.makedirs(DATA_DIR, exist_ok=True)
 USER_REQ_FILE = os.path.join(DATA_DIR, "vip_user_requests.json")
 REPORT_FILE   = os.path.join(DATA_DIR, "report_sellers.json")
-KEYS_FILE     = os.path.join(DATA_DIR, "vip_keys.json")  # حفظ مفاتيح المستخدم
+KEYS_FILE     = os.path.join(DATA_DIR, "vip_keys.json")
 
-# ---------- JSON helpers ----------
 def _load_json_list(path: str) -> list[dict]:
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -119,7 +116,7 @@ def _update_request(ticket_id: str, **changes) -> bool:
     if changed: _save_json_list(USER_REQ_FILE, lst)
     return changed
 
-# ---------- Keys (save/manage) storage ----------
+# ---------- Keys storage ----------
 def _keys_load() -> dict:
     try:
         with open(KEYS_FILE, "r", encoding="utf-8") as f:
@@ -138,13 +135,11 @@ def _keys_save(d: dict) -> None:
     os.replace(tmp, KEYS_FILE)
 
 def _kid() -> str:
-    # قصير وآمن للاستخدام في callback
     return f"k{int(time.time())%100000:05d}{random.randint(0, 9999):04d}"
 
 def _keys_for(uid: int) -> list[dict]:
     d = _keys_load()
     arr = d.get(str(uid)) or []
-    # تأكد من وجود kid فريد
     seen = set()
     for it in arr:
         if "kid" not in it or not it["kid"]:
@@ -153,7 +148,6 @@ def _keys_for(uid: int) -> list[dict]:
                 nk = _kid()
             it["kid"] = nk
         seen.add(it["kid"])
-    # احفظ لو حصل تصحيح
     d[str(uid)] = arr
     _keys_save(d)
     return arr
@@ -231,6 +225,24 @@ def _now_iso() -> str:
 def _now_str() -> str:
     return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
+# ====================== تتبّع شاشة الحالة الحية ======================
+_LIVE_TASKS: Dict[int, asyncio.Task] = {}      # user_id -> task
+_LIVE_MSG_IDS: Dict[int, int] = {}             # user_id -> message_id
+
+async def _stop_live_status(uid: int, *, bot=None, chat_id: int | None = None, delete_msg: bool = False):
+    """يلغي حلقة حالة VIP لهذه المستخدم ويحذف رسالتها إن لزم."""
+    task = _LIVE_TASKS.pop(uid, None)
+    if task and not task.done():
+        task.cancel()
+        with contextlib.suppress(Exception):
+            await asyncio.sleep(0)  # تسليم ليلتقط CancelledError
+    mid = _LIVE_MSG_IDS.pop(uid, None)
+    if delete_msg and bot and chat_id and mid:
+        try:
+            await bot.delete_message(chat_id, mid)
+        except Exception:
+            pass
+
 # ====================== لوحات الأزرار ======================
 def _kb_back_to_vip(lang: str) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
@@ -250,7 +262,6 @@ def _kb_cancel(lang: str) -> InlineKeyboardMarkup:
 
 def _kb_vip_tools(lang: str):
     kb = InlineKeyboardBuilder()
-    # القسم 1: إجراءات سريعة
     kb.row(InlineKeyboardButton(text="⚡ " + _t_safe(lang, "vip.sec.quick", "إجراءات سريعة", "Quick actions"),
                                 callback_data="noop"))
     kb.row(
@@ -261,7 +272,6 @@ def _kb_vip_tools(lang: str):
     )
     kb.row(InlineKeyboardButton(text="💬 " + _t_safe(lang, "vip.tools.priority_support", "دعم فوري", "Priority support"),
                                 callback_data="viptool:support"))
-    # القسم 2: إدارة الاشتراك
     kb.row(InlineKeyboardButton(text="🪪 " + _t_safe(lang, "vip.sec.manage", "إدارة الاشتراك", "Manage"),
                                 callback_data="noop"))
     kb.row(
@@ -270,26 +280,22 @@ def _kb_vip_tools(lang: str):
         InlineKeyboardButton(text="🔁 " + _t_safe(lang, "vip.tools.transfer", "نقل الاشتراك", "Transfer"),
                              callback_data="viptool:transfer"),
     )
-    # مفاتيح المستخدم
     kb.row(
         InlineKeyboardButton(text="💾 " + _t_safe(lang, "vip.keys.save_btn", "حفظ مفتاح/معرّف", "Save key/ID"),
                              callback_data="viptool:savekey"),
         InlineKeyboardButton(text="🔐 " + _t_safe(lang, "vip.keys.my_btn", "مفاتيحي", "My keys"),
                              callback_data="viptool:mykeys"),
     )
-    # تجديد → إلى الموردين الموثوقين
     kb.row(InlineKeyboardButton(text="🔁 " + _t_safe(lang, "vip.renew", "تجديد / ترقية", "Renew / Upgrade"),
                                 callback_data="viptool:renew"))
-    # القسم 3: الأمان والدعم
     kb.row(InlineKeyboardButton(text="🛡️ " + _t_safe(lang, "vip.sec.safety", "الأمان والدعم", "Safety & support"),
                                 callback_data="noop"))
     kb.row(
         InlineKeyboardButton(text="🛡️ " + _t_safe(lang, "vip.security", "حالة الأمان", "Security status"),
-                             callback_data="security_status:vip"),  # 👈 مهم: إضافة :vip
+                             callback_data="security_status:vip"),
         InlineKeyboardButton(text="🚩 " + _t_safe(lang, "vip.tools.report_seller", "الإبلاغ عن بائع", "Report a seller"),
                              callback_data="viptool:report_seller"),
     )
-    # رجوع
     kb.row(InlineKeyboardButton(text="⬅️ " + _t_safe(lang, "vip.back_to_menu", "رجوع للقائمة", "Back to menu"),
                                 callback_data="back_to_menu"))
     return kb.as_markup()
@@ -330,8 +336,6 @@ def _kb_utils(lang: str) -> InlineKeyboardMarkup:
                                 callback_data="vip:open_tools"))
     return kb.as_markup()
 
-
-
 # ====================== حالة الاشتراك (لايف) ======================
 def _fmt_left(secs: int) -> str:
     secs = max(0, int(secs))
@@ -364,50 +368,179 @@ async def _safe_edit_text(msg, text, **kwargs):
         raise
 
 async def _run_live_status(cb: CallbackQuery):
-    lang = _lang(cb.from_user.id)
-    meta = get_vip_meta(cb.from_user.id) or {}
+    """يشغل شاشة الحالة الحية مع تتبّع وإلغاء صحيحين."""
+    uid = cb.from_user.id
+    lang = _lang(uid)
+
+    # ألغِ أي جلسة حالة سابقة واحذف رسالتها
+    await _stop_live_status(uid, bot=cb.bot, chat_id=cb.message.chat.id, delete_msg=True)
+
+    meta = get_vip_meta(uid) or {}
     expiry_ts = meta.get("expiry_ts")
-    msg = await cb.message.answer(_status_text(lang, expiry_ts), parse_mode=ParseMode.HTML, reply_markup=_kb_back_to_vip(lang))
+    msg = await cb.message.answer(_status_text(lang, expiry_ts),
+                                  parse_mode=ParseMode.HTML,
+                                  reply_markup=_kb_back_to_vip(lang))
+
+    # سجّل المعرّف والمهمة
+    _LIVE_MSG_IDS[uid] = msg.message_id
+    # سنجعل هذه الدالة نفسها هي الحلقة؛ نسجّل المهمة الحالية ليمكن إلغاؤها من أزرار الرجوع
+    _LIVE_TASKS[uid] = asyncio.current_task()  # type: ignore
+
     max_loops = (VIP_STATUS_MAX_MIN * 60) // VIP_STATUS_REFRESH_SEC
     loops = 0
-    while True:
-        await asyncio.sleep(VIP_STATUS_REFRESH_SEC); loops += 1
-        if loops >= max_loops: break
-        if not is_vip(cb.from_user.id):
+    try:
+        while True:
+            await asyncio.sleep(VIP_STATUS_REFRESH_SEC); loops += 1
+            # توقّف إذا أُلغيت المهمة أو تغيّر الرسالة
+            if uid not in _LIVE_TASKS or _LIVE_MSG_IDS.get(uid) != msg.message_id:
+                break
+            if loops >= max_loops:
+                break
+
+            if not is_vip(uid):
+                try:
+                    await _safe_edit_text(msg,
+                        "👑 " + _t_safe(lang, "vip.tools.status_msg", "حالة اشتراكك:", "Your VIP status:") +
+                        "\n" + _t_safe(lang, "vip.status.not_vip", "لست VIP", "Not VIP"),
+                        parse_mode=ParseMode.HTML,
+                        reply_markup=_kb_back_to_vip(lang))
+                except Exception:
+                    pass
+                break
+
+            meta = get_vip_meta(uid) or {}
+            expiry_ts = meta.get("expiry_ts")
+            now = int(time.time())
+
+            if not isinstance(expiry_ts, int):
+                try:
+                    await _safe_edit_text(msg, _status_text(lang, None),
+                        parse_mode=ParseMode.HTML,
+                        reply_markup=_kb_back_to_vip(lang))
+                except Exception:
+                    pass
+                break
+
+            left = expiry_ts - now
+            if left <= 0:
+                try:
+                    await _safe_edit_text(msg, _status_text(lang, expiry_ts),
+                        parse_mode=ParseMode.HTML,
+                        reply_markup=_kb_back_to_vip(lang))
+                except Exception:
+                    pass
+                break
+
             try:
-                await _safe_edit_text(msg, "👑 " + _t_safe(lang, "vip.tools.status_msg", "حالة اشتراكك:", "Your VIP status:") + "\n" + _t_safe(lang, "vip.status.not_vip", "لست VIP", "Not VIP"), parse_mode=ParseMode.HTML, reply_markup=_kb_back_to_vip(lang))
-            except Exception: pass
-            break
-        meta = get_vip_meta(cb.from_user.id) or {}; expiry_ts = meta.get("expiry_ts"); now = int(time.time())
-        if not isinstance(expiry_ts, int):
-            try: await _safe_edit_text(msg, _status_text(lang, None), parse_mode=ParseMode.HTML, reply_markup=_kb_back_to_vip(lang))
-            except Exception: pass
-            break
+                await _safe_edit_text(msg, _status_text(lang, expiry_ts),
+                    parse_mode=ParseMode.HTML,
+                    reply_markup=_kb_back_to_vip(lang))
+            except Exception:
+                break
+    except asyncio.CancelledError:
+        # أُلغيت من زر الرجوع
+        pass
+    finally:
+        # نظّف فقط إذا ما زالت هذه الجلسة هي المسجّلة
+        if _LIVE_MSG_IDS.get(uid) == msg.message_id:
+            _LIVE_MSG_IDS.pop(uid, None)
+        _LIVE_TASKS.pop(uid, None)
+
+# ====================== بروفايل VIP (نص + أزرار) ======================
+def _vip_profile_text(lang: str, uid: int) -> str:
+    meta = get_vip_meta(uid) or {}
+    app_id = meta.get("app_id") or "-"
+    expiry_ts = meta.get("expiry_ts")
+    now = int(time.time())
+
+    if not is_vip(uid):
+        status = "🔴 " + _t_safe(lang, "vip.status.not_vip", "غير مُشترك", "Not VIP")
+        exp_line = ""
+    elif expiry_ts is None:
+        status = "🟢 " + _t_safe(lang, "vip.status.active", "نشط", "Active") + " • " + _t_safe(lang, "vip.status.permanent", "مدى الحياة", "Lifetime")
+        exp_line = ""
+    else:
         left = expiry_ts - now
         if left <= 0:
-            try: await _safe_edit_text(msg, _status_text(lang, expiry_ts), parse_mode=ParseMode.HTML, reply_markup=_kb_back_to_vip(lang))
-            except Exception: pass
-            break
-        try: await _safe_edit_text(msg, _status_text(lang, expiry_ts), parse_mode=ParseMode.HTML, reply_markup=_kb_back_to_vip(lang))
-        except Exception: break
+            status = "⚪ " + _t_safe(lang, "vip.status.expired", "منتهي", "Expired")
+            exp_line = ""
+        else:
+            status = "🟢 " + _t_safe(lang, "vip.status.active", "نشط", "Active") + f" • {_fmt_left(left)}"
+            exp_str = time.strftime("%H:%M:%S %d-%m-%Y", time.localtime(expiry_ts))
+            exp_line = f"\n🗓️ {_t_safe(lang, 'vip.expires_on', 'تاريخ الانتهاء', 'Expires on')}: <code>{exp_str}</code>"
+
+    keys_count = len(_keys_for(uid) or [])
+
+    title = _t_safe(lang, "vip.profile.title", "الملف الشخصي VIP", "VIP Profile")
+    id_lbl = _t_safe(lang, "vip.profile.id", "ID", "ID")
+    app_lbl = _t_safe(lang, "vip.profile.app_id", "معرّف التطبيق", "App ID")
+    st_lbl  = _t_safe(lang, "vip.profile.status", "الحالة", "Status")
+    keys_lbl = _t_safe(lang, "vip.profile.keys", "مفاتيحي", "My keys")
+
+    return (
+        f"👑 <b>{title}</b>\n"
+        f"—\n"
+        f"👤 {id_lbl}: <code>{uid}</code>\n"
+        f"🆔 {app_lbl}: <code>{app_id}</code>\n"
+        f"📶 {st_lbl}: {status}"
+        f"{exp_line}\n"
+        f"—\n"
+        f"🔐 {keys_lbl}: <b>{keys_count}</b>"
+    )
+
+def _kb_profile_actions(lang: str) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.row(InlineKeyboardButton(text="📅 " + _t_safe(lang, "vip.tools.status", "حالة الاشتراك", "Status"),
+                                callback_data="viptool:status"),
+           InlineKeyboardButton(text="🧰 " + _t_safe(lang, "vip.tools.utilities", "أدوات VIP", "Utilities"),
+                                callback_data="viptool:utils"))
+    kb.row(InlineKeyboardButton(text="💬 " + _t_safe(lang, "vip.tools.priority_support", "دعم فوري", "Priority support"),
+                                callback_data="viptool:support"))
+    kb.row(InlineKeyboardButton(text="🗂 " + _t_safe(lang, "vip.manage_ids", "إدارة المعرفات", "Manage IDs"),
+                                callback_data="viptool:manage_ids"),
+           InlineKeyboardButton(text="🔁 " + _t_safe(lang, "vip.tools.transfer", "نقل الاشتراك", "Transfer"),
+                                callback_data="viptool:transfer"))
+    kb.row(InlineKeyboardButton(text="💾 " + _t_safe(lang, "vip.keys.save_btn", "حفظ مفتاح/معرّف", "Save key/ID"),
+                                callback_data="viptool:savekey"),
+           InlineKeyboardButton(text="🔐 " + _t_safe(lang, "vip.keys.my_btn", "مفاتيحي", "My keys"),
+                                callback_data="viptool:mykeys"))
+    kb.row(InlineKeyboardButton(text="🔁 " + _t_safe(lang, "vip.renew", "تجديد / ترقية", "Renew / Upgrade"),
+                                callback_data="viptool:renew"))
+    kb.row(InlineKeyboardButton(text="🛡️ " + _t_safe(lang, "vip.security", "حالة الأمان", "Security status"),
+                                callback_data="security_status:vip"),
+           InlineKeyboardButton(text="🚩 " + _t_safe(lang, "vip.tools.report_seller", "الإبلاغ عن بائع", "Report a seller"),
+                                callback_data="viptool:report_seller"))
+    kb.row(InlineKeyboardButton(text="🏠 " + _t_safe(lang, "vip.back_to_menu", "رجوع للقائمة", "Back to menu"),
+                                callback_data="back_to_menu"))
+    return kb.as_markup()
 
 # ====================== فتح اللوحة الرئيسية ======================
 @router.callback_query(F.data.in_({"vip:open_tools", "vip_tools"}))
 async def open_vip_tools(cb: CallbackQuery):
+    # أوقف أي عدّاد حالة لايف
+    await _stop_live_status(cb.from_user.id, bot=cb.bot, chat_id=cb.message.chat.id, delete_msg=True)
+
     lang = _lang(cb.from_user.id)
     if not is_vip(cb.from_user.id):
-        return await cb.answer(_t_safe(lang, "vip.bad.not_vip", "هذه الميزة للمشتركين VIP فقط.", "VIP only."), show_alert=True)
-    title = "👑 " + _t_safe(lang, "vip.tools.title", "أدوات VIP", "VIP Tools")
-    desc  = _t_safe(lang, "vip.tools.desc", "أدوات خاصة ومميزات الوصول المبكر.", "Exclusive tools & early access.")
+        return await cb.answer(
+            _t_safe(lang, "vip.bad.not_vip", "هذه الميزة للمشتركين VIP فقط.", "VIP only."),
+            show_alert=True
+        )
+    profile_text = _vip_profile_text(lang, cb.from_user.id)
     try:
-        await cb.message.edit_text(f"<b>{title}</b>\n{desc}", reply_markup=_kb_vip_tools(lang), parse_mode=ParseMode.HTML)
+        await cb.message.edit_text(profile_text,
+                                   reply_markup=_kb_profile_actions(lang),
+                                   parse_mode=ParseMode.HTML)
     except TelegramBadRequest:
-        await cb.message.answer(f"<b>{title}</b>\n{desc}", reply_markup=_kb_vip_tools(lang), parse_mode=ParseMode.HTML)
+        await cb.message.answer(profile_text,
+                                reply_markup=_kb_profile_actions(lang),
+                                parse_mode=ParseMode.HTML)
     await cb.answer()
 
 # ====================== أدوات بسيطة ======================
 @router.callback_query(F.data == "viptool:support")
 async def vip_support(cb: CallbackQuery):
+    await _stop_live_status(cb.from_user.id, bot=cb.bot, chat_id=cb.message.chat.id, delete_msg=True)
     lang = _lang(cb.from_user.id)
     if not is_vip(cb.from_user.id):
         return await cb.answer(_t_safe(lang, "vip.bad.not_vip",
@@ -417,7 +550,6 @@ async def vip_support(cb: CallbackQuery):
     text = "💬 " + _t_safe(lang, "vip.tools.support_msg",
                            "للدعم الفوري تواصل معنا وسيتم الرد بأولوية.",
                            "Contact support; you have priority.")
-    # ملاحظة: هنا اللوحة فيها زرين: «رجوع» إلى أدوات VIP و«رجوع للقائمة»
     await cb.message.edit_text(text,
                                parse_mode=ParseMode.HTML,
                                reply_markup=_kb_back_to_vip(lang))
@@ -425,6 +557,7 @@ async def vip_support(cb: CallbackQuery):
 
 @router.callback_query(F.data == "viptool:utils")
 async def vip_utils(cb: CallbackQuery):
+    await _stop_live_status(cb.from_user.id, bot=cb.bot, chat_id=cb.message.chat.id, delete_msg=True)
     lang = _lang(cb.from_user.id)
     if not is_vip(cb.from_user.id):
         return await cb.answer(
@@ -439,6 +572,7 @@ async def vip_utils(cb: CallbackQuery):
 
 @router.callback_query(F.data == "viptool:util:fix_perms")
 async def util_fix_perms(cb: CallbackQuery):
+    await _stop_live_status(cb.from_user.id, bot=cb.bot, chat_id=cb.message.chat.id, delete_msg=False)
     lang = _lang(cb.from_user.id)
     txt = _t_safe(
         lang, "vip.utils.fix_perms_text",
@@ -450,6 +584,7 @@ async def util_fix_perms(cb: CallbackQuery):
 
 @router.callback_query(F.data == "viptool:util:block_updates")
 async def util_block_updates(cb: CallbackQuery):
+    await _stop_live_status(cb.from_user.id, bot=cb.bot, chat_id=cb.message.chat.id, delete_msg=False)
     lang = _lang(cb.from_user.id)
     txt = _t_safe(
         lang, "vip.utils.block_updates_text",
@@ -461,6 +596,7 @@ async def util_block_updates(cb: CallbackQuery):
 
 @router.callback_query(F.data == "viptool:util:temp_id")
 async def util_temp_id(cb: CallbackQuery):
+    await _stop_live_status(cb.from_user.id, bot=cb.bot, chat_id=cb.message.chat.id, delete_msg=False)
     lang = _lang(cb.from_user.id)
     rid = f"snake-temp-{random.randint(100000, 999999)}"
     await cb.message.edit_text(
@@ -474,6 +610,7 @@ async def util_temp_id(cb: CallbackQuery):
 
 @router.callback_query(F.data == "viptool:util:device_diag")
 async def util_device_diag(cb: CallbackQuery):
+    await _stop_live_status(cb.from_user.id, bot=cb.bot, chat_id=cb.message.chat.id, delete_msg=False)
     lang = _lang(cb.from_user.id)
     txt = _t_safe(
         lang, "vip.utils.device_diag_text",
@@ -483,16 +620,18 @@ async def util_device_diag(cb: CallbackQuery):
     await cb.message.edit_text("📋 " + txt, reply_markup=_kb_utils(lang))
     await cb.answer()
 
-
 @router.callback_query(F.data == "viptool:status")
 async def vip_status(cb: CallbackQuery):
     lang = _lang(cb.from_user.id)
     if not is_vip(cb.from_user.id):
         return await cb.answer(_t_safe(lang, "vip.bad.not_vip", "هذه الميزة للمشتركين VIP فقط.", "VIP only."), show_alert=True)
-    await _run_live_status(cb); await cb.answer()
+    # تشغيل شاشة الحالة (تلغي القديمة تلقائيًا)
+    await _run_live_status(cb)
+    await cb.answer()
 
 @router.callback_query(F.data == "viptool:util:clean_cache")
 async def util_clean_cache(cb: CallbackQuery):
+    await _stop_live_status(cb.from_user.id, bot=cb.bot, chat_id=cb.message.chat.id, delete_msg=False)
     lang = _lang(cb.from_user.id)
     if not is_vip(cb.from_user.id):
         return await cb.answer(_t_safe(lang, "vip.bad.not_vip", "هذه الميزة للمشتركين VIP فقط.", "VIP only."), show_alert=True)
@@ -500,13 +639,14 @@ async def util_clean_cache(cb: CallbackQuery):
 
 @router.callback_query(F.data == "viptool:util:scan_apps")
 async def util_scan_apps(cb: CallbackQuery):
+    await _stop_live_status(cb.from_user.id, bot=cb.bot, chat_id=cb.message.chat.id, delete_msg=False)
     lang = _lang(cb.from_user.id)
     if not is_vip(cb.from_user.id):
         return await cb.answer(_t_safe(lang, "vip.bad.not_vip", "هذه الميزة للمشتركين VIP فقط.", "VIP only."), show_alert=True)
     await cb.answer(_t_safe(lang, "vip.tools.scan_started", "بدأ الفحص…", "Scan started…"), show_alert=True)
 
 @router.callback_query(F.data == "noop")
-async def _noop(cb: CallbackQuery):  # للعنوان الفرعي
+async def _noop(cb: CallbackQuery):
     await cb.answer()
 
 # ====================== إدارة المفاتيح (CRUD) ======================
@@ -540,6 +680,7 @@ def _kb_mykey_view(lang: str, kid: str) -> InlineKeyboardMarkup:
 
 @router.callback_query(F.data == "viptool:savekey")
 async def savekey_start(cb: CallbackQuery, state: FSMContext):
+    await _stop_live_status(cb.from_user.id, bot=cb.bot, chat_id=cb.message.chat.id, delete_msg=True)
     lang = _lang(cb.from_user.id)
     if not is_vip(cb.from_user.id):
         return await cb.answer(_t_safe(lang, "vip.bad.not_vip", "هذه الميزة للمشتركين VIP فقط.", "VIP only."), show_alert=True)
@@ -581,6 +722,7 @@ async def savekey_finish(msg: Message, state: FSMContext):
 
 @router.callback_query(F.data == "viptool:mykeys")
 async def mykeys_list(cb: CallbackQuery):
+    await _stop_live_status(cb.from_user.id, bot=cb.bot, chat_id=cb.message.chat.id, delete_msg=True)
     lang = _lang(cb.from_user.id)
     items = _keys_for(cb.from_user.id)
     if not items:
@@ -595,6 +737,7 @@ async def mykeys_list(cb: CallbackQuery):
 
 @router.callback_query(F.data.startswith("mykeys:view:"))
 async def mykeys_view(cb: CallbackQuery):
+    await _stop_live_status(cb.from_user.id, bot=cb.bot, chat_id=cb.message.chat.id, delete_msg=False)
     lang = _lang(cb.from_user.id)
     kid = cb.data.split(":")[2]
     it = _key_find(cb.from_user.id, kid)
@@ -610,6 +753,7 @@ async def mykeys_view(cb: CallbackQuery):
 
 @router.callback_query(F.data.startswith("mykeys:editnote:"))
 async def mykeys_editnote_start(cb: CallbackQuery, state: FSMContext):
+    await _stop_live_status(cb.from_user.id, bot=cb.bot, chat_id=cb.message.chat.id, delete_msg=False)
     lang = _lang(cb.from_user.id)
     kid = cb.data.split(":")[2]
     if not _key_find(cb.from_user.id, kid):
@@ -632,6 +776,7 @@ async def mykeys_editnote_apply(msg: Message, state: FSMContext):
 
 @router.callback_query(F.data.startswith("mykeys:del:"))
 async def mykeys_del_confirm(cb: CallbackQuery):
+    await _stop_live_status(cb.from_user.id, bot=cb.bot, chat_id=cb.message.chat.id, delete_msg=False)
     lang = _lang(cb.from_user.id)
     kid = cb.data.split(":")[2]
     if not _key_find(cb.from_user.id, kid):
@@ -646,6 +791,7 @@ async def mykeys_del_confirm(cb: CallbackQuery):
 
 @router.callback_query(F.data.startswith("mykeys:delc:"))
 async def mykeys_del_apply(cb: CallbackQuery):
+    await _stop_live_status(cb.from_user.id, bot=cb.bot, chat_id=cb.message.chat.id, delete_msg=False)
     lang = _lang(cb.from_user.id)
     kid = cb.data.split(":")[2]
     ok = _key_delete(cb.from_user.id, kid)
@@ -658,8 +804,16 @@ async def mykeys_del_apply(cb: CallbackQuery):
 @router.callback_query(F.data == CANCEL_CB)
 async def cancel_any(cb: CallbackQuery, state: FSMContext):
     await state.clear()
+    await _stop_live_status(cb.from_user.id, bot=cb.bot, chat_id=cb.message.chat.id, delete_msg=True)
     lang = _lang(cb.from_user.id)
     await cb.message.edit_text(_t_safe(lang, "cancelled", "تم الإلغاء.", "Cancelled."), reply_markup=_kb_vip_tools(lang))
+    await cb.answer()
+
+# إمساك زر "رجوع للقائمة" لإلغاء العدّاد قبل أن يعدّل الرسالة لاحقاً
+@router.callback_query(F.data == "back_to_menu")
+async def back_to_menu_cancel_loop(cb: CallbackQuery):
+    await _stop_live_status(cb.from_user.id, bot=cb.bot, chat_id=cb.message.chat.id, delete_msg=True)
+    # لا نعدّل الرسالة هنا؛ نترك فتح القائمة لمعالجتك الرئيسية
     await cb.answer()
 
 # ====================== نماذج تفاعلية (Manage/Transfer/Renew) ======================
@@ -679,7 +833,6 @@ def _admin_req_kb(req_type: str, ticket_id: str, user_id: int):
     kb.row(InlineKeyboardButton(text="👤 Open chat", url=f"tg://user?id={user_id}"))
     return kb.as_markup()
 
-# ---- 1) إدارة المعرّف ----
 class ManageIdFSM(StatesGroup):
     ask_seller = State()
     ask_pay_method = State()
@@ -695,6 +848,7 @@ class ManageIdFSM(StatesGroup):
 
 @router.callback_query(F.data == "viptool:manage_ids")
 async def manage_ids_start(cb: CallbackQuery, state: FSMContext):
+    await _stop_live_status(cb.from_user.id, bot=cb.bot, chat_id=cb.message.chat.id, delete_msg=True)
     lang = _lang(cb.from_user.id)
     if not is_vip(cb.from_user.id):
         return await cb.answer(_t_safe(lang, "vip.bad.not_vip", "هذه الميزة للمشتركين VIP فقط.", "VIP only."), show_alert=True)
@@ -771,8 +925,12 @@ async def mi_device(msg: Message, state: FSMContext):
 @router.message(ManageIdFSM.ask_proof)
 async def mi_proof(msg: Message, state: FSMContext):
     lang = _lang(msg.from_user.id)
-    photo_id, doc_id = _extract_proof(msg)
-    if not (photo_id or doc_id):
+    photo_id, doc_id = (None, None)
+    if msg.photo:
+        photo_id = msg.photo[-1].file_id
+    elif msg.document:
+        doc_id = msg.document.file_id
+    else:
         return await msg.reply(_t_safe(lang, "vip.common.send_proof", "أرسل الإثبات كصورة أو ملف.", "Please send proof as photo or document."))
     await state.update_data(proof_photo=photo_id, proof_doc=doc_id)
     await state.set_state(ManageIdFSM.ask_contact)
@@ -811,7 +969,7 @@ async def mi_finish(msg: Message, state: FSMContext):
     await msg.reply(_t_safe(lang, "vip.mi.done", "تم إرسال طلبك.\nالتذكرة: {ticket_id}\nالمعرّف الجديد: {new_app_id}", "Your request was submitted.\nTicket: {ticket_id}\nNew ID: {new_app_id}").format(ticket_id=ticket, new_app_id=item["new_app_id"]), parse_mode=ParseMode.HTML, reply_markup=_kb_back_to_vip(lang))
 
     admin = (
-        "🗂 <b>Manage ID Request</b>\n"
+        "🗂 <b>طلب نقل اشتراط ثعبان</b>\n"
         f"🎫 Ticket: <code>{ticket}</code>\n"
         f"👤 User: <code>{msg.from_user.id}</code>\n"
         f"• Seller: {item['seller']}\n"
@@ -825,7 +983,7 @@ async def mi_finish(msg: Message, state: FSMContext):
     )
     await _notify_admins(msg.bot, admin, reply_kb=_admin_req_kb("manage_id", ticket, msg.from_user.id), photo_id=item["proof_photo"], doc_id=item["proof_doc"])
 
-# ---- 2) نقل الاشتراك ----
+# ---- نقل الاشتراك ----
 class TransferFSM(StatesGroup):
     ask_seller = State()
     ask_target = State()
@@ -835,6 +993,7 @@ class TransferFSM(StatesGroup):
 
 @router.callback_query(F.data == "viptool:transfer")
 async def transfer_start(cb: CallbackQuery, state: FSMContext):
+    await _stop_live_status(cb.from_user.id, bot=cb.bot, chat_id=cb.message.chat.id, delete_msg=True)
     lang = _lang(cb.from_user.id)
     if not is_vip(cb.from_user.id):
         return await cb.answer(_t_safe(lang, "vip.bad.not_vip", "هذه الميزة للمشتركين VIP فقط.", "VIP only."), show_alert=True)
@@ -875,8 +1034,12 @@ async def transfer_appid(msg: Message, state: FSMContext):
 @router.message(TransferFSM.ask_proof)
 async def transfer_proof(msg: Message, state: FSMContext):
     lang = _lang(msg.from_user.id)
-    photo_id, doc_id = _extract_proof(msg)
-    if not (photo_id or doc_id):
+    photo_id, doc_id = (None, None)
+    if msg.photo:
+        photo_id = msg.photo[-1].file_id
+    elif msg.document:
+        doc_id = msg.document.file_id
+    else:
         return await msg.reply(_t_safe(lang, "vip.common.send_proof", "أرسل الإثبات كصورة أو ملف.", "Please send proof as photo or document."))
     await state.update_data(proof_photo=photo_id, proof_doc=doc_id)
     await state.set_state(TransferFSM.ask_note)
@@ -909,7 +1072,7 @@ async def transfer_finish(msg: Message, state: FSMContext):
     await msg.reply(_t_safe(lang, "vip.tx.done", "تم إرسال طلب النقل.\nالتذكرة: {ticket_id}", "Transfer request submitted.\nTicket: {ticket_id}").format(ticket_id=ticket), parse_mode=ParseMode.HTML, reply_markup=_kb_back_to_vip(lang))
 
     admin_text = (
-        "🔁 <b>Transfer Request</b>\n"
+        "🔁 <b>طلب نقل لوحه الى جهاز اخر</b>\n"
         f"🎫 Ticket: <code>{ticket}</code>\n"
         f"👤 From User: <code>{msg.from_user.id}</code>\n"
         f"• Seller: {item['seller']}\n"
@@ -921,11 +1084,11 @@ async def transfer_finish(msg: Message, state: FSMContext):
     )
     await _notify_admins(msg.bot, admin_text, reply_kb=_admin_req_kb("transfer", ticket, msg.from_user.id), photo_id=item["proof_photo"], doc_id=item["proof_doc"])
 
-# ---- 3) تجديد / ترقية → المورّدون الموثوقون ----
+# ---- تجديد / ترقية → المورّدون الموثوقون ----
 @router.callback_query(F.data == "viptool:renew")
 async def renew_redirect(cb: CallbackQuery):
+    await _stop_live_status(cb.from_user.id, bot=cb.bot, chat_id=cb.message.chat.id, delete_msg=False)
     lang = _lang(cb.from_user.id)
-    # شاشة صغيرة مع زر يفتح قائمة الموردين الموثوقين
     kb = InlineKeyboardBuilder()
     kb.row(InlineKeyboardButton(text="🏷️ " + _t_safe(lang, "btn_trusted_suppliers", "الموردون الموثوقون", "Trusted suppliers"), callback_data="trusted_suppliers"))
     kb.row(InlineKeyboardButton(text="⬅️ " + _t_safe(lang, "vip.back", "رجوع", "Back"), callback_data="vip:open_tools"))
@@ -1051,6 +1214,7 @@ def _is_admin(uid: int) -> bool:
 
 @router.callback_query(F.data.in_({"viptool:report_seller", "report_seller:start"}))
 async def report_seller_start(cb: CallbackQuery, state: FSMContext):
+    await _stop_live_status(cb.from_user.id, bot=cb.bot, chat_id=cb.message.chat.id, delete_msg=True)
     lang = _lang(cb.from_user.id)
     if not (os.getenv("ALLOW_REPORT_SELLER_NON_VIP") == "1" or is_vip(cb.from_user.id)):
         return await cb.answer(_t_safe(lang, "vip.bad.not_vip", "هذه الميزة للمشتركين VIP فقط.", "VIP only."), show_alert=True)
@@ -1086,23 +1250,34 @@ async def report_seller_finish(msg: Message, state: FSMContext):
     _append_json_list(REPORT_FILE, item); await state.clear()
 
     you = item["reporter"]
-    confirm = (_t_safe(lang, "report.confirm",
-               "✅ تم استلام بلاغك.\n🎫 رقم التذكرة: <code>{ticket}</code>\n👤 بياناتك: ID=<code>{uid}</code>{uname}\n🚩 البائع: <b>{seller}</b>\n📝 السبب: {reason}\n\n📩 تأكد أن رسائلك الخاصة مفعّلة.",
-               "✅ Report received.\n🎫 Ticket: <code>{ticket}</code>\n👤 You: ID=<code>{uid}</code>{uname}\n🚩 Seller: <b>{seller}</b>\n📝 Reason: {reason}\n\n📩 Ensure your private messages are open.")
-               .format(ticket=ticket_id, uid=you['id'], uname=((' | ' + you['username']) if you['username'] else ''), seller=seller, reason=reason or '-'))
+    confirm = (_t_safe(
+        lang, "report.confirm",
+        "✅ تم استلام بلاغك.\n🎫 رقم التذكرة: <code>{ticket}</code>\n👤 بياناتك: ID=<code>{uid}</code>{uname}\n🚩 البائع: <b>{seller}</b>\n📝 السبب: {reason}\n\n📩 تأكد أن رسائلك الخاصة مفعّلة.",
+        "✅ Report received.\n🎫 Ticket: <code>{ticket}</code>\n👤 You: ID=<code>{uid}</code>{uname}\n🚩 Seller: <b>{seller}</b>\n📝 Reason: {reason}\n\n📩 Ensure your private messages are open."
+    ).format(
+        ticket=ticket_id,
+        uid=you['id'],
+        uname=((' | ' + you['username']) if you['username'] else ''),
+        seller=seller,
+        reason=reason or '-'
+    ))
     await msg.reply(confirm, parse_mode=ParseMode.HTML, reply_markup=_kb_back_to_vip(lang))
 
-    admin_text = ("🚩 <b>Seller Report</b>\n"
-                  f"🎫 Ticket: <code>{ticket_id}</code>\n"
-                  f"• Seller: <b>{seller}</b>\n"
-                  f"• Reason: {reason or '-'}\n"
-                  "—\n"
-                  f"👤 From: <code>{you['id']}</code>{(' | ' + you['username']) if you['username'] else ''}\n"
-                  f"• Name: {you['first_name'] or ''} {you['last_name'] or ''}\n"
-                  f"• Link: <a href='{you['link']}'>Open chat</a>\n"
-                  f"• Lang: {you['lang'] or '-'}\n"
-                  f"• When: <code>{now_iso}</code>")
+    admin_text = (
+        f"🚩 <b>{_t_safe(lang, 'report.admin.title', 'بلاغ بائع', 'Seller Report')}</b>\n"
+        f"🎫 {_t_safe(lang, 'ticket', 'تذكرة', 'Ticket')}: <code>{ticket_id}</code>\n"
+        f"• {_t_safe(lang, 'report.admin.seller', 'البائع', 'Seller')}: <b>{seller}</b>\n"
+        f"• {_t_safe(lang, 'report.admin.reason', 'السبب', 'Reason')}: {reason or '-'}\n"
+        "—\n"
+        f"👤 {_t_safe(lang, 'report.admin.from', 'من', 'From')}: <code>{you['id']}</code>{(' | ' + you['username']) if you['username'] else ''}\n"
+        f"• {_t_safe(lang, 'report.admin.name', 'الاسم', 'Name')}: {you['first_name'] or ''} {you['last_name'] or ''}\n"
+        f"• {_t_safe(lang, 'report.admin.link', 'الرابط', 'Link')}: "
+        f"<a href='{you['link']}'>{_t_safe(lang, 'report.admin.open_chat', 'فتح المحادثة', 'Open chat')}</a>\n"
+        f"• {_t_safe(lang, 'report.admin.lang', 'اللغة', 'Language')}: {you['lang'] or '-'}\n"
+        f"• {_t_safe(lang, 'report.admin.when', 'الوقت', 'When')}: <code>{now_iso}</code>"
+    )
     await _notify_admins(msg.bot, admin_text)
+
 
 @router.callback_query(F.data.startswith("rs:reply:"))
 async def rs_admin_reply_start(cb: CallbackQuery, state: FSMContext):

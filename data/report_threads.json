@@ -1,18 +1,18 @@
 {
   "threads": {
+    "6403644551": {
+      "user_id": 6403644551,
+      "user_name": "SE Support",
+      "status": "open",
+      "last_text": "نعم",
+      "updated_at": "2025-08-24T20:22:43+00:00"
+    },
     "7360982123": {
       "user_id": 7360982123,
       "user_name": "Dev S.E2",
-      "status": "closed",
-      "last_text": "اهخعبثيلراهخغعاهخثي",
-      "updated_at": "2025-08-16T23:12:04+00:00"
-    },
-    "6403644551": {
-      "user_id": 6403644551,
-      "user_name": "6403644551",
-      "status": "closed",
-      "last_text": "Dev: Yes",
-      "updated_at": "2025-08-16T23:12:12+00:00"
+      "status": "open",
+      "last_text": "yfjtgjy",
+      "updated_at": "2025-08-25T19:34:22+00:00"
     }
   }
 }

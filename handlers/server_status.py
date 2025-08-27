@@ -75,17 +75,44 @@ def status_line(ok: bool, ok_txt: str, err_txt: str) -> str:
     return f"{icon(ok)} {ok_txt if ok else err_txt}"
 
 # ===== edit آمن لتفادي message is not modified =====
+# ===== edit آمن لتفادي أخطاء التعديل =====
 async def safe_edit(message: Message, text: str, kb: InlineKeyboardMarkup):
     try:
-        await message.edit_text(
+        # الرسالة نصية؟ عدّل النص
+        if message.text is not None:
+            return await message.edit_text(
+                text,
+                reply_markup=kb,
+                parse_mode="HTML",
+                disable_web_page_preview=True
+            )
+        # الرسالة وسائط مع caption؟ عدّل الكابشن
+        if message.caption is not None:
+            return await message.edit_caption(
+                caption=text,
+                reply_markup=kb,
+                parse_mode="HTML",
+            )
+        # لا نص ولا كابشن → أرسل رسالة جديدة
+        return await message.answer(
             text,
             reply_markup=kb,
             parse_mode="HTML",
             disable_web_page_preview=True
         )
     except TelegramBadRequest as e:
-        if "message is not modified" not in str(e).lower():
-            raise
+        low = str(e).lower()
+        if ("there is no text in the message to edit" in low
+            or "message can't be edited" in low
+            or "message is not modified" in low):
+            return await message.answer(
+                text,
+                reply_markup=kb,
+                parse_mode="HTML",
+                disable_web_page_preview=True
+            )
+        raise
+
 
 # ===== عرض المستخدم =====
 def build_user_text(lang: str) -> str:
