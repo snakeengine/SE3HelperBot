@@ -1,0 +1,11 @@
+{
+  "theme": "neo",
+  "density": "comfy",
+  "sep": "soft",
+  "icons": "classic",
+  "bullets": false,
+  "tip": false,
+  "version": false,
+  "users": false,
+  "alerts": false
+}

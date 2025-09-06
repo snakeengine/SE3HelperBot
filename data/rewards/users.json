@@ -1,0 +1,726 @@
+{
+  "7360982123": {
+    "uid": 7360982123,
+    "points": 10,
+    "streak": 0,
+    "last_claim_ts": 0,
+    "cooldown_until": 0,
+    "banned": false,
+    "suspicion": 0.0,
+    "vip_mult": 1.0,
+    "referrer": 0,
+    "refs_count": 0,
+    "created": 1756778236,
+    "updated": 1756778236,
+    "blocked": false,
+    "updated_at": 1757158993,
+    "last_actions": {
+      "daily_click": 1757115280,
+      "transfer": 1757112090,
+      "support_donate": 1757112116,
+      "buy_click": 1757112141,
+      "wal_tx": 1757118923,
+      "mkt_buy_vip1h": 1757158993
+    },
+    "daily_date": "2025-09-05"
+  },
+  "6403644551": {
+    "points": 590,
+    "blocked": false,
+    "created_at": 1757110760,
+    "updated_at": 1757159520,
+    "last_actions": {
+      "support_donate": 1757110903,
+      "daily_click": 1757120472,
+      "wal_tx": 1757156743,
+      "buy_click": 1757117816,
+      "mkt_buy_vip1h": 1757157900
+    },
+    "daily_date": "2025-09-06",
+    "warns": 0
+  },
+  "6189471726": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757112182,
+    "updated_at": 1757112182,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "7684460806": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757113194,
+    "updated_at": 1757113194,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "7053308632": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1757116138,
+    "updated_at": 1757116138,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0
+  },
+  "8344237891": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1757116156,
+    "updated_at": 1757116156,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0
+  },
+  "1704684634": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757116750,
+    "updated_at": 1757116750,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "7769601157": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757117952,
+    "updated_at": 1757117952,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "7703706733": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757119182,
+    "updated_at": 1757119182,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "7005292880": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757120546,
+    "updated_at": 1757120546,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "1703637762": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757122697,
+    "updated_at": 1757122697,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "6849740697": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757123320,
+    "updated_at": 1757123320,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "7812059391": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757124471,
+    "updated_at": 1757124471,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "7848325828": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757125130,
+    "updated_at": 1757125130,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "7255105615": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1757125519,
+    "updated_at": 1757125519,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0
+  },
+  "8093647716": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757125758,
+    "updated_at": 1757125758,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "6288668223": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757125898,
+    "updated_at": 1757125898,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "6091878603": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757126256,
+    "updated_at": 1757126256,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "7257252788": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757126408,
+    "updated_at": 1757126408,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "5447387027": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757127046,
+    "updated_at": 1757127046,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "885130618": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757127436,
+    "updated_at": 1757127436,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "6712560752": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1757127686,
+    "updated_at": 1757127686,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0
+  },
+  "8264885114": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1757135180,
+    "updated_at": 1757135180,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0
+  },
+  "5781060403": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757135180,
+    "updated_at": 1757136631,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "8427068779": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1757135180,
+    "updated_at": 1757135180,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0
+  },
+  "5645626461": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1757135274,
+    "updated_at": 1757135274,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0
+  },
+  "7307843155": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757135300,
+    "updated_at": 1757135300,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "7825704906": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757135300,
+    "updated_at": 1757135300,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "874807465": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757135300,
+    "updated_at": 1757135300,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "6445127197": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757135300,
+    "updated_at": 1757135300,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "5822784348": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757135300,
+    "updated_at": 1757135300,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "6200701705": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757135300,
+    "updated_at": 1757135300,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "6748440797": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757135300,
+    "updated_at": 1757135300,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "5684164855": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1757136455,
+    "updated_at": 1757136455,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0
+  },
+  "6881349626": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1757136566,
+    "updated_at": 1757136566,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0
+  },
+  "6366256277": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1757137091,
+    "updated_at": 1757137091,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0
+  },
+  "7315912427": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757137503,
+    "updated_at": 1757137503,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "6719049098": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1757137959,
+    "updated_at": 1757137959,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0
+  },
+  "5752690746": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757138002,
+    "updated_at": 1757138002,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "5817600732": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757138689,
+    "updated_at": 1757138689,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "1736447311": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1757139197,
+    "updated_at": 1757139197,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0
+  },
+  "6527083586": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1757139702,
+    "updated_at": 1757139702,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0
+  },
+  "5657858693": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757140380,
+    "updated_at": 1757140380,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "8433123504": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757140405,
+    "updated_at": 1757145892,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "6675788485": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757140540,
+    "updated_at": 1757140540,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "6605200472": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757141429,
+    "updated_at": 1757141429,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "7654765633": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1757141727,
+    "updated_at": 1757141727,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0
+  },
+  "1759423939": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757142014,
+    "updated_at": 1757142014,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "6730187092": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757142996,
+    "updated_at": 1757142996,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "1890751951": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757143717,
+    "updated_at": 1757143717,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "7656227807": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757144329,
+    "updated_at": 1757144329,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "6244270866": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757144712,
+    "updated_at": 1757144712,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "6348347677": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1757145310,
+    "updated_at": 1757145310,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0
+  },
+  "6552793746": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757145378,
+    "updated_at": 1757145378,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "7640238466": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757145891,
+    "updated_at": 1757145891,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "7082785082": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1757147361,
+    "updated_at": 1757147361,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0
+  },
+  "5976558083": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1757148104,
+    "updated_at": 1757148104,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0
+  },
+  "7509205409": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1757148560,
+    "updated_at": 1757148560,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0
+  },
+  "5554276071": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757149480,
+    "updated_at": 1757149480,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "7766896294": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757150475,
+    "updated_at": 1757150475,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "5571361817": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757150691,
+    "updated_at": 1757150691,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "5738059483": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757151145,
+    "updated_at": 1757151145,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "7509430153": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1757151537,
+    "updated_at": 1757151537,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0
+  },
+  "5685643753": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757152436,
+    "updated_at": 1757152436,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "6751839851": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757152708,
+    "updated_at": 1757152708,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "7808802382": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757152960,
+    "updated_at": 1757153380,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "2081229992": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757153722,
+    "updated_at": 1757153722,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "6629166814": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757153817,
+    "updated_at": 1757153817,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "1836388324": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1757153854,
+    "updated_at": 1757153854,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0
+  },
+  "7820669233": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1757154773,
+    "updated_at": 1757154773,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0
+  },
+  "5033973799": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757154809,
+    "updated_at": 1757154809,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "5904906824": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1757155456,
+    "updated_at": 1757155456,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0
+  },
+  "7154011459": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757155877,
+    "updated_at": 1757155877,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "6015984451": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1757156424,
+    "updated_at": 1757156424,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0
+  },
+  "6977408902": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757156472,
+    "updated_at": 1757156472,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "1105175853": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757157275,
+    "updated_at": 1757157275,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "7036333673": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757157275,
+    "updated_at": 1757157275,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  },
+  "8067597914": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1757157480,
+    "updated_at": 1757157480,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1
+  }
+}

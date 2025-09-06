@@ -112,7 +112,8 @@ async def _send_welcome_single_message(
     promoter_real: bool,
     vip_member: bool,
 ):
-    await render_home_card(target_msg)
+    # ⬅️ تمرير اللغة لضمان ثبات الواجهة
+    await render_home_card(target_msg, lang=lang)
 
 # ======================== /start ========================
 @router.message(CommandStart(), StateFilter(None))
@@ -151,7 +152,7 @@ async def _serve_home(message: Message):
         )
         return
 
-    # أعلام (موجودة للتوافق؛ البطاقة نفسها تقرأ الحالة داخليًا عند الحاجة)
+    # أعلام (موجودة للتوافق)
     try:
         vip_real = bool(_is_vip and _is_vip(user.user_id))
     except Exception:
@@ -163,14 +164,14 @@ async def _serve_home(message: Message):
 
     await _send_welcome_single_message(
         target_msg=message,
-        lang=user.lang,
+        lang=user.lang,   # ⬅️ مهم
         user=user,
         vip_real=vip_real,
         promoter_real=promoter_real,
         vip_member=vip_real,
     )
 
-    # خلفية: سجل المستخدم، قائمة معروفة، أوامر السلاش، إعلانات
+    # خلفية: سجل/قوائم/أوامر/إعلانات
     asyncio.create_task(asyncio.to_thread(log_user, message.from_user.id))
     asyncio.create_task(asyncio.to_thread(add_known_user, message.from_user.id))
     asyncio.create_task(update_user_commands(message.bot, message.chat.id, user.lang))
@@ -231,7 +232,7 @@ async def back_to_menu_handler(callback: CallbackQuery, state: FSMContext):
 
     await _send_welcome_single_message(
         target_msg=callback.message,
-        lang=user.lang,
+        lang=user.lang,   # ⬅️ مهم
         user=user,
         vip_real=vip_real,
         promoter_real=promoter_real,

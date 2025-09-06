@@ -1,0 +1,42 @@
+{
+  "users": {
+    "7360982123": {
+      "status": "none",
+      "rejects": 0,
+      "attempts": [],
+      "cooldown_until": 0,
+      "banned_until": 0
+    },
+    "6403644551": {
+      "status": "approved",
+      "rejects": 0,
+      "attempts": [
+        1756346722,
+        1756346771
+      ],
+      "cooldown_until": 0,
+      "banned_until": 0,
+      "submitted_at": 1756346771,
+      "name": "guiwerfyuiwerfgiuwerf",
+      "links": [
+        "uioghewrfuighouewrf"
+      ],
+      "telegram": {
+        "declared": "@jopgverfjopgerjpi",
+        "real": "@SnakeOfficial_Support",
+        "match": false
+      },
+      "proof": {
+        "photos": [
+          "AgACAgEAAxkBAAJR2mivuI2ZrLBuZOSm3F82cch7mxwcAALorzEbpS15RcI05GO-o1FZAQADAgADcwADNgQ",
+          "AgACAgEAAxkBAAJR2mivuI2ZrLBuZOSm3F82cch7mxwcAALorzEbpS15RcI05GO-o1FZAQADAgADbQADNgQ",
+          "AgACAgEAAxkBAAJR2mivuI2ZrLBuZOSm3F82cch7mxwcAALorzEbpS15RcI05GO-o1FZAQADAgADeAADNgQ"
+        ],
+        "videos": []
+      }
+    }
+  },
+  "settings": {
+    "daily_limit": 5
+  }
+}

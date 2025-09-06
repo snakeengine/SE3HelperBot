@@ -39,6 +39,7 @@ def _public_commands(lang: str) -> List[BotCommand]:
     return [
         BotCommand(command="start",     description=t(lang, "cmd_start")),
         BotCommand(command="sections",  description=t(lang, "cmd_sections")),
+        BotCommand(command="rewards",  description=t(lang, "cmd_rewards")),
         BotCommand(command="help",      description=t(lang, "cmd_help")),
         BotCommand(command="about",     description=t(lang, "cmd_about")),
         BotCommand(command="alerts",    description=t(lang, "cmd_alerts")),

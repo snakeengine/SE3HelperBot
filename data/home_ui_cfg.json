@@ -1,0 +1,11 @@
+{
+  "theme": "receipt",
+  "density": "compact",
+  "sep": "soft",
+  "icons": "modern",
+  "bullets": true,
+  "tip": true,
+  "version": true,
+  "users": true,
+  "alerts": true
+}

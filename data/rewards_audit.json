@@ -1,0 +1,22 @@
+[
+  {
+    "ts": 1756769934,
+    "event": "claim_fail",
+    "admin_id": 7360982123,
+    "uid": 7360982123,
+    "meta": {
+      "ans": 12
+    }
+  },
+  {
+    "ts": 1756769953,
+    "event": "claim_ok",
+    "admin_id": 7360982123,
+    "uid": 7360982123,
+    "meta": {
+      "gained": 10,
+      "streak": 1,
+      "points": 10
+    }
+  }
+]

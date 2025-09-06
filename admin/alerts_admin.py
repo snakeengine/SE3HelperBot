@@ -74,8 +74,13 @@ def _menu_kb(lang: str) -> InlineKeyboardMarkup:
 
 # =============== FSM للحالات ===============
 class AlStates(StatesGroup):
-    wait_ttl = State()      # انتظار إدخال الثواني للحذف التلقائي
-    # (الملفات الأخرى قد تستخدم حالات أخرى لاحقًا)
+    # للإرسال الفوري (TTL)
+    wait_ttl   = State()
+    # ⬇️ حالات مخصّصة للإعدادات حتى لا تتعارض مع VIP
+    wait_rate  = State()
+    wait_quiet = State()
+    wait_maxw  = State()
+    wait_actd  = State()
 
 # =============== فتح القائمة ===============
 @router.message(Command("push_update", "push_preview", "push_schedule", "push_stats"))
@@ -162,7 +167,6 @@ async def handle_ttl_send_now(msg: Message, state: FSMContext):
         ping_ttl=ttl,       # حذف رسالة التنبيه بعد N ثانية
         active_for=7*24*3600  # مدة بقاء الإشعار في الصندوق (أسبوع)
     )
-
 
     d["ttl"] = ttl; _save_draft(d)
     await state.clear()
@@ -345,66 +349,70 @@ async def al_cfg_toggle(cb: CallbackQuery):
     cfg = get_config(); set_config({"enabled": not bool(cfg.get("enabled"))})
     await cb.answer("OK"); await al_cfg(cb)
 
+# ⬇️ الحالات الجديدة المقيّدة — تمنع تعارض الرسائل الرقمية مع VIP
+
 @router.callback_query(F.data == "al:cfg:rate")
 async def al_cfg_rate(cb: CallbackQuery, state: FSMContext):
     if not _is_admin(cb.from_user.id):
         return await cb.answer("no", show_alert=True)
-    await state.set_state(AlStates.wait_ttl)  # لا نستخدمها هنا فعليًا، فقط لتعطيل هاندلرات أخرى إن اقتضى
+    await state.set_state(AlStates.wait_rate)
     lang = _L(cb.from_user.id)
     await _safe_edit(cb, t(lang, "alerts.settings.ask_rate_limit") or "أرسل السرعة (رسائل/ثانية): 1..1000")
     await cb.answer()
 
-@router.message(F.text.regexp(r"^\d{1,4}$") & F.from_user.func(lambda u: u.id in ADMIN_IDS))
-async def al_cfg_rate_set(msg: Message):
-    # ملائمة سريعة للسرعة من دون FSM صارم
+@router.message(AlStates.wait_rate, F.text.regexp(r"^\d{1,4}$") & F.from_user.func(lambda u: u.id in ADMIN_IDS))
+async def al_cfg_rate_set(msg: Message, state: FSMContext):
     lang = _L(msg.from_user.id)
-    try:
-        rate = int(msg.text)
-    except Exception:
-        return
-    set_config({"rate_limit": rate})
+    set_config({"rate_limit": int(msg.text)})
+    await state.clear()
     await msg.reply(t(lang, "alerts.settings.saved") or "تم الحفظ ✅")
 
 @router.callback_query(F.data == "al:cfg:quiet")
-async def al_cfg_quiet(cb: CallbackQuery):
+async def al_cfg_quiet(cb: CallbackQuery, state: FSMContext):
     if not _is_admin(cb.from_user.id):
         return await cb.answer("no", show_alert=True)
+    await state.set_state(AlStates.wait_quiet)
     lang = _L(cb.from_user.id)
     await _safe_edit(cb, (t(lang, "alerts.settings.ask_quiet_hours") or "أدخل ساعات الهدوء hh:mm-hh:mm") + "\n例: 22:00-08:00")
     await cb.answer()
 
-@router.message(F.text.regexp(r"^\d{2}:\d{2}-\d{2}:\d{2}$") & F.from_user.func(lambda u: u.id in ADMIN_IDS))
-async def al_cfg_quiet_set(msg: Message):
+@router.message(AlStates.wait_quiet, F.text.regexp(r"^\d{2}:\d{2}-\d{2}:\d{2}$") & F.from_user.func(lambda u: u.id in ADMIN_IDS))
+async def al_cfg_quiet_set(msg: Message, state: FSMContext):
     lang = _L(msg.from_user.id)
     set_config({"quiet_hours": msg.text.strip()})
+    await state.clear()
     await msg.reply(t(lang, "alerts.settings.saved") or "تم الحفظ ✅")
 
 @router.callback_query(F.data == "al:cfg:maxw")
-async def al_cfg_maxw(cb: CallbackQuery):
+async def al_cfg_maxw(cb: CallbackQuery, state: FSMContext):
     if not _is_admin(cb.from_user.id):
         return await cb.answer("no", show_alert=True)
+    await state.set_state(AlStates.wait_maxw)
     lang = _L(cb.from_user.id)
     await _safe_edit(cb, t(lang, "alerts.settings.ask_max_per_week") or "أرسل الحد الأقصى في الأسبوع:")
     await cb.answer()
 
-@router.message(F.text.regexp(r"^\d{1,3}$") & F.from_user.func(lambda u: u.id in ADMIN_IDS))
-async def al_cfg_maxw_set(msg: Message):
+@router.message(AlStates.wait_maxw, F.text.regexp(r"^\d{1,3}$") & F.from_user.func(lambda u: u.id in ADMIN_IDS))
+async def al_cfg_maxw_set(msg: Message, state: FSMContext):
     lang = _L(msg.from_user.id)
     set_config({"max_per_week": int(msg.text)})
+    await state.clear()
     await msg.reply(t(lang, "alerts.settings.saved") or "تم الحفظ ✅")
 
 @router.callback_query(F.data == "al:cfg:actd")
-async def al_cfg_actd(cb: CallbackQuery):
+async def al_cfg_actd(cb: CallbackQuery, state: FSMContext):
     if not _is_admin(cb.from_user.id):
         return await cb.answer("no", show_alert=True)
+    await state.set_state(AlStates.wait_actd)
     lang = _L(cb.from_user.id)
     await _safe_edit(cb, t(lang, "alerts.settings.ask_active_days") or "أرسل عدد الأيام النشطة (استهداف المستخدمين خلال X يوم):")
     await cb.answer()
 
-@router.message(F.text.regexp(r"^\d{1,4}$") & F.from_user.func(lambda u: u.id in ADMIN_IDS))
-async def al_cfg_actd_set(msg: Message):
+@router.message(AlStates.wait_actd, F.text.regexp(r"^\d{1,4}$") & F.from_user.func(lambda u: u.id in ADMIN_IDS))
+async def al_cfg_actd_set(msg: Message, state: FSMContext):
     lang = _L(msg.from_user.id)
     set_config({"active_days": int(msg.text)})
+    await state.clear()
     await msg.reply(t(lang, "alerts.settings.saved") or "تم الحفظ ✅")
 
 # =============== إحصائيات / حذف / رجوع ===============

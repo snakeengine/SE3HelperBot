@@ -36,6 +36,7 @@ def _save(p: Path, obj):
         pass
 
 def tt(lang: str, key: str, fallback: str) -> str:
+    """ترجمة مع fallback آمن، متوافقة مع تطبيع t() في bot.py"""
     try:
         val = t(lang, key)
         if isinstance(val, str) and val.strip() and val != key:
@@ -53,9 +54,9 @@ ADMIN_SEEN_FILE   = DATA / "admin_last_seen.json"   # { admin_id: {...} } أو f
 ADMIN_ONLINE_TTL  = int(os.getenv("ADMIN_ONLINE_TTL", "600"))
 
 # جديد: مصادر “التقارير”
-RIN_THREADS_FILE        = DATA / "support_threads.json"     # موحّد مع report_inbox/report.py
-REPORT_BLOCKLIST_FILE   = DATA / "report_blocklist.json"    # بلوك لِست نظام البلاغات
-REPORT_SETTINGS_FILE    = DATA / "report_settings.json"     # (قديمة) تتضمن banned[]
+RIN_THREADS_FILE        = DATA / "support_threads.json"
+REPORT_BLOCKLIST_FILE   = DATA / "report_blocklist.json"
+REPORT_SETTINGS_FILE    = DATA / "report_settings.json"
 
 def _support_enabled() -> bool:
     return bool(_load(LIVE_CONFIG).get("enabled", True))
@@ -96,11 +97,6 @@ def _online_admins_count() -> int:
 
 # ====== عدّادات “التقارير — الوارد” ======
 def _rin_counts():
-    """
-    يُرجع (open_count, closed_count, blocked_count)
-    - open/closed من support_threads.json
-    - blocked من report_blocklist.json + banned[] القديمة للتوافق
-    """
     open_n = closed_n = 0
     try:
         d = _load(RIN_THREADS_FILE) or {}
@@ -195,6 +191,31 @@ async def _restore_default_bot_commands(bot):
         except Exception:
             pass
 
+# ===================== جوائز: إحصاءات سريعة =====================
+def _rwd_stats():
+    try:
+        p = Path("data") / "rewards_store.json"
+        if not p.exists():
+            return {"users": 0, "total_points": 0, "banned": 0}
+        d = json.loads(p.read_text(encoding="utf-8")) or {}
+        users = d.get("users") or {}
+        total_users = 0
+        total_points = 0
+        banned = 0
+        for uid, u in users.items():
+            if not isinstance(u, dict):
+                continue
+            total_users += 1
+            try:
+                total_points += int(u.get("points", 0))
+            except Exception:
+                pass
+            if u.get("banned"):
+                banned += 1
+        return {"users": total_users, "total_points": total_points, "banned": banned}
+    except Exception:
+        return {"users": 0, "total_points": 0, "banned": 0}
+
 # ===================== لوحات =====================
 def _kb_main(lang: str) -> InlineKeyboardMarkup:
     ver = ""
@@ -206,29 +227,24 @@ def _kb_main(lang: str) -> InlineKeyboardMarkup:
         except Exception:
             ver = ""
 
-    # عدّادات التقارير
     open_n, closed_n, blocked_n = _rin_counts()
-    inbox_badge   = f" {open_n}" if open_n else ""
+    inbox_badge = f" {open_n}" if open_n else ""
 
-    suppliers_reqs   = "📂 " + tt(lang, "admin_hub_btn_resapps", "طلبات الموردين")
-    suppliers_dir    = "📖 " + tt(lang, "admin_hub_btn_supdir", "دليل الموردين")
-    app_txt          = "📦 " + tt(lang, "admin_hub_btn_app", "التطبيق (APK)") + ver
-    security_txt     = "🛡️ " + tt(lang, "admin_hub_btn_security", "الأمن (الألعاب) • أدمن")
-
-    # زر موحّد للتقارير (يفتح قائمة فرعية)
-    reports_hub      = "📮 " + tt(lang, "admin_hub_btn_reports_hub", "التقارير") + inbox_badge
-    servers_inbox    = "📡 " + tt(lang, "admin_hub_btn_server", "السيرفرات — الوارد")
-
-    # === [NEW] زر الإشعارات
-    alerts_txt       = "🔔 " + tt(lang, "admin_hub_btn_alerts", "الإشعارات")
-
-    users_count      = "👥 " + tt(lang, "admin_hub_btn_users_count", "عدد المستخدمين")
-    promoters_txt    = "📣 " + tt(lang, "admin_hub_btn_promoters", "تحكم المروّجين")
-    maint_text       = "🛠️ " + tt(lang, "admin_hub_btn_maintenance", "وضع الصيانة")
-    live_text        = "💬 " + tt(lang, "admin.live.btn.panel", "الدردشة الحيّة")
-    bot_cmds_txt     = "🧹 " + tt(lang, "admin_hub_btn_botcmds", "أوامر البوت")
-    vip_admin_txt    = "👑 " + tt(lang, "admin_hub_btn_vip_admin", "إدارة VIP")
-    close_txt        = "❌ " + tt(lang, "admin_hub_btn_close", "إغلاق")
+    suppliers_reqs    = "📂 " + tt(lang, "admin_hub_btn_resapps", "طلبات الموردين")
+    suppliers_dir     = "📖 " + tt(lang, "admin_hub_btn_supdir", "دليل الموردين")
+    app_txt           = "📦 " + tt(lang, "admin_hub_btn_app", "التطبيق (APK)") + ver
+    security_txt      = "🛡️ " + tt(lang, "admin_hub_btn_security", "الأمن (الألعاب) • أدمن")
+    reports_hub       = "📮 " + tt(lang, "admin_hub_btn_reports_hub", "التقارير") + inbox_badge
+    servers_inbox     = "📡 " + tt(lang, "admin_hub_btn_server", "السيرفرات — الوارد")
+    alerts_txt        = "🔔 " + tt(lang, "admin_hub_btn_alerts", "الإشعارات")
+    users_count       = "👥 " + tt(lang, "admin_hub_btn_users_count", "عدد المستخدمين")
+    promoters_txt     = "📣 " + tt(lang, "admin_hub_btn_promoters", "تحكم المروّجين")
+    maint_text        = "🛠️ " + tt(lang, "admin_hub_btn_maintenance", "وضع الصيانة")
+    live_text         = "💬 " + tt(lang, "admin.live.btn.panel", "الدردشة الحيّة")
+    bot_cmds_txt      = "🧹 " + tt(lang, "admin_hub_btn_botcmds", "أوامر البوت")
+    vip_admin_txt     = "👑 " + tt(lang, "admin_hub_btn_vip_admin", "إدارة VIP")
+    rewards_admin_txt = "🏆 " + tt(lang, "admin_hub_btn_rewards_admin", "إدارة الجوائز")
+    close_txt         = "❌ " + tt(lang, "admin_hub_btn_close", "إغلاق")
 
     kb = InlineKeyboardBuilder()
     kb.row(
@@ -243,12 +259,13 @@ def _kb_main(lang: str) -> InlineKeyboardMarkup:
         InlineKeyboardButton(text=reports_hub,   callback_data="ah:reports"),
         InlineKeyboardButton(text=servers_inbox, callback_data="server_status:admin"),
     )
-    # === [NEW] صف الإشعارات
     kb.row(InlineKeyboardButton(text=alerts_txt, callback_data="ah:alerts"))
     kb.row(
         InlineKeyboardButton(text=users_count,   callback_data="ah:users_count"),
         InlineKeyboardButton(text=promoters_txt, callback_data="promadm:open"),
     )
+    # صف “إدارة الجوائز”
+    kb.row(InlineKeyboardButton(text=rewards_admin_txt, callback_data="ah:rewards"))
     kb.row(
         InlineKeyboardButton(text=maint_text, callback_data="maint:status"),
         InlineKeyboardButton(text=live_text,  callback_data="ah:live"),
@@ -266,11 +283,11 @@ def _kb_reports(lang: str) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.row(
         InlineKeyboardButton(text=f"📥 {tt(lang,'admin_hub_btn_reports_inbox','الوارد')} ({open_n})", callback_data="rin:open"),
-        InlineKeyboardButton(text=f"⚙️ {tt(lang,'admin_hub_btn_reports_settings','الإعدادات')}",   callback_data="ra:open"),
+        InlineKeyboardButton(text=f"⚙️ {tt(lang,'admin_hub_btn_reports_settings','الإعدادات')}",       callback_data="ra:open"),
     )
     kb.row(
         InlineKeyboardButton(text=f"🚫 {tt(lang,'admin_hub_btn_reports_banned','المحظورين')} ({blocked_n})", callback_data="ra:banned"),
-        InlineKeyboardButton(text=f"📊 {tt(lang,'admin_hub_btn_reports_stats','إحصاءات')}",        callback_data="ah:rstats"),
+        InlineKeyboardButton(text=f"📊 {tt(lang,'admin_hub_btn_reports_stats','إحصاءات')}",              callback_data="ah:rstats"),
     )
     kb.row(
         InlineKeyboardButton(text="🛠️ " + tt(lang,"admin_hub_btn_reports_shortcuts","اختصارات"), callback_data="ah:rshort"),
@@ -278,7 +295,7 @@ def _kb_reports(lang: str) -> InlineKeyboardMarkup:
     kb.row(InlineKeyboardButton(text="⬅️ " + tt(lang,"admin.back","رجوع"), callback_data="ah:menu"))
     return kb.as_markup()
 
-# === [NEW] قائمة الإشعارات: أزرار تستدعي callbacks من alerts_admin.py ===
+# === قائمة الإشعارات ===
 def _kb_alerts(lang: str) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text=tt(lang, "alerts.menu.edit", "✍️ تعديل النص"),        callback_data="al:edit")
@@ -296,160 +313,18 @@ def _kb_alerts(lang: str) -> InlineKeyboardMarkup:
     kb.adjust(2,2,2,2,2,1)
     return kb.as_markup()
 
-@router.callback_query(F.data == "ah:alerts")
-async def ah_alerts(cb: CallbackQuery):
-    if not _is_admin(cb.from_user.id):
-        l = get_user_lang(cb.from_user.id) or "en"
-        return await cb.answer(tt(l,"admins_only","للمشرفين فقط"), show_alert=True)
-    lang = get_user_lang(cb.from_user.id) or "en"
-    title = "🔔 " + tt(lang, "admin_hub_alerts_title", "إدارة الإشعارات")
-    desc  = tt(lang, "admin_hub_alerts_desc", "تحكم كامل: تعديل/معاينة/إرسال/جدولة/إلغاء/إعدادات.")
-    try:
-        await cb.message.edit_text(f"<b>{title}</b>\n{desc}",
-                                   reply_markup=_kb_alerts(lang),
-                                   disable_web_page_preview=True,
-                                   parse_mode=ParseMode.HTML)
-    except TelegramBadRequest as e:
-        if "message is not modified" not in str(e):
-            raise
-    await cb.answer()
-
-@router.callback_query(F.data == "ah:reports")
-async def ah_reports(cb: CallbackQuery):
-    if not _is_admin(cb.from_user.id):
-        l = get_user_lang(cb.from_user.id) or "en"
-        return await cb.answer(tt(l,"admins_only","للمشرفين فقط"), show_alert=True)
-    lang = get_user_lang(cb.from_user.id) or "en"
-    open_n, closed_n, blocked_n = _rin_counts()
-    text = (
-        f"📮 <b>{tt(lang,'admin_hub_reports_title','التقارير')}</b>\n"
-        f"{tt(lang,'admin_hub_reports_desc','إدارة البلاغات وخيوط الدعم:')}\n"
-        f"• {tt(lang,'admin_hub_reports_open','مفتوحة')}: <b>{open_n}</b>\n"
-        f"• {tt(lang,'admin_hub_reports_closed','مغلقة')}: <b>{closed_n}</b>\n"
-        f"• {tt(lang,'admin_hub_reports_blocked','محظورون')}: <b>{blocked_n}</b>"
-    )
-    try:
-        await cb.message.edit_text(text, reply_markup=_kb_reports(lang), parse_mode=ParseMode.HTML)
-    except TelegramBadRequest as e:
-        if "message is not modified" not in str(e):
-            raise
-    await cb.answer()
-
-@router.callback_query(F.data == "ah:rstats")
-async def ah_reports_stats(cb: CallbackQuery):
-    if not _is_admin(cb.from_user.id):
-        l = get_user_lang(cb.from_user.id) or "en"
-        return await cb.answer(tt(l,"admins_only","للمشرفين فقط"), show_alert=True)
-    lang = get_user_lang(cb.from_user.id) or "en"
-    open_n, closed_n, blocked_n = _rin_counts()
-    txt = (
-        f"📊 <b>{tt(lang,'admin_hub_reports_stats','إحصاءات التقارير')}</b>\n"
-        f"• {tt(lang,'admin_hub_reports_open','مفتوحة')}: <code>{open_n}</code>\n"
-        f"• {tt(lang,'admin_hub_reports_closed','مغلقة')}: <code>{closed_n}</code>\n"
-        f"• {tt(lang,'admin_hub_reports_blocked','محظورون')}: <code>{blocked_n}</code>\n"
-        f"{tt(lang,'admin_hub_reports_hint','استخدم الأزرار للتنقّل بين الوارد/الإعدادات/المحظورين.')}"
-    )
-    await cb.message.answer(txt, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
-    await cb.answer("✅")
-
-@router.callback_query(F.data == "ah:rshort")
-async def ah_reports_shortcuts(cb: CallbackQuery):
-    if not _is_admin(cb.from_user.id):
-        l = get_user_lang(cb.from_user.id) or "en"
-        return await cb.answer(tt(l,"admins_only","للمشرفين فقط"), show_alert=True)
-    lang = get_user_lang(cb.from_user.id) or "en"
-    text = (
-        "🛠️ <b>" + tt(lang,"admin_hub_reports_shortcuts","اختصارات التقارير") + "</b>\n"
-        "<code>/report</code> — " + tt(lang,"admin.cmds.tip.report","فتح بلاغ دعم") + "\n"
-        "<code>/rinfo &lt;uid&gt;</code> — معلومات المستخدم/الحظر/الجلسة\n"
-        "<code>/rban &lt;uid&gt; &lt;hours|perm&gt;</code> — حظر مؤقّت/دائم\n"
-        "<code>/runban &lt;uid&gt;</code> — رفع الحظر"
-    )
-    await cb.message.answer(text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
-    await cb.answer("✅")
-
-def _kb_cmds(lang: str) -> InlineKeyboardMarkup:
+# === [NEW] لوحة فرعية لإدارة الجوائز
+def _kb_rewards_admin(lang: str, me_uid: int) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.row(
-        InlineKeyboardButton(text=tt(lang, "admin.cmds.vipadm", "/vipadm"), callback_data="ahc:send:/vipadm"),
-        InlineKeyboardButton(text="/vip",        callback_data="ahc:send:/vip"),
-        InlineKeyboardButton(text="/vip_status", callback_data="ahc:send:/vip_status"),
-        InlineKeyboardButton(text="📣 " + tt(lang, "promadm.btn.open", "إدارة المروّجين"), callback_data="promadm:open"),
-    )
-    kb.row(
-        InlineKeyboardButton(text="/vip_track",  callback_data="ahc:send:/vip_track"),
-        InlineKeyboardButton(text="/report",     callback_data="ahc:send:/report"),
-    )
-    kb.row(
-        InlineKeyboardButton(text="/language",   callback_data="ahc:send:/language"),
-        InlineKeyboardButton(text="/setlang",    callback_data="ahc:send:/setlang"),
-    )
-    kb.row(InlineKeyboardButton(text="/apply_supplier", callback_data="ahc:send:/apply_supplier"))
-    kb.row(InlineKeyboardButton(text="📤 " + tt(lang, "admin.cmds.btn.send_all_slash", "إرسال كل أوامر السلاش"), callback_data="ahc:slash_all"))
-    kb.row(InlineKeyboardButton(text=tt(lang, "admin.back", "رجوع"), callback_data="ah:menu"))
-    return kb.as_markup()
-
-def _kb_bot_cmds(lang: str) -> InlineKeyboardMarkup:
-    kb = InlineKeyboardBuilder()
-    kb.row(
-        InlineKeyboardButton(text="🧹 " + tt(lang, "admin.botcmds.clean_now", "تنظيف فوري"), callback_data="ah:bot_cmds:clean"),
-        InlineKeyboardButton(text="↩️ " + tt(lang, "admin.botcmds.restore", "استعادة الأوامر"), callback_data="ah:bot_cmds:restore"),
-    )
-    kb.row(InlineKeyboardButton(text="⬅️ " + tt(lang, "admin.back", "رجوع"), callback_data="ah:menu"))
-    return kb.as_markup()
-
-def _kb_live_main(lang: str, admin_id: int) -> InlineKeyboardMarkup:
-    on = _support_enabled()
-    me_on = _admin_is_online(admin_id)
-    online_n = _online_admins_count()
-
-    kb = InlineKeyboardBuilder()
-    kb.row(
-        InlineKeyboardButton(
-            text=("🟢 " if on else "🔴 ") + (tt(lang, "admin.live.toggle_off", "إيقاف") if on else tt(lang, "admin.live.toggle_on", "تشغيل")),
-            callback_data="liveadm:toggle"
-        ),
-        InlineKeyboardButton(
-            text=("🛑 " + tt(lang, "admin.live.avail.off", "إيقاف")) if me_on else ("✅ " + tt(lang, "admin.live.avail.on", "أنا متاح الآن")),
-            callback_data="liveadm:avail_off" if me_on else "liveadm:avail_on"
-        )
-    )
-    kb.row(
-        InlineKeyboardButton(text="📋 " + tt(lang, "admin.live.list", "قائمة الجلسات"), callback_data="liveadm:list"),
-        InlineKeyboardButton(text=f"👥 {tt(lang, 'admin.live.online_count', 'المتصلون')}: {online_n}", callback_data="ah:noop")
-    )
-    kb.row(InlineKeyboardButton(text="⬅️ " + tt(lang, "admin.back", "رجوع"), callback_data="ah:menu"))
-    return kb.as_markup()
-
-def _kb_live_block_durations(uid: int, lang: str) -> InlineKeyboardMarkup:
-    kb = InlineKeyboardBuilder()
-    kb.row(
-        InlineKeyboardButton(text="1h",   callback_data=f"liveadm:ban:{uid}:1"),
-        InlineKeyboardButton(text="24h",  callback_data=f"liveadm:ban:{uid}:24"),
-        InlineKeyboardButton(text="7d",   callback_data=f"liveadm:ban:{uid}:{24*7}"),
-        InlineKeyboardButton(text="30d",  callback_data=f"liveadm:ban:{uid}:{24*30}"),
-        InlineKeyboardButton(text="∞",    callback_data=f"liveadm:ban:{uid}:perm"),
-    )
-    kb.row(InlineKeyboardButton(text=tt(lang, "admin.back", "رجوع"), callback_data="liveadm:list"))
-    return kb.as_markup()
-
-def _kb_live_list(lang: str, waiting: list[int], active: list[tuple[int,int]]) -> InlineKeyboardMarkup:
-    kb = InlineKeyboardBuilder()
-    for uid in waiting[:5]:
-        kb.row(
-            InlineKeyboardButton(text=f"🟡 {uid}", callback_data="ah:noop"),
-            InlineKeyboardButton(text=tt(lang, "admin.live.btn.join", "انضمام"),  callback_data=f"live:accept:{uid}"),
-            InlineKeyboardButton(text=tt(lang, "admin.live.btn.end", "إنهاء"),     callback_data=f"live:decline:{uid}"),
-            InlineKeyboardButton(text=tt(lang, "admin.live.btn.block", "حظر"),    callback_data=f"liveadm:block:{uid}")
-        )
-    for uid, aid in active[:5]:
-        kb.row(
-            InlineKeyboardButton(text=f"🟢 {uid} · a:{aid}", callback_data="ah:noop"),
-            InlineKeyboardButton(text=tt(lang, "admin.live.btn.end", "إنهاء"),          callback_data=f"live:end:{uid}"),
-            InlineKeyboardButton(text=tt(lang, "admin.live.btn.block", "حظر"),          callback_data=f"liveadm:block:{uid}"),
-            InlineKeyboardButton(text=tt(lang, "admin.live.btn.unblock", "إلغاء حظر"), callback_data=f"liveadm:unblock:{uid}")
-        )
-    kb.row(InlineKeyboardButton(text="⬅️ " + tt(lang, "admin.back", "رجوع"), callback_data="ah:live"))
+    kb.button(text="🏆 " + tt(lang, "rwdadm.open_my_panel", "فتح لوحتي"),
+              callback_data=f"rwdadm:panel:{me_uid}")
+    kb.button(text="📋 " + tt(lang, "rwdadm.users_list", "قائمة المستخدمين"),
+              callback_data="rwdadm:list:p:0")
+    kb.button(text="🧰 " + tt(lang, "rwdadm.cmds", "أوامر سريعة"),
+              callback_data="ah:rwd:cmds")
+    kb.button(text="⬅️ " + tt(lang, "admin.back", "رجوع"),
+              callback_data="ah:menu")
+    kb.adjust(1,1,1,1)
     return kb.as_markup()
 
 # ===================== واجهات وتحكم =====================
@@ -560,6 +435,29 @@ async def liveadm_touch(cb: CallbackQuery):
             raise
     await cb.answer(tt(lang, "admin.live.touched", "تم تسجيل تواجدك"), show_alert=True)
 
+def _kb_live_main(lang: str, admin_id: int) -> InlineKeyboardMarkup:
+    on = _support_enabled()
+    me_on = _admin_is_online(admin_id)
+    online_n = _online_admins_count()
+
+    kb = InlineKeyboardBuilder()
+    kb.row(
+        InlineKeyboardButton(
+            text=("🟢 " if on else "🔴 ") + (tt(lang, "admin.live.toggle_off", "إيقاف") if on else tt(lang, "admin.live.toggle_on", "تشغيل")),
+            callback_data="liveadm:toggle"
+        ),
+        InlineKeyboardButton(
+            text=("🛑 " + tt(lang, "admin.live.avail.off", "إيقاف")) if me_on else ("✅ " + tt(lang, "admin.live.avail.on", "أنا متاح الآن")),
+            callback_data="liveadm:avail_off" if me_on else "liveadm:avail_on"
+        )
+    )
+    kb.row(
+        InlineKeyboardButton(text="📋 " + tt(lang, "admin.live.list", "قائمة الجلسات"), callback_data="liveadm:list"),
+        InlineKeyboardButton(text=f"👥 {tt(lang, 'admin.live.online_count', 'المتصلون')}: {online_n}", callback_data="ah:noop")
+    )
+    kb.row(InlineKeyboardButton(text="⬅️ " + tt(lang, "admin.back", "رجوع"), callback_data="ah:menu"))
+    return kb.as_markup()
+
 @router.callback_query(F.data == "liveadm:list")
 async def liveadm_list(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
@@ -590,6 +488,37 @@ async def liveadm_list(cb: CallbackQuery):
     )
     await cb.message.edit_text(text, reply_markup=_kb_live_list(lang, waiting, active), parse_mode=ParseMode.HTML)
     await cb.answer()
+
+def _kb_live_block_durations(uid: int, lang: str) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.row(
+        InlineKeyboardButton(text="1h",   callback_data=f"liveadm:ban:{uid}:1"),
+        InlineKeyboardButton(text="24h",  callback_data=f"liveadm:ban:{uid}:24"),
+        InlineKeyboardButton(text="7d",   callback_data=f"liveadm:ban:{uid}:{24*7}"),
+        InlineKeyboardButton(text="30d",  callback_data=f"liveadm:ban:{uid}:{24*30}"),
+        InlineKeyboardButton(text="∞",    callback_data=f"liveadm:ban:{uid}:perm"),
+    )
+    kb.row(InlineKeyboardButton(text=tt(lang, "admin.back", "رجوع"), callback_data="liveadm:list"))
+    return kb.as_markup()
+
+def _kb_live_list(lang: str, waiting: list[int], active: list[tuple[int,int]]) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    for uid in waiting[:5]:
+        kb.row(
+            InlineKeyboardButton(text=f"🟡 {uid}", callback_data="ah:noop"),
+            InlineKeyboardButton(text=tt(lang, "admin.live.btn.join", "انضمام"),  callback_data=f"live:accept:{uid}"),
+            InlineKeyboardButton(text=tt(lang, "admin.live.btn.end", "إنهاء"),     callback_data=f"live:decline:{uid}"),
+            InlineKeyboardButton(text=tt(lang, "admin.live.btn.block", "حظر"),    callback_data=f"liveadm:block:{uid}")
+        )
+    for uid, aid in active[:5]:
+        kb.row(
+            InlineKeyboardButton(text=f"🟢 {uid} · a:{aid}", callback_data="ah:noop"),
+            InlineKeyboardButton(text=tt(lang, "admin.live.btn.end", "إنهاء"),          callback_data=f"live:end:{uid}"),
+            InlineKeyboardButton(text=tt(lang, "admin.live.btn.block", "حظر"),          callback_data=f"liveadm:block:{uid}"),
+            InlineKeyboardButton(text=tt(lang, "admin.live.btn.unblock", "إلغاء حظر"), callback_data=f"liveadm:unblock:{uid}")
+        )
+    kb.row(InlineKeyboardButton(text="⬅️ " + tt(lang, "admin.back", "رجوع"), callback_data="ah:live"))
+    return kb.as_markup()
 
 @router.callback_query(F.data.startswith("liveadm:block:"))
 async def liveadm_block(cb: CallbackQuery):
@@ -650,6 +579,15 @@ async def ah_bot_cmds(cb: CallbackQuery):
                                parse_mode=ParseMode.HTML)
     await cb.answer()
 
+def _kb_bot_cmds(lang: str) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.row(
+        InlineKeyboardButton(text="🧹 " + tt(lang, "admin.botcmds.clean_now", "تنظيف فوري"), callback_data="ah:bot_cmds:clean"),
+        InlineKeyboardButton(text="↩️ " + tt(lang, "admin.botcmds.restore", "استعادة الأوامر"), callback_data="ah:bot_cmds:restore"),
+    )
+    kb.row(InlineKeyboardButton(text="⬅️ " + tt(lang, "admin.back", "رجوع"), callback_data="ah:menu"))
+    return kb.as_markup()
+
 @router.callback_query(F.data == "ah:bot_cmds:clean")
 async def ah_bot_cmds_clean(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
@@ -681,6 +619,27 @@ async def ah_cmds(cb: CallbackQuery):
                                parse_mode=ParseMode.HTML)
     await cb.answer()
 
+def _kb_cmds(lang: str) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.row(
+        InlineKeyboardButton(text=tt(lang, "admin.cmds.vipadm", "/vipadm"), callback_data="ahc:send:/vipadm"),
+        InlineKeyboardButton(text="/vip",        callback_data="ahc:send:/vip"),
+        InlineKeyboardButton(text="/vip_status", callback_data="ahc:send:/vip_status"),
+        InlineKeyboardButton(text="📣 " + tt(lang, "promadm.btn.open", "إدارة المروّجين"), callback_data="promadm:open"),
+    )
+    kb.row(
+        InlineKeyboardButton(text="/vip_track",  callback_data="ahc:send:/vip_track"),
+        InlineKeyboardButton(text="/report",     callback_data="ahc:send:/report"),
+    )
+    kb.row(
+        InlineKeyboardButton(text="/language",   callback_data="ahc:send:/language"),
+        InlineKeyboardButton(text="/setlang",    callback_data="ahc:send:/setlang"),
+    )
+    kb.row(InlineKeyboardButton(text="/apply_supplier", callback_data="ahc:send:/apply_supplier"))
+    kb.row(InlineKeyboardButton(text="📤 " + tt(lang, "admin.cmds.btn.send_all_slash", "إرسال كل أوامر السلاش"), callback_data="ahc:slash_all"))
+    kb.row(InlineKeyboardButton(text=tt(lang, "admin.back", "رجوع"), callback_data="ah:menu"))
+    return kb.as_markup()
+
 @router.callback_query(F.data == "ahc:slash_all")
 async def ahc_slash_all(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
@@ -689,6 +648,17 @@ async def ahc_slash_all(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
     text = (
         "🧰 <b>" + tt(lang, "admin.cmds.slash_title", "أوامر السلاش") + "</b>\n"
+        # جوائز (جديد)
+        "<code>/rewards_admin</code> — " + tt(lang, "rwdadm.cmds.rewards_admin", "لوحة إدارة الجوائز") + "\n"
+        "<code>/r_grant &lt;uid&gt; &lt;points&gt;</code> — " + tt(lang, "rwdadm.cmds.r_grant", "منح/خصم نقاط") + "\n"
+        "<code>/r_setpts &lt;uid&gt; &lt;points&gt;</code> — " + tt(lang, "rwdadm.cmds.setpts", "تعيين النقاط") + "\n"
+        "<code>/r_setstreak &lt;uid&gt; &lt;streak&gt;</code> — " + tt(lang, "rwdadm.cmds.setstreak", "تعيين السلسلة") + "\n"
+        "<code>/r_ban &lt;uid&gt;</code> — " + tt(lang, "rwdadm.cmds.ban", "حظر المستخدم") + "\n"
+        "<code>/r_unban &lt;uid&gt;</code> — " + tt(lang, "rwdadm.cmds.unban", "إلغاء الحظر") + "\n"
+        "<code>/r_del &lt;uid&gt;</code> — " + tt(lang, "rwdadm.cmds.del", "حذف المستخدم") + "\n"
+        "<code>/r_notify &lt;uid&gt; &lt;text&gt;</code> — " + tt(lang, "rwdadm.cmds.notify", "إشعار المستخدم") + "\n"
+        "\n"
+        # VIP وباقي الأوامر
         "<code>/vipadm</code> — " + tt(lang, "admin.cmds.tip.vipadm", "لوحة إدارة VIP") + "\n"
         "<code>/vip</code> — " + tt(lang, "admin.cmds.tip.vip", "لوحة المستخدم VIP") + "\n"
         "<code>/vip_status</code> — " + tt(lang, "admin.cmds.tip.vip_status", "حالةاشتراك VIP ") + "\n"
@@ -801,7 +771,7 @@ async def app_send(cb: CallbackQuery):
 async def app_info(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
         l = get_user_lang(cb.from_user.id) or "en"
-        return await cb.answer(tt(l, "admins_only", "للمشرفين فقط"), show_alert=True)
+        return await cb.answer(tt(lang, "admins_only", "للمشرفين فقط"), show_alert=True)
     lang = get_user_lang(cb.from_user.id) or "en"
     if not app_load_release or not app_info_text:
         return await cb.answer(tt(lang, "admin_hub_module_missing", "الوحدة غير متاحة"), show_alert=True)
@@ -816,7 +786,7 @@ async def app_info(cb: CallbackQuery):
 async def app_remove(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
         l = get_user_lang(cb.from_user.id) or "en"
-        return await cb.answer(tt(l, "admins_only", "للمشرفين فقط"), show_alert=True)
+        return await cb.answer(tt(lang, "admins_only", "للمشرفين فقط"), show_alert=True)
     lang = get_user_lang(cb.from_user.id) or "en"
     kb = InlineKeyboardBuilder()
     kb.button(text=tt(lang, "app.remove_confirm_yes", "نعم"), callback_data="app:rm_yes")
@@ -853,11 +823,144 @@ async def cmd_vipadm(msg: Message):
     ])
     await msg.reply(tt(lang, "admin.vipadm.open", "افتح لوحة إدارة VIP:"), reply_markup=kb)
 
+# ---- إدارة الجوائز (زر القائمة + دليل)
+@router.callback_query(F.data == "ah:rewards")
+async def ah_rewards(cb: CallbackQuery):
+    if not _is_admin(cb.from_user.id):
+        l = get_user_lang(cb.from_user.id) or "en"
+        return await cb.answer(tt(l, "admins_only", "للمشرفين فقط"), show_alert=True)
+
+    lang = get_user_lang(cb.from_user.id) or "en"
+    st = _rwd_stats() or {}
+    text = (
+        "🏆 <b>" + tt(lang, "admin_hub_rewards_title", "إدارة الجوائز") + "</b>\n" +
+        tt(lang, "admin_hub_rewards_desc", "لوحة تحكم كاملة لمنح/خصم/حظر/تصفير ومراجعة السجل.") + "\n" +
+        f"• {tt(lang,'rwdadm.stats.users','المستخدمون')}: <b>{st.get('users',0)}</b>\n" +
+        f"• {tt(lang,'rwdadm.stats.total','إجمالي النقاط')}: <b>{st.get('total_points',0)}</b>\n" +
+        f"• {tt(lang,'rwdadm.stats.banned','محظورون')}: <b>{st.get('banned',0)}</b>"
+    )
+    try:
+        await cb.message.edit_text(
+            text,
+            reply_markup=_kb_rewards_admin(lang, cb.from_user.id),
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True
+        )
+    except TelegramBadRequest as e:
+        if "message is not modified" not in str(e):
+            raise
+    await cb.answer()
+
+@router.callback_query(F.data == "ah:rwd:cmds")
+async def ah_rewards_cmds(cb: CallbackQuery):
+    if not _is_admin(cb.from_user.id):
+        l = get_user_lang(cb.from_user.id) or "en"
+        return await cb.answer(tt(l, "admins_only", "للمشرفين فقط"), show_alert=True)
+    lang = get_user_lang(cb.from_user.id) or "en"
+    txt = (
+        "🧰 <b>" + tt(lang, "rwdadm.cmds.title", "أوامر الجوائز (أدمن)") + "</b>\n"
+        "<code>/rewards_admin [uid]</code> — " + tt(lang,"rwdadm.cmds.rewards_admin","فتح لوحة إدارة الجوائز (اختياري uid)") + "\n"
+        "<code>/r_grant &lt;uid&gt; &lt;points&gt;</code> — " + tt(lang,"rwdadm.cmds.r_grant","منح/خصم نقاط") + "\n"
+        "<code>/r_setpts &lt;uid&gt; &lt;points&gt;</code> — " + tt(lang,"rwdadm.cmds.setpts","تعيين النقاط مباشرة") + "\n"
+        "<code>/r_setstreak &lt;uid&gt; &lt;streak&gt;</code> — " + tt(lang,"rwdadm.cmds.setstreak","تعيين السلسلة") + "\n"
+        "<code>/r_ban &lt;uid&gt;</code> — " + tt(lang,"rwdadm.cmds.ban","حظر المستخدم") + "\n"
+        "<code>/r_unban &lt;uid&gt;</code> — " + tt(lang,"rwdadm.cmds.unban","إلغاء الحظر") + "\n"
+        "<code>/r_del &lt;uid&gt;</code> — " + tt(lang,"rwdadm.cmds.del","حذف المستخدم من قاعدة الجوائز") + "\n"
+        "<code>/r_notify &lt;uid&gt; &lt;text&gt;</code> — " + tt(lang,"rwdadm.cmds.notify","إرسال رسالة للمستخدم") + "\n"
+        "\n" +
+        tt(lang,"rwdadm.cmds.note","ملاحظة: يمكنك أيضًا استخدام الأزرار داخل لوحة الجوائز بدون أوامر.")
+    )
+    kb = InlineKeyboardBuilder()
+    kb.button(text="/rewards_admin", callback_data="ahc:send:/rewards_admin")
+    kb.button(text="/r_grant",       callback_data="ahc:send:/r_grant 123456789 50")
+    kb.button(text="/r_setpts",      callback_data="ahc:send:/r_setpts 123456789 0")
+    kb.button(text="/r_setstreak",   callback_data="ahc:send:/r_setstreak 123456789 0")
+    kb.button(text="/r_ban",         callback_data="ahc:send:/r_ban 123456789")
+    kb.button(text="/r_unban",       callback_data="ahc:send:/r_unban 123456789")
+    kb.button(text="/r_del",         callback_data="ahc:send:/r_del 123456789")
+    kb.button(text="/r_notify",      callback_data="ahc:send:/r_notify 123456789 مرحبًا")
+    kb.button(text="⬅️ " + tt(lang, "admin.back", "رجوع"), callback_data="ah:rewards")
+    kb.adjust(2,2,2,2,1)
+    await cb.message.edit_text(txt, parse_mode=ParseMode.HTML, reply_markup=kb.as_markup())
+    await cb.answer()
+
+@router.callback_query(F.data == "ah:alerts")
+async def ah_alerts(cb: CallbackQuery):
+    if not _is_admin(cb.from_user.id):
+        l = get_user_lang(cb.from_user.id) or "en"
+        return await cb.answer(tt(l,"admins_only","للمشرفين فقط"), show_alert=True)
+    lang = get_user_lang(cb.from_user.id) or "en"
+    title = "🔔 " + tt(lang, "admin_hub_alerts_title", "إدارة الإشعارات")
+    desc  = tt(lang, "admin_hub_alerts_desc", "تحكم كامل: تعديل/معاينة/إرسال/جدولة/إلغاء/إعدادات.")
+    try:
+        await cb.message.edit_text(f"<b>{title}</b>\n{desc}",
+                                   reply_markup=_kb_alerts(lang),
+                                   disable_web_page_preview=True,
+                                   parse_mode=ParseMode.HTML)
+    except TelegramBadRequest as e:
+        if "message is not modified" not in str(e):
+            raise
+    await cb.answer()
+
+@router.callback_query(F.data == "ah:reports")
+async def ah_reports(cb: CallbackQuery):
+    if not _is_admin(cb.from_user.id):
+        l = get_user_lang(cb.from_user.id) or "en"
+        return await cb.answer(tt(l,"admins_only","للمشرفين فقط"), show_alert=True)
+    lang = get_user_lang(cb.from_user.id) or "en"
+    open_n, closed_n, blocked_n = _rin_counts()
+    text = (
+        f"📮 <b>{tt(lang,'admin_hub_reports_title','التقارير')}</b>\n"
+        f"{tt(lang,'admin_hub_reports_desc','إدارة البلاغات وخيوط الدعم:')}\n"
+        f"• {tt(lang,'admin_hub_reports_open','مفتوحة')}: <b>{open_n}</b>\n"
+        f"• {tt(lang,'admin_hub_reports_closed','مغلقة')}: <b>{closed_n}</b>\n"
+        f"• {tt(lang,'admin_hub_reports_blocked','محظورون')}: <b>{blocked_n}</b>"
+    )
+    try:
+        await cb.message.edit_text(text, reply_markup=_kb_reports(lang), parse_mode=ParseMode.HTML)
+    except TelegramBadRequest as e:
+        if "message is not modified" not in str(e):
+            raise
+    await cb.answer()
+
+@router.callback_query(F.data == "ah:rstats")
+async def ah_reports_stats(cb: CallbackQuery):
+    if not _is_admin(cb.from_user.id):
+        l = get_user_lang(cb.from_user.id) or "en"
+        return await cb.answer(tt(l,"admins_only","للمشرفين فقط"), show_alert=True)
+    lang = get_user_lang(cb.from_user.id) or "en"
+    open_n, closed_n, blocked_n = _rin_counts()
+    txt = (
+        f"📊 <b>{tt(lang,'admin_hub_reports_stats','إحصاءات التقارير')}</b>\n"
+        f"• {tt(lang,'admin_hub_reports_open','مفتوحة')}: <code>{open_n}</code>\n"
+        f"• {tt(lang,'admin_hub_reports_closed','مغلقة')}: <code>{closed_n}</code>\n"
+        f"• {tt(lang,'admin_hub_reports_blocked','محظورون')}: <code>{blocked_n}</code>\n"
+        f"{tt(lang,'admin_hub_reports_hint','استخدم الأزرار للتنقّل بين الوارد/الإعدادات/المحظورين.')}"
+    )
+    await cb.message.answer(txt, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
+    await cb.answer("✅")
+
+@router.callback_query(F.data == "ah:rshort")
+async def ah_reports_shortcuts(cb: CallbackQuery):
+    if not _is_admin(cb.from_user.id):
+        l = get_user_lang(cb.from_user.id) or "en"
+        return await cb.answer(tt(l,"admins_only","للمشرفين فقط"), show_alert=True)
+    lang = get_user_lang(cb.from_user.id) or "en"
+    text = (
+        "🛠️ <b>" + tt(lang,"admin_hub_reports_shortcuts","اختصارات التقارير") + "</b>\n"
+        "<code>/report</code> — " + tt(lang,"admin.cmds.tip.report","فتح بلاغ دعم") + "\n"
+        "<code>/rinfo &lt;uid&gt;</code> — معلومات المستخدم/الحظر/الجلسة\n"
+        "<code>/rban &lt;uid&gt; &lt;hours|perm&gt;</code> — حظر مؤقّت/دائم\n"
+        "<code>/runban &lt;uid&gt;</code> — رفع الحظر"
+    )
+    await cb.message.answer(text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
+    await cb.answer("✅")
+
 @router.callback_query(F.data == "ah:close")
 async def ah_close(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
         l = get_user_lang(cb.from_user.id) or "en"
-        return await cb.answer(tt(l, "admins_only", "للمشرفين فقط"), show_alert=True)
+        return await cb.answer(tt(lang, "admins_only", "للمشرفين فقط"), show_alert=True)
     lang = get_user_lang(cb.from_user.id) or "en"
     await cb.message.edit_text(tt(lang, "admin_closed", "تم الإغلاق"))
     await cb.answer()

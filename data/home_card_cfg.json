@@ -1,0 +1,11 @@
+{
+  "theme": "neo",
+  "density": "compact",
+  "sep": "soft",
+  "icons": "modern",
+  "show_bullets": true,
+  "show_tip": true,
+  "show_version": true,
+  "show_users": true,
+  "show_alerts": true
+}

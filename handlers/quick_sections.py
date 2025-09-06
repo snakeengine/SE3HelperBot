@@ -10,16 +10,26 @@ from aiogram.enums import ParseMode
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from lang import t, get_user_lang
 
+# خريطة callbacks (مع فولباكات آمنة)
 try:
     from handlers.start import CB
 except Exception:
     CB = {
-        "APP_DOWNLOAD": "app:download", "TOOLS": "tools",
-        "TRUSTED_SUPPLIERS": "trusted_suppliers", "CHECK_DEVICE": "check_device",
-        "VIP_OPEN": "vip:open", "VIP_PANEL": "vip:open_tools",
-        "SAFE_USAGE": "safe_usage:open", "SECURITY_STATUS": "security_status",
-        "SERVER_STATUS": "server_status", "LANG": "change_lang",
-        "RESELLER_INFO": "reseller_info", "PROMO_INFO": "prom:info", "PROMO_PANEL": "prom:panel",
+        "APP_DOWNLOAD": "app:download",
+        "TOOLS": "tools",
+        "TRUSTED_SUPPLIERS": "trusted_suppliers",
+        "CHECK_DEVICE": "check_device",
+        "VIP_OPEN": "vip:open",
+        "VIP_PANEL": "vip:open_tools",
+        "SAFE_USAGE": "safe_usage:open",
+        "SECURITY_STATUS": "security_status",
+        "SERVER_STATUS": "server_status",
+        "LANG": "change_lang",
+        "RESELLER_INFO": "reseller_info",
+        "PROMO_INFO": "prom:info",
+        "PROMO_PANEL": "prom:panel",
+        # أضفنا مكالمة للجوائز
+        "REWARDS": "rewards:open",
     }
 
 try:
@@ -61,60 +71,105 @@ def _section_inline_kb(section: str, lang: str, user_id: int) -> InlineKeyboardM
 
     if section == "user":
         kb.row(
-            InlineKeyboardButton(text=t(lang, "btn_download") or "📥 Download app", callback_data=CB["APP_DOWNLOAD"]),
-            InlineKeyboardButton(text=t(lang, "btn_game_tools") or "🎛️ Game tools", callback_data=CB["TOOLS"]),
+            InlineKeyboardButton(
+                text=t(lang, "btn_download") or "📥 Download app",
+                callback_data=CB.get("APP_DOWNLOAD", "app:download"),
+            ),
+            InlineKeyboardButton(
+                text=t(lang, "btn_game_tools") or "🎛️ Game tools",
+                callback_data=CB.get("TOOLS", "tools"),
+            ),
         )
         kb.row(
-            InlineKeyboardButton(text=t(lang, "btn_trusted_suppliers") or "🏷️ Trusted suppliers", callback_data=CB["TRUSTED_SUPPLIERS"]),
-            InlineKeyboardButton(text=t(lang, "btn_check_device") or "📱 Check device", callback_data=CB["CHECK_DEVICE"]),
+            InlineKeyboardButton(
+                text=t(lang, "btn_trusted_suppliers") or "🏷️ Trusted suppliers",
+                callback_data=CB.get("TRUSTED_SUPPLIERS", "trusted_suppliers"),
+            ),
+            InlineKeyboardButton(
+                text=t(lang, "btn_rewards") or "🎁 Rewards",
+                callback_data=CB.get("REWARDS", "rewards"),
+            ),
         )
 
     elif section == "vip":
         if _is_vip(user_id):
-            kb.row(InlineKeyboardButton(text=t(lang, "btn_vip_panel") or "👑 VIP panel", callback_data=CB["VIP_PANEL"]))
+            kb.row(InlineKeyboardButton(
+                text=t(lang, "btn_vip_panel") or "👑 VIP panel",
+                callback_data=CB.get("VIP_PANEL", "vip:open_tools"),
+            ))
         else:
-            kb.row(InlineKeyboardButton(text=t(lang, "btn_vip_subscribe") or "👑 Subscribe VIP", callback_data=CB["VIP_OPEN"]))
+            kb.row(InlineKeyboardButton(
+                text=t(lang, "btn_vip_subscribe") or "👑 Subscribe VIP",
+                callback_data=CB.get("VIP_OPEN", "vip:open"),
+            ))
 
     elif section == "bot":
         kb.row(
-            InlineKeyboardButton(text=t(lang, "btn_safe_usage") or "🧠 Safe usage", callback_data=CB["SAFE_USAGE"]),
-            InlineKeyboardButton(text=t(lang, "btn_security") or "🛡️ Security status", callback_data=CB["SECURITY_STATUS"]),
+            InlineKeyboardButton(
+                text=t(lang, "btn_safe_usage") or "🧠 Safe usage",
+                callback_data=CB.get("SAFE_USAGE", "safe_usage:open"),
+            ),
+            InlineKeyboardButton(
+                text=t(lang, "btn_security") or "🛡️ Security status",
+                callback_data=CB.get("SECURITY_STATUS", "security_status"),
+            ),
         )
         kb.row(
-            InlineKeyboardButton(text=t(lang, "btn_server_status") or "📊 Server status", callback_data=CB["SERVER_STATUS"]),
-            InlineKeyboardButton(text=t(lang, "btn_lang") or "🌐 Language", callback_data=CB["LANG"]),
+            InlineKeyboardButton(
+                text=t(lang, "btn_server_status") or "📊 Server status",
+                callback_data=CB.get("SERVER_STATUS", "server_status"),
+            ),
+            InlineKeyboardButton(
+                text=t(lang, "btn_lang") or "🌐 Language",
+                callback_data=CB.get("LANG", "change_lang"),
+            ),
         )
 
     elif section == "groups":
         kb.row(
             InlineKeyboardButton(
-                text=t(lang, "btn_promoter_panel") or "📣 Promoters panel", callback_data=CB.get("PROMO_PANEL", "prom:panel")
-            ) if _is_promoter(user_id) else
-            InlineKeyboardButton(text=t(lang, "btn_be_promoter") or "📣 How to be a promoter?", callback_data=CB.get("PROMO_INFO", "prom:info"))
+                text=t(lang, "btn_promoter_panel") or "📣 Promoters panel",
+                callback_data=CB.get("PROMO_PANEL", "prom:panel"),
+            ) if _is_promoter(user_id) else InlineKeyboardButton(
+                text=t(lang, "btn_be_promoter") or "📣 How to be a promoter?",
+                callback_data=CB.get("PROMO_INFO", "prom:info"),
+            )
         )
-        kb.row(InlineKeyboardButton(text=t(lang, "btn_be_supplier_long") or "❓ How to be a supplier?", callback_data=CB["RESELLER_INFO"]))
+        kb.row(InlineKeyboardButton(
+            text=t(lang, "btn_be_supplier_long") or "❓ How to be a supplier?",
+            callback_data=CB.get("RESELLER_INFO", "reseller_info"),
+        ))
 
     elif section == "channels":
-        kb.row(InlineKeyboardButton(text=t(lang, "btn_be_supplier_long") or "❓ How to be a supplier?", callback_data=CB["RESELLER_INFO"]))
-        kb.row(InlineKeyboardButton(text=t(lang, "btn_trusted_suppliers") or "🏷️ Trusted suppliers", callback_data=CB["TRUSTED_SUPPLIERS"]))
+        kb.row(InlineKeyboardButton(
+            text=t(lang, "btn_be_supplier_long") or "❓ How to be a supplier?",
+            callback_data=CB.get("RESELLER_INFO", "reseller_info"),
+        ))
+        kb.row(InlineKeyboardButton(
+            text=t(lang, "btn_trusted_suppliers") or "🏷️ Trusted suppliers",
+            callback_data=CB.get("TRUSTED_SUPPLIERS", "trusted_suppliers"),
+        ))
 
     elif section == "forums":
-        kb.row(InlineKeyboardButton(text=t(lang, "btn_safe_usage") or "🧠 Safe usage", callback_data=CB["SAFE_USAGE"]))
+        kb.row(InlineKeyboardButton(
+            text=t(lang, "btn_safe_usage") or "🧠 Safe usage",
+            callback_data=CB.get("SAFE_USAGE", "safe_usage:open"),
+        ))
 
     return kb.as_markup()
 
 def _normalize_tab(text: str, lang: str) -> str | None:
     mapping = {
-        "user": {"ar": ("المستخدم",), "en": ("User",)},
-        "vip": {"ar": ("VIP", "في اي بي", "ڤي آي پي"), "en": ("VIP",)},
-        "bot": {"ar": ("البوت",), "en": ("Bot",)},
-        "groups": {"ar": ("المجموعات",), "en": ("Groups",)},
-        "channels": {"ar": ("القنوات",), "en": ("Channels",)},
-        "forums": {"ar": ("المنتديات",), "en": ("Forums", "Topics")},
+        "user":    {"ar": ("المستخدم",), "en": ("User",)},
+        "vip":     {"ar": ("VIP", "في اي بي", "ڤي آي پي"), "en": ("VIP",)},
+        "bot":     {"ar": ("البوت",), "en": ("Bot",)},
+        "groups":  {"ar": ("المجموعات",), "en": ("Groups",)},
+        "channels":{"ar": ("القنوات",), "en": ("Channels",)},
+        "forums":  {"ar": ("المنتديات",), "en": ("Forums", "Topics")},
     }
     txt = (text or "").strip()
     for k, langs in mapping.items():
-        if any(w in txt for w in langs.get(lang, ())):
+        if any(w == txt or w in txt for w in langs.get(lang, ())):
             return k
     return None
 

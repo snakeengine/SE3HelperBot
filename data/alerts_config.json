@@ -1,6 +1,6 @@
 {
   "enabled": true,
-  "rate_limit": 20,
+  "rate_limit": 60,
   "quiet_hours": "22:00-08:00",
   "max_per_week": 2,
   "active_days": 120,

@@ -41,6 +41,16 @@ def _tr(lang: str, key: str, en: str, ar: str) -> str:
         return v
     return ar if (lang or "ar").startswith("ar") else en
 
+def _tr_fmt(lang: str, key: str, en: str, ar: str, **fmt) -> str:
+    """
+    مثل _tr لكن يدعم format(**fmt) بأمان حتى لو المفتاح ناقص.
+    """
+    base = _tr(lang, key, en, ar)
+    try:
+        return base.format(**fmt)
+    except Exception:
+        return base
+
 # ===== أدوات تخزين JSON =====
 def _load() -> list[dict]:
     try:
@@ -126,9 +136,11 @@ def _summary(lang: str, d: dict) -> str:
     return "\n".join(lines)
 
 def _fee_note(lang: str) -> str:
-    return _tr(lang, "supplier_fee_note",
-               "Note: There is a <b>$500</b> fee to activate your supplier account in-app (credited to your wallet for key/ID activations).",
-               "ملاحظة: توجد رسوم قدرها <b>500$</b> لتفعيل حساب المورد داخل التطبيق (تُضاف لمحفظتك لتفعيل المفاتيح/المعرّفات).")
+    return _tr(
+        lang, "supplier_fee_note",
+        "Note: There is a <b>$500</b> fee to activate your supplier account in-app (credited to your wallet for key/ID activations).",
+        "ملاحظة: توجد رسوم قدرها <b>500$</b> لتفعيل حساب المورد داخل التطبيق (تُضاف لمحفظتك لتفعيل المفاتيح/المعرّفات)."
+    )
 
 def _is_admin(user_id: int) -> bool:
     return user_id in ADMIN_IDS
@@ -187,17 +199,30 @@ async def open_apply(cb: CallbackQuery, state: FSMContext):
 
     blocked, until = _blocked(cb.from_user.id)
     if blocked:
-        await cb.message.edit_text(t(lang, "apply_blocked").format(days=COOLDOWN_DAYS, until=until), parse_mode=ParseMode.HTML)
+        await cb.message.edit_text(
+            _tr_fmt(
+                lang, "apply_blocked",
+                "You were recently rejected. You can re-apply after {days} day(s) (after: {until}).",
+                "تم رفض طلبك مؤخرًا. يمكنك إعادة التقديم بعد {days} يوم (بعد: {until}).",
+                days=COOLDOWN_DAYS, until=until
+            ),
+            parse_mode=ParseMode.HTML
+        )
         return await cb.answer()
 
     if _pending_count(cb.from_user.id) >= MAX_PENDING_PER_USER:
-        await cb.message.edit_text(t(lang, "apply_already_pending"), parse_mode=ParseMode.HTML)
+        await cb.message.edit_text(
+            _tr(lang, "apply_already_pending", "You already have a pending application.", "لديك طلب قيد المراجعة بالفعل."),
+            parse_mode=ParseMode.HTML
+        )
         return await cb.answer()
 
     await state.clear()
     await state.set_state(ApplyStates.name)
     await cb.message.edit_text(
-        f"{t(lang,'apply_intro')}\n\n{_fee_note(lang)}\n\n{t(lang,'ask_name')}",
+        f"{_tr(lang,'apply_intro','Supplier program application','طلب الانضمام لبرنامج الموردين')}\n\n"
+        f"{_fee_note(lang)}\n\n"
+        f"{_tr(lang,'ask_name','What is your name?','ما اسمك؟')}",
         reply_markup=_kb_cancel(lang),
         disable_web_page_preview=True,
         parse_mode=ParseMode.HTML
@@ -208,14 +233,21 @@ async def open_apply(cb: CallbackQuery, state: FSMContext):
 async def app_cancel(cb: CallbackQuery, state: FSMContext):
     lang = get_user_lang(cb.from_user.id) or "en"
     await state.clear()
-    await cb.message.edit_text(t(lang, "apply_cancelled"), parse_mode=ParseMode.HTML)
+    await cb.message.edit_text(
+        _tr(lang, "apply_cancelled", "Application cancelled.", "تم إلغاء الطلب."),
+        parse_mode=ParseMode.HTML
+    )
     await cb.answer()
 
 @router.callback_query(F.data == "app_restart")
 async def app_restart(cb: CallbackQuery, state: FSMContext):
     lang = get_user_lang(cb.from_user.id) or "en"
     await state.set_state(ApplyStates.name)
-    await cb.message.edit_text(t(lang, "ask_name"), reply_markup=_kb_cancel(lang), parse_mode=ParseMode.HTML)
+    await cb.message.edit_text(
+        _tr(lang, "ask_name", "What is your name?", "ما اسمك؟"),
+        reply_markup=_kb_cancel(lang),
+        parse_mode=ParseMode.HTML
+    )
     await cb.answer()
 
 # ===== الأسئلة =====
@@ -224,40 +256,40 @@ async def g_name(msg: Message, state: FSMContext):
     lang = get_user_lang(msg.from_user.id) or "en"
     v = (msg.text or "").strip()
     if not v:
-        return await msg.answer(t(lang, "retry_text"), parse_mode=ParseMode.HTML)
+        return await msg.answer(_tr(lang, "retry_text", "Please send text.", "من فضلك أرسل نصًا."), parse_mode=ParseMode.HTML)
     await state.update_data(name=v)
     await state.set_state(ApplyStates.country)
-    await msg.answer(t(lang, "ask_country"), parse_mode=ParseMode.HTML)
+    await msg.answer(_tr(lang, "ask_country", "Which country?", "ما هي دولتك؟"), parse_mode=ParseMode.HTML)
 
 @router.message(ApplyStates.country)
 async def g_country(msg: Message, state: FSMContext):
     lang = get_user_lang(msg.from_user.id) or "en"
     v = (msg.text or "").strip()
     if not v:
-        return await msg.answer(t(lang, "retry_text"), parse_mode=ParseMode.HTML)
+        return await msg.answer(_tr(lang, "retry_text", "Please send text.", "من فضلك أرسل نصًا."), parse_mode=ParseMode.HTML)
     await state.update_data(country=v)
     await state.set_state(ApplyStates.channel)
-    await msg.answer(t(lang, "ask_channel"), parse_mode=ParseMode.HTML)
+    await msg.answer(_tr(lang, "ask_channel", "Your channel / page link?", "رابط قناتك/صفحتك؟"), parse_mode=ParseMode.HTML)
 
 @router.message(ApplyStates.channel)
 async def g_channel(msg: Message, state: FSMContext):
     lang = get_user_lang(msg.from_user.id) or "en"
     ch = (msg.text or "").strip()
     if not ch or not ("t.me/" in ch or ch.startswith("@")):
-        return await msg.answer(t(lang, "retry_channel"), parse_mode=ParseMode.HTML)
+        return await msg.answer(_tr(lang, "retry_channel", "Please send a valid Telegram link or @username.", "أرسل رابط تيليجرام صحيحًا أو اسم مستخدم يبدأ بـ @."), parse_mode=ParseMode.HTML)
     await state.update_data(channel=ch)
     await state.set_state(ApplyStates.exp)
-    await msg.answer(t(lang, "ask_experience"), parse_mode=ParseMode.HTML)
+    await msg.answer(_tr(lang, "ask_experience", "Tell us about your experience.", "اخبرنا عن خبرتك."), parse_mode=ParseMode.HTML)
 
 @router.message(ApplyStates.exp)
 async def g_exp(msg: Message, state: FSMContext):
     lang = get_user_lang(msg.from_user.id) or "en"
     v = (msg.text or "").strip()
     if not v:
-        return await msg.answer(t(lang, "retry_text"), parse_mode=ParseMode.HTML)
+        return await msg.answer(_tr(lang, "retry_text", "Please send text.", "من فضلك أرسل نصًا."), parse_mode=ParseMode.HTML)
     await state.update_data(exp=v)
     await state.set_state(ApplyStates.vol)
-    await msg.answer(t(lang, "ask_volume"), parse_mode=ParseMode.HTML)
+    await msg.answer(_tr(lang, "ask_volume", "Monthly sales/volume (optional).", "حجم المبيعات الشهري (اختياري)."), parse_mode=ParseMode.HTML)
 
 @router.message(ApplyStates.vol)
 async def g_vol(msg: Message, state: FSMContext):
@@ -265,7 +297,7 @@ async def g_vol(msg: Message, state: FSMContext):
     v = (msg.text or "").strip()
     await state.update_data(vol=v)
     await state.set_state(ApplyStates.pref)
-    await msg.answer(t(lang, "ask_lang_pref"), parse_mode=ParseMode.HTML)
+    await msg.answer(_tr(lang, "ask_lang_pref", "Preferred language (ar/en).", "اللغة المفضلة (ar/en)."), parse_mode=ParseMode.HTML)
 
 @router.message(ApplyStates.pref)
 async def g_pref(msg: Message, state: FSMContext):
@@ -278,7 +310,7 @@ async def g_pref(msg: Message, state: FSMContext):
 
     await state.set_state(ApplyStates.confirm)
     await msg.answer(
-        t(current_lang, "apply_review") + "\n\n" + _summary(current_lang, d),
+        _tr(current_lang, "apply_review", "Please review your answers:", "راجع بياناتك:") + "\n\n" + _summary(current_lang, d),
         reply_markup=_kb_confirm(current_lang),
         disable_web_page_preview=True,
         parse_mode=ParseMode.HTML
@@ -303,17 +335,19 @@ async def app_submit(cb: CallbackQuery, state: FSMContext):
     _save(data)
 
     await state.clear()
-    await cb.message.edit_text(t(lang, "apply_submitted"), parse_mode=ParseMode.HTML)
+    await cb.message.edit_text(_tr(lang, "apply_submitted", "Your application has been submitted. We will contact you shortly.", "تم إرسال طلبك. سنتواصل معك قريبًا."), parse_mode=ParseMode.HTML)
 
     # إشعار كل أدمن بلغته
     for aid in ADMIN_IDS:
         try:
             al = get_user_lang(aid) or "en"
             title = _tr(al, "admin_new_app", "New supplier application", "طلب مورد جديد")
+            lbl_rec  = _tr(al, "admin_lbl_recid", "RecID", "المعرّف")
+            lbl_user = _tr(al, "admin_lbl_user",  "User",  "المستخدم")
             txt = (
                 f"🆕 <b>{title}</b>\n"
-                f"• RecID: <code>{rec['id']}</code>\n"
-                f"• User: <code>{rec['user_id']}</code> @{rec['username']}\n\n"
+                f"• {lbl_rec}: <code>{rec['id']}</code>\n"
+                f"• {lbl_user}: <code>{rec['user_id']}</code> @{rec['username']}\n\n"
                 + _summary(al, {
                     'name': rec.get('name',''),
                     'country': rec.get('country',''),
@@ -333,28 +367,29 @@ async def app_submit(cb: CallbackQuery, state: FSMContext):
 # ===== إجراءات الأدمن (اعتماد/رفض/طلب معلومات) =====
 @router.callback_query(F.data.regexp(r"^resapp:(approve|reject|ask):\d+$"))
 async def admin_actions(cb: CallbackQuery, state: FSMContext):
+    lang_admin = get_user_lang(cb.from_user.id) or "en"
     if not _is_admin(cb.from_user.id):
-        await cb.answer(t("en", "admins_only"), show_alert=True)
+        await cb.answer(_tr(lang_admin, "admins_only", "Admins only.", "خاص بالأدمن."), show_alert=True)
         return
 
     try:
         _, action, rec_id_s = cb.data.split(":")
         rec_id = int(rec_id_s)
     except Exception:
-        return await cb.answer(_tr(get_user_lang(cb.from_user.id) or "en", "bad_data", "Bad data", "بيانات غير صالحة"))
+        return await cb.answer(_tr(lang_admin, "bad_data", "Bad data", "بيانات غير صالحة"))
 
     i, rec, _ = _find_by_rec_id(rec_id)
     if rec is None:
-        return await cb.answer(t("en", "not_found"), show_alert=True)
+        return await cb.answer(_tr(lang_admin, "not_found", "Not found", "غير موجود"), show_alert=True)
 
-    admin_lang = get_user_lang(cb.from_user.id) or "en"
+    admin_lang = lang_admin
     user_lang  = rec.get("pref") or get_user_lang(rec["user_id"]) or "en"
 
     if action == "approve":
         if _update_status(rec_id, "approved"):
             # 1) إخطار المستخدم
             try:
-                await cb.message.bot.send_message(rec["user_id"], t(user_lang, "approve_message"), parse_mode=ParseMode.HTML)
+                await cb.message.bot.send_message(rec["user_id"], _tr(user_lang, "approve_message", "✅ Approved. Please complete payment to activate.", "✅ تم القبول. يرجى إكمال الدفع للتفعيل."), parse_mode=ParseMode.HTML)
             except Exception:
                 pass
             # 2) فتح شاشة الدفع
@@ -364,7 +399,7 @@ async def admin_actions(cb: CallbackQuery, state: FSMContext):
                 pass
             # 3) تنظيف لوحة الأدمن وتأكيد بلغة الأدمن
             await cb.message.edit_reply_markup(reply_markup=None)
-            await cb.message.answer(t(admin_lang, "approve_message_admin"), parse_mode=ParseMode.HTML)
+            await cb.message.answer(_tr(admin_lang, "approve_message_admin", "Approved and user notified.", "تم القبول وإبلاغ المستخدم."), parse_mode=ParseMode.HTML)
         return await cb.answer()
 
     if action == "reject":
@@ -376,24 +411,25 @@ async def admin_actions(cb: CallbackQuery, state: FSMContext):
                     logging.warning(f"set_supplier(False) failed for {rec['user_id']}: {e}")
 
             try:
-                await cb.message.bot.send_message(rec["user_id"], t(user_lang, "reject_message"), parse_mode=ParseMode.HTML)
+                await cb.message.bot.send_message(rec["user_id"], _tr(user_lang, "reject_message", "❌ Rejected. You can re-apply later.", "❌ تم الرفض. يمكنك التقديم لاحقًا."), parse_mode=ParseMode.HTML)
             except Exception:
                 pass
             await cb.message.edit_reply_markup(reply_markup=None)
-            await cb.message.answer(t(admin_lang, "reject_message_admin"), parse_mode=ParseMode.HTML)
+            await cb.message.answer(_tr(admin_lang, "reject_message_admin", "Rejected and user notified.", "تم الرفض وإبلاغ المستخدم."), parse_mode=ParseMode.HTML)
         return await cb.answer()
 
     if action == "ask":
         await state.update_data(target_uid=rec["user_id"], target_lang=user_lang)
         await state.set_state(AdminAsk.waiting_question)
-        await cb.message.answer(t(admin_lang, "admin_ask_prompt"), parse_mode=ParseMode.HTML)
+        await cb.message.answer(_tr(admin_lang, "admin_ask_prompt", "Send your question to forward to the user:", "أرسل سؤالك لإرساله للمستخدم:"), parse_mode=ParseMode.HTML)
         await cb.answer()
         return
 
 @router.message(AdminAsk.waiting_question)
 async def admin_send_question(msg: Message, state: FSMContext):
+    lang_admin = get_user_lang(msg.from_user.id) or "en"
     if not _is_admin(msg.from_user.id):
-        return await msg.answer(t("en", "admins_only"), parse_mode=ParseMode.HTML)
+        return await msg.answer(_tr(lang_admin, "admins_only", "Admins only.", "خاص بالأدمن."), parse_mode=ParseMode.HTML)
 
     data = await state.get_data()
     uid = data.get("target_uid")
@@ -402,18 +438,16 @@ async def admin_send_question(msg: Message, state: FSMContext):
 
     if not uid or not q:
         await state.clear()
-        al = get_user_lang(msg.from_user.id) or "en"
-        return await msg.answer(_tr(al, "cancelled", "Cancelled.", "تم الإلغاء."), parse_mode=ParseMode.HTML)
+        return await msg.answer(_tr(lang_admin, "cancelled", "Cancelled.", "تم الإلغاء."), parse_mode=ParseMode.HTML)
 
     try:
-        await msg.bot.send_message(uid, t(user_lang, "admin_ask_user").format(q=html.escape(q)), parse_mode=ParseMode.HTML)
+        await msg.bot.send_message(uid, _tr(user_lang, "admin_ask_user", "Admin asks: {q}", "سؤال من الأدمن: {q}").format(q=html.escape(q)), parse_mode=ParseMode.HTML)
     except Exception:
         pass
 
     await state.clear()
-    al = get_user_lang(msg.from_user.id) or "en"
-    done = t(al, "admin_done")
-    await msg.answer(done if done != "admin_done" else _tr(al, "admin_done_fallback", "Done.", "تم."), parse_mode=ParseMode.HTML)
+    done = t(lang_admin, "admin_done")
+    await msg.answer(done if (isinstance(done, str) and done.strip() and done != "admin_done") else _tr(lang_admin, "admin_done_fallback", "Done.", "تم."), parse_mode=ParseMode.HTML)
 
 # ====== لوحة إدارة الطلبات للأدمن ======
 PER_PAGE = 5
@@ -518,7 +552,7 @@ async def admin_list_cmd(msg: Message):
 @router.callback_query(F.data.regexp(r"^resapp:list:(pending|approved|blocked|unbanned):\d+$"))
 async def admin_list_cb(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
-        return await cb.answer(t("en", "admins_only"), show_alert=True)
+        return await cb.answer(_tr(get_user_lang(cb.from_user.id) or "en", "admins_only", "Admins only.", "خاص بالأدمن."), show_alert=True)
     lang = get_user_lang(cb.from_user.id) or "en"
     _, _, status, page_s = cb.data.split(":")
     await _render_list_message(cb.message, lang, status, int(page_s))
@@ -527,18 +561,21 @@ async def admin_list_cb(cb: CallbackQuery):
 @router.callback_query(F.data.regexp(r"^resapp:view:\d+$"))
 async def admin_view_cb(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
-        return await cb.answer(t("en", "admins_only"), show_alert=True)
+        return await cb.answer(_tr(get_user_lang(cb.from_user.id) or "en", "admins_only", "Admins only.", "خاص بالأدمن."), show_alert=True)
     lang = get_user_lang(cb.from_user.id) or "en"
     rec_id = int(cb.data.split(":")[2])
     _, rec, _ = _find_by_rec_id(rec_id)
     if rec is None:
-        return await cb.answer(t("en", "not_found"), show_alert=True)
+        return await cb.answer(_tr(lang, "not_found", "Not found", "غير موجود"), show_alert=True)
 
     user_lang = rec.get("pref") or get_user_lang(rec["user_id"]) or "en"
+    lbl_rec   = _tr(lang, "admin_lbl_recid",  "RecID", "المعرّف")
+    lbl_user  = _tr(lang, "admin_lbl_user",   "User",  "المستخدم")
+    lbl_stat  = _tr(lang, "admin_lbl_status", "Status","الحالة")
     text = (
-        f"🧾 <b>RecID:</b> <code>{rec['id']}</code>\n"
-        f"👤 <b>User:</b> <code>{rec['user_id']}</code> @{rec.get('username','')}\n"
-        f"📌 <b>Status:</b> <code>{rec.get('status')}</code>\n\n"
+        f"🧾 <b>{lbl_rec}:</b> <code>{rec['id']}</code>\n"
+        f"👤 <b>{lbl_user}:</b> <code>{rec['user_id']}</code> @{rec.get('username','')}\n"
+        f"📌 <b>{lbl_stat}:</b> <code>{rec.get('status')}</code>\n\n"
         + _summary(user_lang, {
             'name': rec.get('name', ''),
             'country': rec.get('country', ''),
@@ -567,18 +604,17 @@ async def admin_view_cb(cb: CallbackQuery):
 
 @router.callback_query(F.data.regexp(r"^resapp:unban:\d+$"))
 async def admin_unban_cb(cb: CallbackQuery):
+    lang_admin = get_user_lang(cb.from_user.id) or "ar"
     if not _is_admin(cb.from_user.id):
-        return await cb.answer(_tr("en", "admins_only", "Admins only.", "خاص بالأدمن."), show_alert=True)
+        return await cb.answer(_tr(lang_admin, "admins_only", "Admins only.", "خاص بالأدمن."), show_alert=True)
 
-    admin_lang = get_user_lang(cb.from_user.id) or "ar"
     rec_id = int(cb.data.split(":")[2])
 
     i, rec, data = _find_by_rec_id(rec_id)
     if rec is None:
-        return await cb.answer(_tr(admin_lang, "not_found", "Not found.", "غير موجود"), show_alert=True)
+        return await cb.answer(_tr(lang_admin, "not_found", "Not found.", "غير موجود"), show_alert=True)
 
     target_uid = rec.get("user_id")
-    # ✅ الافتراضي عربي بدل EN
     user_lang = rec.get("pref") or get_user_lang(target_uid) or "ar"
 
     # أحدث رفض لهذا المستخدم
@@ -601,27 +637,24 @@ async def admin_unban_cb(cb: CallbackQuery):
             await cb.message.edit_reply_markup(reply_markup=None)
         except Exception:
             pass
-        await cb.message.answer(_tr(admin_lang, "admin_unbanned_admin",
-                                    "Unban completed ✅", "تم إلغاء الحظر ✅"))
+        await cb.message.answer(_tr(lang_admin, "admin_unbanned_admin", "Unban completed ✅", "تم إلغاء الحظر ✅"))
         return await cb.answer()
 
     data[latest_reject_idx]["status"] = "rejected_unblocked"
     data[latest_reject_idx]["updated_at"] = _now_iso()
     _save(data)
 
-    # 📨 رسالة للمستخدم مع فولباك عربي/إنجليزي
-    msg_user = _tr(
-        user_lang, "admin_unbanned_user",
-        "✅ Your block has been lifted. You can apply again now.",
-        "✅ تم رفع الحظر. يمكنك التقديم مرة أخرى الآن."
-    )
+    # 📨 رسالة للمستخدم
+    msg_user = _tr(user_lang, "admin_unbanned_user",
+                   "✅ Your block has been lifted. You can apply again now.",
+                   "✅ تم رفع الحظر. يمكنك التقديم مرة أخرى الآن.")
     try:
         await cb.message.bot.send_message(target_uid, msg_user)
     except Exception:
         pass
 
-    # تحديث رسالة الأدمن + سطر الحالة مترجم بفولباك
-    status_unb = _tr(admin_lang, "admin_status_unbanned", "Unbanned", "تم فك الحظر")
+    # تحديث رسالة الأدمن + سطر الحالة مترجم
+    status_unb = _tr(lang_admin, "admin_status_unbanned", "Unbanned", "تم فك الحظر")
     try:
         await cb.message.edit_text(cb.message.text + f"\n\n✅ {status_unb}",
                                    disable_web_page_preview=True)
@@ -631,10 +664,8 @@ async def admin_unban_cb(cb: CallbackQuery):
         except Exception:
             pass
 
-    await cb.message.answer(_tr(admin_lang, "admin_unbanned_admin",
-                                "Unban completed ✅", "تم إلغاء الحظر ✅"))
+    await cb.message.answer(_tr(lang_admin, "admin_unbanned_admin", "Unban completed ✅", "تم إلغاء الحظر ✅"))
     await cb.answer()
-
 
 # زر ثابت للترقيم (لا يفعل شيئًا)
 @router.callback_query(F.data == "noop")

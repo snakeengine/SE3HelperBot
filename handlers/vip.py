@@ -75,8 +75,27 @@ def _load_admin_ids() -> set[int]:
 
 ADMIN_IDS = _load_admin_ids()
 
+def _ulang(uid: int) -> str:
+    # لغة المستخدم/الأدمن مع فولباك إنجليزي
+    return (get_user_lang(uid) or "en")
+
+
 def _admin_only(cb: CallbackQuery) -> bool:
     return bool(cb.from_user and (cb.from_user.id in ADMIN_IDS))
+
+# ====== مساعد ترجمة بفولباك ======
+def _tr(lang: str, key: str, en: str, ar: str) -> str:
+    v = t(lang, key)
+    if isinstance(v, str) and v.strip() and v != key:
+        return v
+    return ar if (lang or "ar").startswith("ar") else en
+
+def _tr_fmt(lang: str, key: str, en: str, ar: str, **fmt) -> str:
+    base = _tr(lang, key, en, ar)
+    try:
+        return base.format(**fmt)
+    except Exception:
+        return base
 
 # ---- التحقق من SNAKE ID ----
 _RX_NUMERIC = re.compile(r"^\d{4,10}$")
@@ -166,7 +185,7 @@ def _admin_review_kb(user_id: int, app_id: str, lang: str) -> InlineKeyboardMark
     kb = InlineKeyboardBuilder()
     kb.button(text=t(lang, "vip.admin.approve"), callback_data=f"vip:approve:{user_id}")
     kb.button(text=t(lang, "vip.admin.reject"), callback_data=f"vip:reject:{user_id}")
-    kb.button(text="⏱ مخصّص", callback_data=f"vip:approve_secs:{user_id}")
+    kb.button(text=t(lang, "vip.admin.custom_secs"), callback_data=f"vip:approve_secs:{user_id}")
     kb.adjust(3)
     kb.row(InlineKeyboardButton(text=f"👤 {t(lang, 'vip.admin.user')} {user_id}", callback_data="vip:noop"))
     kb.row(InlineKeyboardButton(text=f"🆔 {t(lang, 'vip.admin.app_id')}: {app_id}", callback_data="vip:noop"))
@@ -291,24 +310,28 @@ async def vip_receive_appid(msg: Message, state: FSMContext):
             meta = get_vip_meta(user_id) or {}
             expiry_str = _fmt_ts(meta.get("expiry_ts"), date_only=True)
             return await msg.answer(
-                "✅ هذا المعرف مستخدم لديك بالفعل واشتراكك فعّال."
+                _tr(lang, "vip.appid.already_owned_you",
+                    "✅ This ID already belongs to you and your VIP is active.",
+                    "✅ هذا المعرف مستخدم لديك بالفعل واشتراكك فعّال.")
                 + (f"\n🗓️ {t(lang,'vip.expires_on')}: {expiry_str}" if expiry_str != "-" else "")
             )
         else:
             return await msg.answer(
-                "⚠️ هذا SNAKE ID مستخدم لدى حساب آخر، لذلك لا يمكن تقديم طلب بهذا المعرف.\n"
-                "إن كنت المالك الحقيقي، يرجى التواصل مع الدعم."
+                _tr(lang, "vip.appid.used_by_other",
+                    "⚠️ This SNAKE ID is already linked to another account. If you are the owner, contact support.",
+                    "⚠️ هذا SNAKE ID مستخدم لدى حساب آخر. إن كنت المالك الحقيقي، تواصل مع الدعم.")
             )
 
     in_pend, pend_uid = _is_app_in_pending(app_id)
     if in_pend:
         if pend_uid == user_id:
-            return await msg.answer("ℹ️ لديك طلب قيد المراجعة بهذا المعرف بالفعل. يرجى الانتظار.")
+            return await msg.answer(_tr(lang, "vip.pending.same_app",
+                                        "ℹ️ You already have a pending request with this ID. Please wait.",
+                                        "ℹ️ لديك طلب قيد المراجعة بهذا المعرف بالفعل. يرجى الانتظار."))
         else:
-            return await msg.answer(
-                "⏳ هناك طلب آخر قيد المراجعة بنفس المعرف من مستخدم مختلف.\n"
-                "يرجى الانتظار حتى يتم البت فيه أو التواصل مع الدعم."
-            )
+            return await msg.answer(_tr(lang, "vip.pending.other_user",
+                                        "⏳ Another user has a pending request with the same ID. Please wait or contact support.",
+                                        "⏳ هناك طلب آخر قيد المراجعة بنفس المعرف من مستخدم مختلف. يرجى الانتظار أو التواصل مع الدعم."))
 
     if get_pending(user_id):
         await state.clear()
@@ -366,7 +389,10 @@ async def vip_apply_confirm(cb: CallbackQuery, state: FSMContext):
         await state.clear(); await cb.answer(t(lang, "vip.track.already_pending"), show_alert=True); return
     owner = find_uid_by_app(app_id)
     if owner is not None and int(owner) != user_id:
-        await state.clear(); await cb.answer("⚠️ هذا المعرف مستخدم لحساب آخر.", show_alert=True); return
+        await state.clear(); await cb.answer(_tr(lang, "vip.appid.taken_during",
+                                                 "⚠️ This ID is now linked to another account. Process stopped.",
+                                                 "⚠️ هذا المعرف أصبح مستخدمًا لحساب آخر. أوقفنا الإجراء."),
+                                             show_alert=True); return
 
     ticket_id = f"{user_id}-{int(time.time())%1000000:06d}"
     add_pending(user_id, app_id, ticket_id=ticket_id)
@@ -374,19 +400,21 @@ async def vip_apply_confirm(cb: CallbackQuery, state: FSMContext):
 
     for admin_id in ADMIN_IDS:
         try:
+            al = _ulang(admin_id)
             m = await cb.bot.send_message(
                 admin_id,
-                f"{t(lang, 'vip.admin.new_request_title')}\n"
-                f"🎫 <b>{t(lang, 'vip.ticket_id')}</b>: <code>{ticket_id}</code>\n"
-                f"👤 {t(lang, 'vip.admin.user')}: <code>{user_id}</code>\n"
-                f"🆔 {t(lang, 'vip.admin.app_id')}: <code>{app_id}</code>\n\n"
-                f"{t(lang, 'vip.admin.instructions')}",
-                reply_markup=_admin_review_kb(user_id, app_id, lang),
+                f"{t(al, 'vip.admin.new_request_title')}\n"
+                f"🎫 <b>{t(al, 'vip.ticket_id')}</b>: <code>{ticket_id}</code>\n"
+                f"👤 {t(al, 'vip.admin.user')}: <code>{user_id}</code>\n"
+                f"🆔 {t(al, 'vip.admin.app_id')}: <code>{app_id}</code>\n\n"
+                f"{t(al, 'vip.admin.instructions')}",
+                reply_markup=_admin_review_kb(user_id, app_id, al),
                 parse_mode=ParseMode.HTML
             )
             _admin_msgs_add(user_id, admin_id, m.message_id, ticket_id)
         except Exception:
             pass
+
 
     await state.clear()
     try:
@@ -448,13 +476,15 @@ async def vip_cancel(cb: CallbackQuery):
 
     for admin_id in ADMIN_IDS:
         try:
+            al = _ulang(admin_id)
             await cb.bot.send_message(
                 admin_id,
-                t(lang, "vip.admin.user_cancelled_note").format(user_id=user_id, ticket_id=ticket_id),
+                t(al, "vip.admin.user_cancelled_note").format(user_id=user_id, ticket_id=ticket_id),
                 parse_mode=ParseMode.HTML
             )
         except Exception:
             pass
+
 
     try:
         await cb.message.edit_reply_markup(
@@ -489,7 +519,10 @@ async def vip_approve(cb: CallbackQuery):
 
     owner = find_uid_by_app(app_id)
     if owner is not None and int(owner) != user_id:
-        await cb.answer("⚠️ هذا المعرف أصبح مستخدمًا لحساب آخر. أوقفنا الإجراء.", show_alert=True)
+        await cb.answer(_tr(lang, "vip.appid.taken_during",
+                            "⚠️ This ID is now linked to another account. Process stopped.",
+                            "⚠️ هذا المعرف أصبح مستخدمًا لحساب آخر. أوقفنا الإجراء."),
+                        show_alert=True)
         return
 
     pop_pending(user_id)
@@ -501,14 +534,15 @@ async def vip_approve(cb: CallbackQuery):
     exp_str = _fmt_ts(meta.get("expiry_ts"), date_only=True)
 
     try:
-        msg_txt = t(lang, "vip.user.approved")
-        if ticket_id:
-            msg_txt = t(lang, "vip.user.approved_with_ticket").format(ticket_id=ticket_id)
-        if exp_str != "-":
-            msg_txt += f"\n🗓️ {t(lang,'vip.expires_on')}: {exp_str}"
-        await cb.bot.send_message(user_id, msg_txt)
+       u_lang = _ulang(user_id)  # لغة المستخدم
+       if ticket_id:
+           await cb.bot.send_message(user_id, t(u_lang, "vip.user.rejected_with_ticket").format(ticket_id=ticket_id))
+       else:
+           await cb.bot.send_message(user_id, t(u_lang, "vip.user.rejected"))
     except Exception:
         pass
+
+
 
     note = t(lang, "vip.admin.approved_note").format(user_id=user_id, app_id=app_id)
     if ticket_id:
@@ -569,7 +603,10 @@ async def vip_approve_secs_start(cb: CallbackQuery, state: FSMContext):
     app_id = normalize_app_id(pend.get("app_id", ""))
     await state.set_state(AdminCustomSecsFSM.waiting_secs)
     await state.update_data(pending_uid=user_id, app_id=app_id)
-    await cb.message.answer("أدخل مدة الاشتراك المطلوبة **بالثواني** (مثل: 2592000 لمدة 30 يوم).", parse_mode=ParseMode.MARKDOWN)
+    await cb.message.answer(_tr(lang, "vip.admin.ask_secs",
+                                "Enter subscription duration in **seconds** (e.g. 2592000 for 30 days).",
+                                "أدخل مدة الاشتراك المطلوبة **بالثواني** (مثل: 2592000 لمدة 30 يوم)."),
+                            parse_mode=ParseMode.MARKDOWN)
     await cb.answer()
 
 @router.message(AdminCustomSecsFSM.waiting_secs)
@@ -581,7 +618,9 @@ async def vip_approve_secs_recv(msg: Message, state: FSMContext):
         if secs <= 0 or secs > 315360000:
             raise ValueError()
     except Exception:
-        return await msg.answer("قيمة غير صحيحة. أدخل عدد الثواني فقط (1 .. 315360000).")
+        return await msg.answer(_tr(lang, "vip.admin.bad_secs",
+                                    "Invalid value. Send seconds only (1 .. 315360000).",
+                                    "قيمة غير صحيحة. أدخل عدد الثواني فقط (1 .. 315360000)."))
 
     data = await state.get_data()
     uid = int(data.get("pending_uid", 0))
@@ -593,7 +632,9 @@ async def vip_approve_secs_recv(msg: Message, state: FSMContext):
 
     owner = find_uid_by_app(app_id)
     if owner is not None and int(owner) != uid:
-        return await msg.answer("⚠️ هذا المعرف أصبح مستخدمًا لحساب آخر. العملية أُلغيت.")
+        return await msg.answer(_tr(lang, "vip.appid.taken_during",
+                                    "⚠️ This ID is now linked to another account. Process cancelled.",
+                                    "⚠️ هذا المعرف أصبح مستخدمًا لحساب آخر. العملية أُلغيت."))
 
     pop_pending(uid)
     _admin_msgs_clear(uid)
@@ -605,21 +646,31 @@ async def vip_approve_secs_recv(msg: Message, state: FSMContext):
     human = _humanize_seconds(secs)
 
     await msg.answer(
-        f"✅ تم قبول UID <code>{uid}</code> على SNAKE ID <code>{app_id}</code>\n"
-        f"⏱ المدة المضافة: <b>{human}</b>\n"
-        + (f"🗓️ تاريخ الانتهاء: <b>{exp_str}</b>" if exp_str != "-" else ""),
+        _tr_fmt(lang, "vip.admin.custom_secs_done_admin",
+                "✅ Approved UID <code>{uid}</code> on SNAKE ID <code>{app_id}</code>\n⏱ Added: <b>{human}</b>\n{expiry}",
+                "✅ تم قبول UID <code>{uid}</code> على SNAKE ID <code>{app_id}</code>\n⏱ المدة المضافة: <b>{human}</b>\n{expiry}",
+                uid=uid, app_id=app_id,
+                human=human,
+                expiry=(f"🗓️ {t(lang,'vip.expires_on')}: <b>{exp_str}</b>" if exp_str != "-" else "")
+        ),
         parse_mode=ParseMode.HTML
     )
 
     try:
+        u_lang = _ulang(uid)  # لغة المستخدم
         await msg.bot.send_message(
             uid,
-            "✅ تم قبول طلبك وتفعيل اشتراكك.\n"
-            f"⏱ المدة: {human}\n"
-            + (f"🗓️ {t(lang,'vip.expires_on')}: {exp_str}" if exp_str != "-" else "")
+            _tr_fmt(
+                u_lang, "vip.admin.custom_secs_done_user",
+                "✅ Your request was approved and VIP activated.\n⏱ Duration: {human}\n{expiry}",
+                "✅ تم قبول طلبك وتفعيل اشتراكك.\n⏱ المدة: {human}\n{expiry}",
+                human=human,
+                expiry=(f"🗓️ {t(u_lang,'vip.expires_on')}: {exp_str}" if exp_str != "-" else "")
+            )
         )
     except Exception:
         pass
+
 
 # ===== معلومات/ميزات =====
 @router.callback_query(F.data == "vip:info")
