@@ -7,6 +7,21 @@ from dotenv import load_dotenv
 # ⬅️ حمّل متغيرات البيئة أولاً
 load_dotenv()
 
+# --- FORCE LOCAL PROJECT ON SYS.PATH (fix for "handlers" name collision) ---
+import sys, pathlib
+ROOT = pathlib.Path(__file__).parent.resolve()
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+# تشخيص اختياري: اطبع مصدر باكج handlers
+try:
+    import handlers as _handlers_pkg
+    import logging as _hlog
+    _hlog.info(f"[IMPORT] handlers package path -> {_handlers_pkg.__file__}")
+except Exception:
+    pass
+# ---------------------------------------------------------------------------
+
+
 # ✅ تطبيع (توافق) لدالة الترجمة t() لتقبل (lang,key) أو (lang,key,fallback)
 import lang as _lang_mod
 try:
@@ -19,22 +34,35 @@ def _t_compat(*args, **kwargs):
     يدعم:
       - t(lang, key)
       - t(lang, key, fallback)
-    ويرجع fallback إذا كانت الترجمة فاضية.
+    ويمنع الأخطاء ويرجع fallback/نصًا فارغًا عند عدم توفر الترجمة.
     """
     if _orig_t is None:
         if len(args) >= 3:
             return args[2]
         if len(args) >= 2:
             return args[1]
-        return "?"
+        return ""
+
+    # ✅ صيغة بثلاثة وسائط: (lang, key, fallback)
     if len(args) >= 3:
         lang_code, key, fallback = args[0], args[1], args[2]
         try:
             val = _orig_t(lang_code, key)
-        except TypeError:
-            val = _orig_t(lang_code, key)
-        return val or fallback or key
-    return _orig_t(*args, **kwargs)
+        except Exception:
+            val = None
+        if isinstance(val, str) and val.strip() and val != key:
+            return val
+        return fallback or key or ""
+
+    # ✅ صيغة بوسيطين: (lang, key)
+    try:
+        val = _orig_t(*args, **kwargs)
+    except Exception:
+        return ""
+    key = args[1] if len(args) >= 2 else None
+    if isinstance(val, str) and val.strip() and (key is None or val != key):
+        return val
+    return ""
 
 _lang_mod.t = _t_compat
 t = _lang_mod.t  # لاستخدامه محليًا
@@ -49,9 +77,15 @@ from aiogram.types import BotCommand, BotCommandScopeDefault, BotCommandScopeCha
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.client.session.aiohttp import AiohttpSession
+from handlers.sevip_store import router as sevip_store_router  # <<< أعلى الملف عند الاستيرادات موجود already
+from admin.sevip_activation_admin import router as sevip_activation_admin_router
+from admin.stars_revenue import router as stars_revenue_admin_router
+from handlers.sevip_shop import router as sevip_shop_router            # NEW
+from admin.sevip_inventory_admin import router as sevip_inventory_admin_router  # NEW
 
 # ✅ راووترات إجبارية (forced include)
 import handlers.supplier_payment as _supplier_payment
+from handlers.human_check import router as human_router
 
 # ✅ نظام الجوائز
 import handlers.rewards_gate as _rewards_gate
@@ -60,13 +94,26 @@ import handlers.rewards_market as _rewards_market
 import handlers.rewards_wallet as _rewards_wallet
 import handlers.rewards_compat as _rewards_compat
 
+
+# ✅ (اختياري) بروفايل الجوائز الاحترافي — استيراد مرن
+try:
+    from handlers import rewards_profile_pro as _rewards_profile_pro
+except Exception:
+    _rewards_profile_pro = None
+
 # ✅ لوحات أدمن (اختياري) — استيراد ديناميكي مع لوج للأخطاء
+import logging
+from importlib import import_module
+
 def _opt_import(mod_path: str):
     try:
         return import_module(mod_path)
     except Exception as e:
-        logging.exception(f"[IMPORT] Failed to import {mod_path}: {e}")
+        logging.getLogger(__name__).info(
+            f"[IMPORT] optional module skipped: {mod_path} ({e})"
+        )
         return None
+
 
 _rewards_market_admin = _opt_import("admin.rewards_market_admin")
 _rewards_admin        = _opt_import("admin.rewards_admin")
@@ -133,6 +180,8 @@ else:
 def _public_cmds(lang: str = "en") -> list[BotCommand]:
     return [
         BotCommand(command="start",        description=t(lang, "cmd_start")    or "Start"),
+        BotCommand(command="shop",         description=t(lang, "cmd_shop")     or ("SEVIP store" if lang == "en" else "متجر SEVIP")),
+
         BotCommand(command="sections",     description=t(lang, "cmd_sections") or ("Quick sections" if lang == "en" else "الأقسام السريعة")),
         BotCommand(command="help",         description=t(lang, "cmd_help")     or "Help"),
         BotCommand(command="about",        description=t(lang, "cmd_about")    or "About"),
@@ -253,6 +302,8 @@ _HANDLER_MODULES = [
     "handlers.server_status",
     "handlers.debug_callbacks",
     "handlers.persistent_menu",
+    "handlers.admin_entry",
+    "handlers.whoami",
 ]
 
 # (اختياري) تشخيص
@@ -280,7 +331,14 @@ rewards_shim = Router(name="rewards_shim")
 
 @rewards_shim.callback_query(F.data == "rewards")
 async def _shim_rewards(cb):
-    await _rewards_hub.open_hub(cb, edit=True)
+    """
+    افتح البروفايل مباشرة إن توفر، وإلا افتح الهَب كفولباك.
+    """
+    try:
+        from handlers.rewards_profile_pro import open_profile
+        await open_profile(cb, edit=True)
+    except Exception:
+        await _rewards_hub.open_hub(cb, edit=True)
 
 @rewards_shim.callback_query(F.data == "wallet")
 async def _shim_wallet(cb):
@@ -339,8 +397,12 @@ def register_routers(dp: Dispatcher):
             "push_update","push_preview","push_schedule","push_stats",
             # ===== Store & Wallet & Rewards
             "rewards","wallet","store","send_points",
+             "shop", 
             # أوامر أدمن المتجر
-            "orders","sendcode"
+            "orders","sendcode","inv_add","inv_stats",   # ✅ NEW
+            # اختصارات إضافية
+            "profile","my_rewards","rprofile",
+            "revenue",
         ),
         allowed_content_types=("text","photo","video","document","voice","audio","video_note"),
         allow_free_text=True,
@@ -379,6 +441,28 @@ def register_routers(dp: Dispatcher):
     dp.include_router(_supplier_payment.router)
     logging.info("Loaded handlers.supplier_payment (forced include)")
 
+    dp.include_router(human_router)
+    logging.info("Loaded handlers.human_check")
+
+
+    # ✅ متجر SEVIP (تضمين صريح)
+    dp.include_router(sevip_store_router)
+    logging.info("Loaded handlers.sevip_store (explicit include)")
+        # ✅ متجر USDT (شاشة الشراء والفواتير)
+    dp.include_router(sevip_shop_router)
+    logging.info("Loaded handlers.sevip_shop (explicit include)")
+
+    # ✅ أوامر مخزون الأكواد للأدمن (/inv_add /inv_stats)
+    dp.include_router(sevip_inventory_admin_router)
+    logging.info("Loaded admin.sevip_inventory_admin")
+
+
+    dp.include_router(sevip_activation_admin_router)
+    logging.info("Loaded admin.sevip_activation_admin")
+
+    dp.include_router(stars_revenue_admin_router)
+    logging.info("Loaded admin.stars_revenue")
+
     # ====== نظام الجوائز (الترتيب مهم)
     dp.include_router(_rewards_gate.router)     # بوابة الاشتراك + chat_member
     dp.include_router(_rewards_hub.router)      # الهَب (واجهة)
@@ -386,6 +470,11 @@ def register_routers(dp: Dispatcher):
     dp.include_router(_rewards_wallet.router)   # المحفظة
     dp.include_router(_rewards_compat.router)   # توافق /rewards
     dp.include_router(rewards_shim)             # يمسك callbacks: rewards/wallet/store
+    
+    # ✅ NEW: بروفايل الجوائز الاحترافية (إن وُجد)
+    if _rewards_profile_pro and hasattr(_rewards_profile_pro, "router"):
+        dp.include_router(_rewards_profile_pro.router)
+        logging.info("Loaded handlers.rewards_profile_pro")
 
     # ✅ لوحة أدمن الجوائز (إن وُجدت) وإلا فعّل الشِم
     if _rewards_admin and hasattr(_rewards_admin, "router"):
@@ -439,10 +528,14 @@ def register_routers(dp: Dispatcher):
     async def _fb_sections(msg):
         await msg.answer("📂 الأقسام السريعة: استخدم زر Menu السفلي لعرض الأقسام.")
 
-    # ✅ أمر /rewards يفتح الهَب مباشرة
+    # ✅ أمر /rewards يفتح البروفايل مباشرة مع فولباك للهَب
     @fallback.message(Command("rewards"))
     async def _fb_rewards(msg):
-        await _rewards_hub.open_hub(msg)
+        try:
+            from handlers.rewards_profile_pro import open_profile
+            await open_profile(msg)
+        except Exception:
+            await _rewards_hub.open_hub(msg)
 
     @fallback.message(Command("admin"))
     async def _fb_admin(msg):
@@ -502,6 +595,7 @@ async def main():
     register_routers(dp)
     dp.startup.register(_alerts_startup)
 
+    
     try:
         asyncio.create_task(run_vip_cron(bot))
         logging.info("⏰ VIP reminder task started.")
@@ -519,8 +613,28 @@ async def main():
         logging.exception("Polling crashed with an exception.")
         raise
 
+    try:
+        asyncio.create_task(_payments_cron(bot))
+        logging.info("🔔 Payments monitor started.")
+    except Exception as e:
+        logging.warning(f"Payments monitor failed to start: {e}")
+
+
+# يمرّ كل دقيقة ليتحقق من مدفوعات USDT ويسلّم الأكواد
+async def _payments_cron(bot):
+    from handlers.sevip_shop import check_payments_and_fulfill
+    interval = int(os.getenv("PAYMENTS_POLL_INTERVAL", "60"))
+    while True:
+        try:
+            await check_payments_and_fulfill(bot)
+        except Exception:
+            logging.exception("payments_cron crashed")
+        await asyncio.sleep(interval)
+
+
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
-        logging.info("🛑 Bot stopped.")
+        logging.info("🛑 Bot stopped.")  
+

@@ -3,34 +3,34 @@ from __future__ import annotations
 
 import json, os, math, re
 from pathlib import Path
-from typing import Optional, Tuple
 
 from aiogram import Router, F
 from aiogram.filters import Command
-from aiogram.types import (
-    Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
-)
+from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.enums import ChatType, ParseMode
+from utils.user_resolver import resolve_user_id  # أعلى الملف
 
 from lang import t, get_user_lang
 from utils.rewards_store import (
-    ensure_user, get_points, add_points, set_blocked, is_blocked
+    DATA_DIR,
+    ensure_user, get_points, add_points, set_blocked, is_blocked, list_blocked_users
 )
 from utils.rewards_notify import (
-    notify_user_points, notify_user_set_points, notify_user_ban
+    notify_user_points, notify_user_set_points,
+    notify_user_ban, notify_user_unban
 )
 
 router = Router(name="rewards_admin")
 
+# ----------------- مساعدة عامة -----------------
+# نخلي التخزين متوافق مع utils.rewards_store (users.json)
+STORE_FILE = DATA_DIR / "users.json"
 DATA = Path("data")
-STORE_FILE = DATA / "rewards_store.json"
 USERNAMES_CACHE = DATA / "rwd_usernames.json"  # {uid: "@uname" or ""}
-
-# ========= أدوات مساعدة أساسية =========
 
 def _L(uid: int) -> str:
     return get_user_lang(uid) or "ar"
@@ -53,19 +53,27 @@ def _save_json(p: Path, obj: dict):
         pass
 
 def _all_user_ids() -> list[int]:
-    d = _load_json(STORE_FILE)
-    users = (d or {}).get("users") or d  # دعم الشكلين
-    out = []
-    if isinstance(users, dict):
-        for k in users.keys():
-            try:
-                out.append(int(k))
-            except Exception:
-                continue
-    return out
+    """
+    يقرأ نفس ملف التخزين المستخدم في utils.rewards_store: users.json
+    الهيكل: { "12345": {...}, "67890": {...} }
+    """
+    try:
+        if not STORE_FILE.exists():
+            return []
+        d = json.loads(STORE_FILE.read_text(encoding="utf-8")) or {}
+        if isinstance(d, dict):
+            out = []
+            for k in d.keys():
+                try:
+                    out.append(int(k))
+                except Exception:
+                    continue
+            return out
+    except Exception:
+        pass
+    return []
 
 async def _username_of(bot, uid: int) -> str:
-    # كاش محلي
     cache = _load_json(USERNAMES_CACHE)
     if str(uid) in cache:
         return cache[str(uid)] or ""
@@ -89,18 +97,100 @@ async def _display_line(bot, uid: int) -> str:
     uname = await _username_of(bot, uid)
     return f"{uid} · {pts}p · {uname or '-'}"
 
-# ========= لوحة: قائمة المستخدمين + بحث =========
+# ================= قائمة المحظورين =================
+BLOCKED_PAGE_SIZE = 10
 
+def _blocked_page_kb(page: int, has_prev: bool, has_next: bool) -> InlineKeyboardBuilder:
+    kb = InlineKeyboardBuilder()
+    nav = []
+    if has_prev:
+        nav.append(InlineKeyboardButton(text="«", callback_data=f"rwdadm:blocked:p:{page-1}"))
+    nav.append(InlineKeyboardButton(text=f"{page+1}", callback_data=f"rwdadm:blocked:p:{page}"))
+    if has_next:
+        nav.append(InlineKeyboardButton(text="»", callback_data=f"rwdadm:blocked:p:{page+1}"))
+    if nav:
+        kb.row(*nav)
+    kb.row(InlineKeyboardButton(text="⬅️ رجوع", callback_data="ah:rewards"))
+    return kb
+
+async def _render_blocked_page(cb: CallbackQuery, page: int):
+    lang = _L(cb.from_user.id)
+    offset = page * BLOCKED_PAGE_SIZE
+    items, total = list_blocked_users(offset=offset, limit=BLOCKED_PAGE_SIZE)
+
+    # لا يوجد محظورون
+    if total == 0:
+        txt = t(lang, "rwdadm.blocked.empty", "لا يوجد مستخدمون محظورون حاليًا.")
+        try:
+            await cb.message.edit_text(txt, reply_markup=_blocked_page_kb(0, False, False).as_markup())
+        except Exception:
+            await cb.message.answer(txt, reply_markup=_blocked_page_kb(0, False, False).as_markup())
+        await cb.answer()
+        return
+
+    # بناء النص والأزرار
+    lines = [
+        t(lang, "rwdadm.blocked.title", "🚫 قائمة المحظورين") +
+        f"\n{t(lang,'rwdadm.total','الإجمالي')}: {total}"
+    ]
+    kb = InlineKeyboardBuilder()
+    for uid, row in items:
+        pts = int((row or {}).get("points", 0))
+        warns = int((row or {}).get("warns", 0))
+        lines.append(f"\n• <b>{uid}</b> — {t(lang,'rwdadm.points','النقاط')}: {pts} | {t(lang,'rwdadm.warns','تحذيرات')}: {warns}")
+        kb.row(
+            InlineKeyboardButton(text=t(lang, "rwdadm.open_panel", "فتح لوحة 🧩"), callback_data=f"rwdadm:panel:{uid}"),
+            InlineKeyboardButton(text=t(lang, "rwdadm.unban_btn", "رفع الحظر ✅"), callback_data=f"rwdadm:unban:{uid}"),
+        )
+
+    has_prev = offset > 0
+    has_next = (offset + BLOCKED_PAGE_SIZE) < total
+    nav_kb = _blocked_page_kb(page, has_prev, has_next)
+    for row in nav_kb.export():
+        kb.row(*row)
+
+    text = "\n".join(lines)
+    try:
+        await cb.message.edit_text(text, reply_markup=kb.as_markup(), disable_web_page_preview=True)
+    except Exception:
+        await cb.message.answer(text, reply_markup=kb.as_markup(), disable_web_page_preview=True)
+    await cb.answer()
+
+@router.callback_query(F.data == "ah:rwd:blocked")
+async def ah_rwd_blocked(cb: CallbackQuery):
+    """فتح الصفحة الأولى من قائمة المحظورين من لوحة الجوائز."""
+    await _render_blocked_page(cb, 0)
+
+@router.callback_query(F.data.startswith("rwdadm:blocked:p:"))
+async def rwd_blocked_list(cb: CallbackQuery):
+    """ترقيم صفحات قائمة المحظورين."""
+    try:
+        page = int(cb.data.split(":")[-1])
+    except Exception:
+        page = 0
+    await _render_blocked_page(cb, page)
+
+async def _refresh_blocked_current_page(cb: CallbackQuery):
+    """يحاول استخراج الصفحة الحالية من كيبورد القائمة وإعادة عرضها."""
+    try:
+        for row in (cb.message.reply_markup.inline_keyboard or []):
+            for btn in row:
+                data = getattr(btn, "callback_data", "") or ""
+                if data.startswith("rwdadm:blocked:p:"):
+                    page = int(data.split(":")[-1])
+                    await _render_blocked_page(cb, page)
+                    return
+    except Exception:
+        pass
+
+# ================= قائمة المستخدمين والبحث =================
 PAGE_SIZE = 12
 
 def _kb_users(lang: str, items: list[tuple[int, str]], page: int, pages: int) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    # زر البحث
     kb.button(text="🔎 " + t(lang, "rwdadm.search", "بحث"), callback_data="rwdadm:search")
-    # المستخدمون
     for uid, label in items:
         kb.row(InlineKeyboardButton(text=label, callback_data=f"rwdadm:panel:{uid}"))
-    # صفحات
     kb.row(InlineKeyboardButton(text=f"page {page}/{pages}", callback_data="rwdadm:list:noop"))
     if page > 1:
         kb.button(text="⬅️", callback_data=f"rwdadm:list:p:{page-1}")
@@ -109,7 +199,7 @@ def _kb_users(lang: str, items: list[tuple[int, str]], page: int, pages: int) ->
     kb.row(InlineKeyboardButton(text="⬅️ " + t(lang, "admin.back", "رجوع"), callback_data="ah:rewards"))
     return kb.as_markup()
 
-async def _render_users_list(cb_or_msg, page: int = 1):
+async def _render_users_list(cb_or_msg: Message | CallbackQuery, page: int = 1):
     lang = _L(cb_or_msg.from_user.id)
     uids = sorted(set(_all_user_ids()))
     total = len(uids)
@@ -146,8 +236,7 @@ async def list_page(cb: CallbackQuery):
     page = int(cb.data.split(":")[-1])
     await _render_users_list(cb, page)
 
-# ========= بحث =========
-
+# ---- بحث
 class SearchStates(StatesGroup):
     wait_query = State()
 
@@ -162,64 +251,46 @@ async def search_start(cb: CallbackQuery, state: FSMContext):
 
 _username_re = re.compile(r"^@?[A-Za-z0-9_]{5,32}$")
 
+
+
 @router.message(SearchStates.wait_query)
 async def search_collect(msg: Message, state: FSMContext):
     lang = _L(msg.from_user.id)
     raw = (msg.text or "").strip()
-
-    # ID مباشر
-    if raw.isdigit():
-        uid = int(raw)
+    uid = await resolve_user_id(msg.bot, raw)
+    if uid:
         ensure_user(uid)
-        await user_panel_open(msg, uid)
+        await user_panel_open(msg, int(uid))
         await state.clear()
         return
+    await msg.reply(
+        t(lang, "rwdadm.username_not_found",
+          "لم أستطع العثور على مستخدم بهذا المعرف. تأكد أنه بدأ محادثة مع البوت.")
+    )
 
-    # @username
-    if _username_re.match(raw):
-        uname = raw.lstrip("@")
-        try:
-            chat = await msg.bot.get_chat(f"@{uname}")
-            if chat.type == ChatType.PRIVATE:
-                ensure_user(int(chat.id))
-                await user_panel_open(msg, int(chat.id))
-                await state.clear()
-                return
-        except Exception:
-            pass
-        await msg.reply(t(lang, "rwdadm.username_not_found",
-                          "لم أستطع العثور على مستخدم بهذا المعرف. تأكد أنه بدأ محادثة مع البوت."))
-        return
 
-    await msg.reply(t(lang, "rwdadm.search_invalid", "أرسل @username صحيحًا أو ID رقمي."))
 
-# ========= لوحة مستخدم =========
-
+# ================= لوحة مستخدم =================
 def _kb_user_panel(lang: str, uid: int, pts: int, banned: bool) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    # زيادات/نواقص سريعة
     for delta in (10, 50, 100):
         kb.button(text=f"+{delta}", callback_data=f"rwdadm:grant:{uid}:{delta}")
     for delta in (10, 50, 100):
         kb.button(text=f"-{delta}", callback_data=f"rwdadm:grant:{uid}:-{delta}")
     kb.adjust(3, 3)
 
-    # تعيين/تصفير/إشعار
     kb.row(
         InlineKeyboardButton(text=t(lang, "rwdadm.set_points", "تعيين رصيد"), callback_data=f"rwdadm:set:{uid}"),
         InlineKeyboardButton(text=t(lang, "rwdadm.zero_points", "تصفير"),      callback_data=f"rwdadm:zero:{uid}"),
     )
     kb.row(InlineKeyboardButton(text=t(lang, "rwdadm.notify", "إشعار المستخدم"), callback_data=f"rwdadm:notify:{uid}"))
 
-    # حظر / إلغاء
     if banned:
         kb.row(InlineKeyboardButton(text="✅ " + t(lang, "rwdadm.unban", "إلغاء الحظر"), callback_data=f"rwdadm:unban:{uid}"))
     else:
         kb.row(InlineKeyboardButton(text="🚫 " + t(lang, "rwdadm.ban", "حظر المستخدم"), callback_data=f"rwdadm:ban:{uid}"))
 
-    # حذف من قاعدة الجوائز
     kb.row(InlineKeyboardButton(text="🗑 " + t(lang, "rwdadm.delete_user", "حذف من قاعدة الجوائز"), callback_data=f"rwdadm:del:{uid}"))
-
     kb.row(InlineKeyboardButton(text="⬅️ " + t(lang, "admin.back", "رجوع"), callback_data="rwdadm:list:p:1"))
     return kb.as_markup()
 
@@ -251,18 +322,15 @@ async def open_panel_cb(cb: CallbackQuery):
     uid = int(cb.data.split(":")[-1])
     await user_panel_open(cb, uid)
 
-# ========= إجراءات النقاط =========
-
+# ================= إجراءات النقاط =================
 @router.callback_query(F.data.startswith("rwdadm:grant:"))
 async def grant_points(cb: CallbackQuery):
     parts = cb.data.split(":")
     uid = int(parts[2])
     delta = int(parts[3])
     ensure_user(uid)
-    # طبّق
     add_points(uid, delta, reason="admin_grant")
     new_bal = int(get_points(uid))
-    # إشعارات
     await notify_user_points(cb.bot, uid, delta, new_bal, actor_id=cb.from_user.id)
     await user_panel_open(cb, uid)
 
@@ -294,7 +362,6 @@ async def set_points_collect(msg: Message, state: FSMContext):
     delta = new - old
     if delta != 0:
         add_points(uid, delta, reason="admin_set")
-    # إشعار
     await notify_user_set_points(msg.bot, uid, old, new, actor_id=msg.from_user.id)
     await state.clear()
     await user_panel_open(msg, uid)
@@ -309,8 +376,7 @@ async def zero_points(cb: CallbackQuery):
     await notify_user_set_points(cb.bot, uid, old, 0, actor_id=cb.from_user.id)
     await user_panel_open(cb, uid)
 
-# ========= حظر / إلغاء =========
-
+# ================= حظر / إلغاء الحظر =================
 @router.callback_query(F.data.startswith("rwdadm:ban:"))
 async def ban_user(cb: CallbackQuery):
     uid = int(cb.data.split(":")[-1])
@@ -322,11 +388,14 @@ async def ban_user(cb: CallbackQuery):
 async def unban_user(cb: CallbackQuery):
     uid = int(cb.data.split(":")[-1])
     set_blocked(uid, False)
-    await notify_user_ban(cb.bot, uid, False, actor_id=cb.from_user.id)
-    await user_panel_open(cb, uid)
+    await notify_user_unban(cb.bot, uid, actor_id=cb.from_user.id)
+    # إن كانت العملية من قائمة المحظورين، حدّث نفس الصفحة
+    if cb.message and cb.message.reply_markup:
+        await _refresh_blocked_current_page(cb)
+    else:
+        await user_panel_open(cb, uid)
 
-# ========= إشعار يدوي =========
-
+# ================= إشعار يدوي =================
 @router.callback_query(F.data.startswith("rwdadm:notify:"))
 async def notify_start(cb: CallbackQuery, state: FSMContext):
     lang = _L(cb.from_user.id)
@@ -345,38 +414,44 @@ async def notify_collect(msg: Message, state: FSMContext):
     if not text:
         await msg.reply(t(lang, "rwdadm.notify_empty", "النص فارغ."))
         return
-    # إلى المستخدم
     try:
         await msg.bot.send_message(uid, text)
     except Exception:
         pass
-    # للأدمن
-    who = f"<a href='tg://user?id={uid}'>{uid}</a>"
     await msg.bot.send_message(msg.from_user.id, t(lang, "rwdadm.notify_sent", "✅ تم إرسال الإشعار."))
-    from utils.rewards_notify import notify_admins
-    await notify_admins(msg.bot, f"📣 <b>Manual notify</b>\n• User: {who}\n• By: <a href='tg://user?id={msg.from_user.id}'>{msg.from_user.id}</a>\n• Text: {text}")
+    try:
+        from utils.rewards_notify import notify_admins
+        who = f"<a href='tg://user?id={uid}'>{uid}</a>"
+        await notify_admins(msg.bot, f"📣 <b>Manual notify</b>\n• User: {who}\n• By: <a href='tg://user?id={msg.from_user.id}'>{msg.from_user.id}</a>\n• Text: {text}")
+    except Exception:
+        pass
     await state.clear()
     await user_panel_open(msg, uid)
 
-# ========= حذف من قاعدة الجوائز =========
-
+# ================= حذف من قاعدة الجوائز =================
 @router.callback_query(F.data.startswith("rwdadm:del:"))
 async def delete_user(cb: CallbackQuery):
     lang = _L(cb.from_user.id)
     uid = int(cb.data.split(":")[-1])
 
-    d = _load_json(STORE_FILE)
-    users = d.get("users") or d
-    if isinstance(users, dict):
-        users.pop(str(uid), None)
-        if "users" in d:
-            d["users"] = users
-        _save_json(STORE_FILE, d)
+    # احذف من users.json مباشرة
+    try:
+        if STORE_FILE.exists():
+            d = json.loads(STORE_FILE.read_text(encoding="utf-8")) or {}
+            if isinstance(d, dict):
+                d.pop(str(uid), None)
+                tmp = STORE_FILE.with_suffix(".tmp")
+                tmp.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+                os.replace(tmp, STORE_FILE)
+    except Exception:
+        pass
 
-    # إعلام الأدمن
-    from utils.rewards_notify import notify_admins
-    who = f"<a href='tg://user?id={uid}'>{uid}</a>"
-    await notify_admins(cb.bot, f"🗑 <b>User removed from rewards DB</b>\n• User: {who}\n• By: <a href='tg://user?id={cb.from_user.id}'>{cb.from_user.id}</a>")
+    try:
+        from utils.rewards_notify import notify_admins
+        who = f"<a href='tg://user?id={uid}'>{uid}</a>"
+        await notify_admins(cb.bot, f"🗑 <b>User removed from rewards DB</b>\n• User: {who}\n• By: <a href='tg://user?id={cb.from_user.id}'>{cb.from_user.id}</a>")
+    except Exception:
+        pass
 
     try:
         await cb.message.answer(t(lang, "rwdadm.deleted_done", "تم حذف المستخدم من قاعدة الجوائز."))
@@ -385,8 +460,7 @@ async def delete_user(cb: CallbackQuery):
 
     await _render_users_list(cb, 1)
 
-# ========= الدخول: من زر لوحة الأدمن أو من أمر سلاش =========
-
+# ================= الدخول: أزرار + أوامر =================
 @router.callback_query(F.data == "rwdadm:list")
 @router.callback_query(F.data == "ah:rwd:list")
 async def open_users_list(cb: CallbackQuery):
@@ -405,7 +479,6 @@ async def cmd_rewards_admin(msg: Message):
 # أوامر سريعة (سلاش)
 @router.message(Command("r_grant"))
 async def cmd_r_grant(msg: Message):
-    # /r_grant <uid> <points>  (points قد تكون سالبة)
     try:
         _, uid_s, pts_s = msg.text.split(maxsplit=2)
         uid = int(uid_s); delta = int(pts_s)
@@ -448,7 +521,7 @@ async def cmd_r_unban(msg: Message):
     except Exception:
         return
     set_blocked(uid, False)
-    await notify_user_ban(msg.bot, uid, False, actor_id=msg.from_user.id)
+    await notify_user_unban(msg.bot, uid, actor_id=msg.from_user.id)
     await msg.answer("✅")
 
 @router.message(Command("r_del"))
@@ -458,21 +531,23 @@ async def cmd_r_del(msg: Message):
         uid = int(uid_s)
     except Exception:
         return
-    d = _load_json(STORE_FILE)
-    users = d.get("users") or d
-    if isinstance(users, dict):
-        users.pop(str(uid), None)
-        if "users" in d:
-            d["users"] = users
-        _save_json(STORE_FILE, d)
-    from utils.rewards_notify import notify_admins
-    who = f"<a href='tg://user?id={uid}'>{uid}</a>"
-    await notify_admins(msg.bot, f"🗑 <b>User removed from rewards DB</b>\n• User: {who}\n• By: <a href='tg://user?id={msg.from_user.id}'>{msg.from_user.id}</a>")
+    try:
+        if STORE_FILE.exists():
+            d = json.loads(STORE_FILE.read_text(encoding="utf-8")) or {}
+            if isinstance(d, dict):
+                d.pop(str(uid), None)
+                tmp = STORE_FILE.with_suffix(".tmp")
+                tmp.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+                os.replace(tmp, STORE_FILE)
+        from utils.rewards_notify import notify_admins
+        who = f"<a href='tg://user?id={uid}'>{uid}</a>"
+        await notify_admins(msg.bot, f"🗑 <b>User removed from rewards DB</b>\n• User: {who}\n• By: <a href='tg://user?id={msg.from_user.id}'>{msg.from_user.id}</a>")
+    except Exception:
+        pass
     await msg.answer("✅")
 
 @router.message(Command("r_notify"))
 async def cmd_r_notify(msg: Message):
-    # /r_notify <uid> <text...>
     try:
         _, uid_s, text = msg.text.split(maxsplit=2)
         uid = int(uid_s)
@@ -482,7 +557,10 @@ async def cmd_r_notify(msg: Message):
         await msg.bot.send_message(uid, text)
     except Exception:
         pass
-    from utils.rewards_notify import notify_admins
-    who = f"<a href='tg://user?id={uid}'>{uid}</a>"
-    await notify_admins(msg.bot, f"📣 <b>Manual notify</b>\n• User: {who}\n• By: <a href='tg://user?id={msg.from_user.id}'>{msg.from_user.id}</a>\n• Text: {text}")
+    try:
+        from utils.rewards_notify import notify_admins
+        who = f"<a href='tg://user?id={uid}'>{uid}</a>"
+        await notify_admins(msg.bot, f"📣 <b>Manual notify</b>\n• User: {who}\n• By: <a href='tg://user?id={msg.from_user.id}'>{msg.from_user.id}</a>\n• Text: {text}")
+    except Exception:
+        pass
     await msg.answer("✅")

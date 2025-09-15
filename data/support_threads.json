@@ -2,31 +2,27 @@
   "users": {
     "6403644551": {
       "open": false,
-      "admin_id": 7360982123
-    },
-    "7360982123": {
-      "open": false,
       "admin_id": null
     },
-    "1483576923": {
-      "open": false,
+    "7360982123": {
+      "open": true,
       "admin_id": null
     }
   },
   "threads": {
+    "6403644551": {
+      "user_id": 6403644551,
+      "user_name": "SE Support",
+      "status": "open",
+      "last_text": "سيىبفلقفسىحتهاختثقفلا",
+      "updated_at": "2025-09-08T23:17:24+00:00"
+    },
     "7360982123": {
       "user_id": 7360982123,
       "user_name": "Dev S.E2",
       "status": "open",
-      "last_text": "تيتيتيتتيتتثوبوبب",
-      "updated_at": "2025-08-28T00:42:35+00:00"
-    },
-    "1483576923": {
-      "user_id": 1483576923,
-      "user_name": "..",
-      "status": "open",
-      "last_text": "ويتيتيريتبتتبتبتب",
-      "updated_at": "2025-08-25T23:53:56+00:00"
+      "last_text": "(media)",
+      "updated_at": "2025-09-09T00:10:59+00:00"
     }
   }
 }

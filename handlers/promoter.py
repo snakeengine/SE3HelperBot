@@ -34,18 +34,93 @@ if not ADMIN_IDS:
 
 _DEFAULT_DAILY_LIMIT = 5  # حد افتراضي إذا لم يوجد في settings
 
-# ===== I/O =====
-def _load_store() -> Dict[str, Any]:
+# ===== I/O (مع تطبيع الشكل لتفادي KeyError: 'users') =====
+def _load_raw() -> Any:
     if STORE_FILE.exists():
         try:
-            return json.loads(STORE_FILE.read_text("utf-8"))
-        except Exception:
-            pass
-    return {"users": {}, "settings": {"daily_limit": _DEFAULT_DAILY_LIMIT}}
+            return json.loads(STORE_FILE.read_text(encoding="utf-8"))
+        except Exception as e:
+            log.warning(f"[promoters] read failed: {e}")
+    return None
+
+def _users_map_from_any(obj: Any) -> Dict[str, Any]:
+    """
+    يُرجِع قاموسًا موحّدًا بالشكل { '<uid>': {...} } من أي صيغة محتملة:
+      1) {"users": { "123": {...} | True | 1 | {} , ... }}
+      2) {"123": {...} | True | 1 | {} , ...}  (بدون مفتاح users)
+      3) [123, 456, ...]  أو  [{"id":123,"active":true}, {"uid":456}, ...]
+    """
+    out: Dict[str, Any] = {}
+
+    if not obj:
+        return out
+
+    # شكل به users
+    if isinstance(obj, dict) and isinstance(obj.get("users"), dict):
+        base = obj["users"]
+        for k, v in base.items():
+            if isinstance(v, dict):
+                out[str(k)] = v
+            else:
+                out[str(k)] = {"active": bool(v)} if v is not None else {}
+        return out
+
+    # قاموس مباشر
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if k in ("meta", "stats", "settings"):
+                continue
+            if isinstance(v, dict):
+                out[str(k)] = v
+            else:
+                out[str(k)] = {"active": bool(v)} if v is not None else {}
+        return out
+
+    # قائمة
+    if isinstance(obj, list):
+        for item in obj:
+            try:
+                if isinstance(item, (int, str)):
+                    out[str(int(item))] = {"active": True}
+                elif isinstance(item, dict):
+                    uid = item.get("id") or item.get("uid")
+                    if uid is None:
+                        continue
+                    row = dict(item)
+                    row.pop("id", None); row.pop("uid", None)
+                    out[str(int(uid))] = row if row else {"active": True}
+            except Exception:
+                continue
+        return out
+
+    return out
+
+def _load_store() -> Dict[str, Any]:
+    """
+    يضمن إرجاع شكل قياسي:
+        {"users": {...}, "settings": {...}}
+    بغض النظر عن صيغة الملف الفعلية.
+    """
+    raw = _load_raw()
+    users = _users_map_from_any(raw)
+    settings = {}
+    if isinstance(raw, dict):
+        settings = raw.get("settings") or {}
+    # إعداد افتراضي للحد اليومي
+    if "daily_limit" not in settings:
+        settings["daily_limit"] = _DEFAULT_DAILY_LIMIT
+    return {"users": users, "settings": settings}
 
 def _save_store(d: Dict[str, Any]) -> None:
     try:
-        STORE_FILE.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+        # كتابة بالصيغة القياسية دومًا لتفادي المشاكل مستقبلًا
+        payload = {
+            "users": d.get("users", {}),
+            "settings": d.get("settings", {"daily_limit": _DEFAULT_DAILY_LIMIT}),
+        }
+        tmp = STORE_FILE.with_suffix(".tmp")
+        tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        os.replace(tmp, STORE_FILE)
     except Exception as e:
         log.warning(f"[promoters] save failed: {e}")
 
@@ -64,9 +139,26 @@ def _now() -> int:
 
 # ===== API لـ start.py =====
 def is_promoter(uid: int) -> bool:
+    """
+    آمنة بالكامل—لا ترمي KeyError حتى لو كان الملف بصيغ قديمة.
+    يعتبر المستخدم مروّجًا إن وُجد سجل له ولم يكن محظورًا،
+    ويحترم مفتاح active إن كان موجودًا.
+    """
     d = _load_store()
-    u = d["users"].get(str(uid))
-    return bool(u and u.get("status") == "approved")
+    u = d.get("users", {}).get(str(uid))
+    if not u:
+        return False
+    if isinstance(u, dict):
+        if u.get("banned") is True:
+            return False
+        if "active" in u and not u["active"]:
+            return False
+        status = u.get("status")
+        if status and status not in ("approved", "active", "enabled"):
+            # لو النظام عندك يعتمد "approved" فقط، السطر التالي يكفي:
+            return status == "approved"
+    # إن لم تُحدد حالة، نعدّه مفعّلًا لوجوده في القائمة
+    return True
 
 # ===== ترجمة مبسطة (ثنائية fallback) =====
 def L(uid: int) -> str:

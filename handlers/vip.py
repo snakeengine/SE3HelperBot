@@ -7,7 +7,9 @@ from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
-from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import (
+    Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, ContentType
+)
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest
@@ -76,9 +78,7 @@ def _load_admin_ids() -> set[int]:
 ADMIN_IDS = _load_admin_ids()
 
 def _ulang(uid: int) -> str:
-    # لغة المستخدم/الأدمن مع فولباك إنجليزي
     return (get_user_lang(uid) or "en")
-
 
 def _admin_only(cb: CallbackQuery) -> bool:
     return bool(cb.from_user and (cb.from_user.id in ADMIN_IDS))
@@ -144,10 +144,6 @@ def _is_app_in_pending(app_id: str) -> tuple[bool, int | None]:
 # ===================== هيلبر ذكي للعرض =====================
 async def _smart_show(cb: CallbackQuery, text: str, *, reply_markup=None,
                       parse_mode: ParseMode = ParseMode.HTML):
-    """
-    إن كانت الرسالة الأصلية وسائط -> أرسل رسالة نصية جديدة.
-    إن كانت نصية -> حاول تعديلها، وإن فشل فلتكن رسالة جديدة.
-    """
     m = cb.message
     is_media = bool(getattr(m, "photo", None) or getattr(m, "animation", None)
                     or getattr(m, "video", None) or getattr(m, "document", None))
@@ -161,7 +157,9 @@ async def _smart_show(cb: CallbackQuery, text: str, *, reply_markup=None,
 # ---- حالات ----
 class VipApplyFSM(StatesGroup):
     waiting_app_id = State()
-    confirm_terms = State()
+    confirm_terms  = State()
+    waiting_seller = State()   # جديد: معلومات البائع
+    waiting_proof  = State()   # جديد: إثبات الدفع
 
 class AdminCustomSecsFSM(StatesGroup):
     waiting_secs = State()
@@ -347,7 +345,7 @@ async def vip_receive_appid(msg: Message, state: FSMContext):
     kb.adjust(2)
     await msg.answer(warn_text, reply_markup=kb.as_markup(), parse_mode=ParseMode.HTML)
 
-# ===== تأكيد أو إلغاء التحذير =====
+# ===== تأكيد/إلغاء =====
 @router.callback_query(F.data == "vip:apply_abort")
 async def vip_apply_abort(cb: CallbackQuery, state: FSMContext):
     lang = get_user_lang(cb.from_user.id) or "en"
@@ -373,6 +371,7 @@ async def vip_apply_abort(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "vip:apply_confirm")
 async def vip_apply_confirm(cb: CallbackQuery, state: FSMContext):
+    """بعد الموافقة على التحذير نطلب: 1) معلومات البائع، 2) إثبات الدفع."""
     lang = get_user_lang(cb.from_user.id) or "en"
     data = await state.get_data()
     app_id = normalize_app_id(str(data.get("pending_app_id", "")))
@@ -381,18 +380,78 @@ async def vip_apply_confirm(cb: CallbackQuery, state: FSMContext):
         await cb.answer(t(lang, "vip.apply.stale_or_invalid"), show_alert=True)
         return
 
-    user_id = cb.from_user.id
+    # نظّف الكيبورد القديم
+    try:
+        await cb.message.edit_reply_markup()
+    except Exception:
+        pass
 
-    if is_vip(user_id):
-        await state.clear(); await cb.answer(t(lang, "vip.menu.subscribed"), show_alert=True); return
+    # انتقل لطلب معلومات البائع
+    await state.set_state(VipApplyFSM.waiting_seller)
+    await cb.message.answer(
+        _tr(lang, "vip.apply.ask_seller",
+            "Send the seller ID/number you paid to (e.g. @seller or 9665xxxx).",
+            "أرسل معرف/رقم البائع الذي دفعت له (مثال: @seller أو 9665xxxx).")
+    )
+    await cb.answer()
+
+# ===== استلام معلومات البائع =====
+@router.message(VipApplyFSM.waiting_seller)
+async def vip_apply_seller(msg: Message, state: FSMContext):
+    lang = get_user_lang(msg.from_user.id) or "en"
+    raw = (msg.text or "").strip()
+    if not raw:
+        return await msg.reply(_tr(lang, "vip.apply.bad_seller",
+                                   "Please send a valid seller username or number.",
+                                   "أرسل اسم مستخدم أو رقم بائع صحيح."))
+
+    # قبول @username أو رقم (مع + اختياري) أو t.me/username
+    s = raw
+    m = re.match(r"^(?:https?://)?t\.me/(@?[A-Za-z0-9_]{3,})/?$", s, re.IGNORECASE)
+    if m:
+        s = m.group(1)
+    num = s.lstrip("+")
+    is_username = bool(re.fullmatch(r"@?[A-Za-z0-9_]{3,}", s))
+    is_numeric  = num.isdigit() and len(num) >= 3
+    if not (is_username or is_numeric):
+        return await msg.reply(_tr(lang, "vip.apply.bad_seller",
+                                   "Please send a valid seller username or number.",
+                                   "أرسل اسم مستخدم أو رقم بائع صحيح."))
+
+    seller_val = num if is_numeric else (s if s.startswith("@") else f"@{s}")
+
+    await state.update_data(seller=seller_val)
+    await state.set_state(VipApplyFSM.waiting_proof)
+    await msg.reply(
+        _tr(lang, "vip.apply.ask_proof",
+            "Send a payment confirmation screenshot now (photo or file). You may add a note in the caption.",
+            "أرسل الآن لقطة شاشة لتأكيد الدفع (صورة أو ملف). يمكنك إضافة ملاحظة في التعليق.")
+    )
+
+# ===== استلام إثبات الدفع =====
+@router.message(
+    VipApplyFSM.waiting_proof,
+    F.content_type.in_({ContentType.PHOTO, ContentType.DOCUMENT})
+)
+async def vip_apply_proof(msg: Message, state: FSMContext):
+    lang = get_user_lang(msg.from_user.id) or "en"
+    data = await state.get_data()
+    app_id = normalize_app_id(str(data.get("pending_app_id", "")))
+    seller = str(data.get("seller", "-"))
+    if not app_id:
+        await state.clear()
+        return await msg.reply(t(lang, "vip.apply.stale_or_invalid"))
+
+    # جهّز الإثبات
+    proof_kind = "photo" if msg.photo else "document"
+    file_id = msg.photo[-1].file_id if msg.photo else msg.document.file_id
+    caption = msg.caption or ""
+
+    # أنشئ تذكرة/طلب معلّق ثم أخطِر الإدمنين مع الإثبات
+    user_id = msg.from_user.id
     if get_pending(user_id):
-        await state.clear(); await cb.answer(t(lang, "vip.track.already_pending"), show_alert=True); return
-    owner = find_uid_by_app(app_id)
-    if owner is not None and int(owner) != user_id:
-        await state.clear(); await cb.answer(_tr(lang, "vip.appid.taken_during",
-                                                 "⚠️ This ID is now linked to another account. Process stopped.",
-                                                 "⚠️ هذا المعرف أصبح مستخدمًا لحساب آخر. أوقفنا الإجراء."),
-                                             show_alert=True); return
+        await state.clear()
+        return await msg.answer(t(lang, "vip.track.already_pending"))
 
     ticket_id = f"{user_id}-{int(time.time())%1000000:06d}"
     add_pending(user_id, app_id, ticket_id=ticket_id)
@@ -401,31 +460,60 @@ async def vip_apply_confirm(cb: CallbackQuery, state: FSMContext):
     for admin_id in ADMIN_IDS:
         try:
             al = _ulang(admin_id)
-            m = await cb.bot.send_message(
-                admin_id,
+            head = (
                 f"{t(al, 'vip.admin.new_request_title')}\n"
                 f"🎫 <b>{t(al, 'vip.ticket_id')}</b>: <code>{ticket_id}</code>\n"
                 f"👤 {t(al, 'vip.admin.user')}: <code>{user_id}</code>\n"
-                f"🆔 {t(al, 'vip.admin.app_id')}: <code>{app_id}</code>\n\n"
-                f"{t(al, 'vip.admin.instructions')}",
-                reply_markup=_admin_review_kb(user_id, app_id, al),
-                parse_mode=ParseMode.HTML
+                f"🆔 {t(al, 'vip.admin.app_id')}: <code>{app_id}</code>\n"
+                f"🧾 " + _tr(al, "vip.admin.seller_line", "Seller:", "البائع:") + f" <code>{seller}</code>\n\n"
+                f"{t(al, 'vip.admin.instructions')}"
             )
-            _admin_msgs_add(user_id, admin_id, m.message_id, ticket_id)
+            header_msg = await msg.bot.send_message(
+                admin_id, head, parse_mode=ParseMode.HTML,
+                reply_markup=_admin_review_kb(user_id, app_id, al)
+            )
+            _admin_msgs_add(user_id, admin_id, header_msg.message_id, ticket_id)
+
+            proof_caption = (
+                _tr(al, "vip.admin.payment_proof", "Payment proof", "إثبات الدفع") +
+                (f"\n{caption}" if caption else "")
+            )
+            if proof_kind == "photo":
+                await msg.bot.send_photo(
+                    admin_id, file_id,
+                    caption=proof_caption,
+                    parse_mode=ParseMode.HTML,
+                    reply_to_message_id=header_msg.message_id
+                )
+            else:
+                await msg.bot.send_document(
+                    admin_id, file_id,
+                    caption=proof_caption,
+                    parse_mode=ParseMode.HTML,
+                    reply_to_message_id=header_msg.message_id
+                )
         except Exception:
             pass
 
-
     await state.clear()
-    try:
-        await cb.message.edit_reply_markup()
-    except Exception:
-        pass
-    await cb.message.answer(
-        t(lang, "vip.apply.sent_with_ticket").format(ticket_id=ticket_id, submitted_at=submitted_at),
+    await msg.answer(
+        _tr_fmt(
+            lang, "vip.apply.sent_with_ticket_ext",
+            "✅ Your request was submitted.\n🎫 Ticket: <code>{ticket}</code>\n📌 Submitted: {when}",
+            "✅ تم إرسال طلبك.\n🎫 رقم التذكرة: <code>{ticket}</code>\n📌 وقت الإرسال: {when}",
+            ticket=ticket_id, when=submitted_at
+        ),
         parse_mode=ParseMode.HTML
     )
-    await cb.answer()
+
+@router.message(VipApplyFSM.waiting_proof)
+async def vip_apply_proof_invalid(msg: Message, state: FSMContext):
+    lang = get_user_lang(msg.from_user.id) or "en"
+    await msg.reply(
+        _tr(lang, "vip.apply.bad_proof",
+            "Please send a photo or a file as payment proof.",
+            "فضلًا أرسل صورة أو ملفًا كإثبات دفع.")
+    )
 
 # ===== زر تتبّع من القائمة =====
 @router.callback_query(F.data == "vip:track")
@@ -485,7 +573,6 @@ async def vip_cancel(cb: CallbackQuery):
         except Exception:
             pass
 
-
     try:
         await cb.message.edit_reply_markup(
             reply_markup=_vip_menu_kb(lang, is_member=False, has_pending=False)
@@ -533,16 +620,16 @@ async def vip_approve(cb: CallbackQuery):
     meta = get_vip_meta(user_id) or {}
     exp_str = _fmt_ts(meta.get("expiry_ts"), date_only=True)
 
+    # إشعار المستخدم بالموافقة
     try:
-       u_lang = _ulang(user_id)  # لغة المستخدم
-       if ticket_id:
-           await cb.bot.send_message(user_id, t(u_lang, "vip.user.rejected_with_ticket").format(ticket_id=ticket_id))
-       else:
-           await cb.bot.send_message(user_id, t(u_lang, "vip.user.rejected"))
+        u_lang = _ulang(user_id)
+        msg = _tr_fmt(u_lang, "vip.user.approved",
+                      "✅ Your VIP was activated.\n📅 Expires on: {exp}",
+                      "✅ تم تفعيل اشتراك VIP الخاص بك.\n📅 ينتهي في: {exp}",
+                      exp=exp_str)
+        await cb.bot.send_message(user_id, msg, parse_mode=ParseMode.HTML)
     except Exception:
         pass
-
-
 
     note = t(lang, "vip.admin.approved_note").format(user_id=user_id, app_id=app_id)
     if ticket_id:
@@ -571,10 +658,10 @@ async def vip_reject(cb: CallbackQuery):
         await cb.answer(t(lang, "vip.admin.no_pending"), show_alert=True);  return
 
     try:
-        if ticket_id:
-            await cb.bot.send_message(user_id, t(lang, "vip.user.rejected_with_ticket").format(ticket_id=ticket_id))
-        else:
-            await cb.bot.send_message(user_id, t(lang, "vip.user.rejected"))
+        u_lang = _ulang(user_id)
+        msg = t(u_lang, "vip.user.rejected_with_ticket").format(ticket_id=ticket_id) if ticket_id \
+            else t(u_lang, "vip.user.rejected")
+        await cb.bot.send_message(user_id, msg, parse_mode=ParseMode.HTML)
     except Exception:
         pass
 
@@ -657,7 +744,7 @@ async def vip_approve_secs_recv(msg: Message, state: FSMContext):
     )
 
     try:
-        u_lang = _ulang(uid)  # لغة المستخدم
+        u_lang = _ulang(uid)
         await msg.bot.send_message(
             uid,
             _tr_fmt(
@@ -670,7 +757,6 @@ async def vip_approve_secs_recv(msg: Message, state: FSMContext):
         )
     except Exception:
         pass
-
 
 # ===== معلومات/ميزات =====
 @router.callback_query(F.data == "vip:info")

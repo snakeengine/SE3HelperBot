@@ -12,9 +12,13 @@ from utils.rewards_store import get_points
 
 log = logging.getLogger(__name__)
 
-# === Admins ===
+# ============ إعدادات عامة ============
 _admin_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
 ADMIN_IDS = [int(x) for x in _admin_env.split(",") if x.strip().isdigit()]
+
+# مفاتيح تعطيل إشعارات الأدمن من .env
+NOTIFY_ADMINS = (os.getenv("REWARDS_NOTIFY_ADMINS", "1").strip() not in {"0", "false", "no", "off", ""})
+NOTIFY_VIP_ORDERS = (os.getenv("REWARDS_NOTIFY_VIP_ORDERS", "1").strip() not in {"0", "false", "no", "off", ""})
 
 
 def _L(uid: int) -> str:
@@ -22,6 +26,8 @@ def _L(uid: int) -> str:
 
 
 async def _safe_send(bot, chat_id: int, text: str, **kwargs) -> bool:
+    """إرسال آمن (بدون كسر التدفق) مع تعطيل المعاينة افتراضيًا."""
+    kwargs.setdefault("disable_web_page_preview", True)
     try:
         await bot.send_message(chat_id, text, **kwargs)
         return True
@@ -32,17 +38,26 @@ async def _safe_send(bot, chat_id: int, text: str, **kwargs) -> bool:
 
 # ------------------------------ Helpers ------------------------------
 
-def _fmt_hours_ar(hours: int) -> str:
+def _fb(lang: str, ar_text: str, en_text: str) -> str:
+    """اختيار fallback بحسب اللغة."""
+    return ar_text if str(lang).startswith("ar") else en_text
+
+
+def _fmt_hours(hours: int, lang: str) -> str:
+    """تنسيق مدة VIP باللغتين."""
     if hours < 24:
-        return f"{hours} ساعة"
+        return _fb(lang, f"{hours} ساعة", f"{hours} hour" + ("s" if hours != 1 else ""))
     days = hours // 24
-    if days == 1:
-        return "يوم"
-    if days == 2:
-        return "يومين"
-    if 3 <= days <= 10:
-        return f"{days} أيام"
-    return f"{days} يومًا"
+    if str(lang).startswith("ar"):
+        if days == 1:
+            return "يوم"
+        if days == 2:
+            return "يومين"
+        if 3 <= days <= 10:
+            return f"{days} أيام"
+        return f"{days} يومًا"
+    else:
+        return f"{days} day" + ("s" if days != 1 else "")
 
 
 def _from_order(obj: Any) -> dict:
@@ -53,7 +68,6 @@ def _from_order(obj: Any) -> dict:
     if isinstance(obj, dict):
         get = obj.get
     else:
-        # fallback على getattr
         get = lambda k, default=None: getattr(obj, k, default)
 
     oid = get("id") or get("oid") or get("order_id")
@@ -62,7 +76,14 @@ def _from_order(obj: Any) -> dict:
     app_id = get("app_id") or get("app") or ""
     details = get("details") or get("note") or ""
     cost = get("cost") or get("price") or 0
-    return {"oid": oid, "uid": uid, "hours": int(hours or 0), "app_id": str(app_id or ""), "details": str(details or ""), "cost": int(cost or 0)}
+    return {
+        "oid": oid,
+        "uid": uid,
+        "hours": int(hours or 0),
+        "app_id": str(app_id or ""),
+        "details": str(details or ""),
+        "cost": int(cost or 0),
+    }
 
 
 # ==============================================================
@@ -86,10 +107,12 @@ async def notify_user_points(
     lang = _L(uid)
     if new_balance is None:
         text = t(lang, "rwdadm.user_notice.delta_short",
-                 "تم تعديل رصيدك: {delta:+}").format(delta=delta)
+                 _fb(lang, "تم تعديل رصيدك: {delta:+}", "Your balance changed: {delta:+}")) \
+            .format(delta=delta)
     else:
         text = t(lang, "rwdadm.user_notice.delta",
-                 "تم تعديل رصيدك: {delta:+} • الرصيد الحالي: {balance}") \
+                 _fb(lang, "تم تعديل رصيدك: {delta:+} • الرصيد الحالي: {balance}",
+                             "Your balance changed: {delta:+} • New balance: {balance}")) \
             .format(delta=delta, balance=new_balance)
 
     await _safe_send(bot, uid, text)
@@ -121,7 +144,8 @@ async def notify_user_set_points(
 
     lang = _L(uid)
     text = t(lang, "rwdadm.user_notice.set",
-             "تم تعيين رصيدك إلى: {balance}").format(balance=new_balance)
+             _fb(lang, "تم تعيين رصيدك إلى: {balance}", "Your balance was set to: {balance}")) \
+        .format(balance=new_balance)
     await _safe_send(bot, uid, text)
     if actor_id:
         await _safe_send(bot, actor_id,
@@ -130,7 +154,8 @@ async def notify_user_set_points(
 
 async def notify_user_ban(bot, uid: int, *args, actor_id: Optional[int] = None) -> None:
     lang = _L(uid)
-    text = t(lang, "rwdadm.user_notice.ban", "🚫 تم حظرك من نظام الجوائز.")
+    text = t(lang, "rwdadm.user_notice.ban",
+             _fb(lang, "🚫 تم حظرك من نظام الجوائز.", "🚫 You have been banned from rewards."))
     await _safe_send(bot, uid, text)
     if actor_id:
         await _safe_send(bot, actor_id, f"✅ banned uid=<code>{uid}</code>")
@@ -138,7 +163,8 @@ async def notify_user_ban(bot, uid: int, *args, actor_id: Optional[int] = None) 
 
 async def notify_user_unban(bot, uid: int, *args, actor_id: Optional[int] = None) -> None:
     lang = _L(uid)
-    text = t(lang, "rwdadm.user_notice.unban", "✅ تم فك حظرك من نظام الجوائز.")
+    text = t(lang, "rwdadm.user_notice.unban",
+             _fb(lang, "✅ تم فك حظرك من نظام الجوائز.", "✅ Your rewards ban has been lifted."))
     await _safe_send(bot, uid, text)
     if actor_id:
         await _safe_send(bot, actor_id, f"✅ unbanned uid=<code>{uid}</code>")
@@ -146,7 +172,8 @@ async def notify_user_unban(bot, uid: int, *args, actor_id: Optional[int] = None
 
 async def notify_user_warns_reset(bot, uid: int, *, actor_id: Optional[int] = None) -> None:
     lang = _L(uid)
-    text = t(lang, "rwdadm.user_notice.warns_reset", "تم تصفير التحذيرات على حسابك.")
+    text = t(lang, "rwdadm.user_notice.warns_reset",
+             _fb(lang, "تم تصفير التحذيرات على حسابك.", "Your warnings have been reset."))
     await _safe_send(bot, uid, text)
     if actor_id:
         await _safe_send(bot, actor_id, f"✅ warns reset | uid=<code>{uid}</code>")
@@ -154,7 +181,8 @@ async def notify_user_warns_reset(bot, uid: int, *, actor_id: Optional[int] = No
 
 async def notify_user_reset_account(bot, uid: int, *, actor_id: Optional[int] = None) -> None:
     lang = _L(uid)
-    text = t(lang, "rwdadm.user_notice.reset", "تمت إعادة ضبط حساب الجوائز الخاص بك.")
+    text = t(lang, "rwdadm.user_notice.reset",
+             _fb(lang, "تمت إعادة ضبط حساب الجوائز الخاص بك.", "Your rewards account has been reset."))
     await _safe_send(bot, uid, text)
     if actor_id:
         await _safe_send(bot, actor_id, f"✅ rewards reset | uid=<code>{uid}</code>")
@@ -188,8 +216,12 @@ async def notify_user_vip_submitted(
     txt = t(
         lang,
         "rwd.vip.submitted",
-        "تم استلام طلبك بنجاح ✅\nرقم الطلب: #{oid}\nالمدة: {hours}\nسيتم مراجعته من الإدارة.",
-    ).format(oid=oid, hours=_fmt_hours_ar(int(hours or 0)))
+        _fb(
+            lang,
+            "✅ تم استلام طلب VIP الخاص بك.\nرقم الطلب: #{oid}\nالمدة: {hours}\nبانتظار موافقة الإدارة.",
+            "✅ Your VIP request has been submitted.\nOrder: #{oid}\nDuration: {hours}\nAwaiting admin approval.",
+        ),
+    ).format(oid=oid, hours=_fmt_hours(int(hours or 0), lang))
     await _safe_send(bot, uid, txt)
 
 
@@ -208,6 +240,9 @@ async def notify_admins_new_vip_order(
       - notify_admins_new_vip_order(bot, order_dict)
       - notify_admins_new_vip_order(bot, oid, uid, hours, app_id, details, cost)
     """
+    if not (NOTIFY_ADMINS and NOTIFY_VIP_ORDERS):
+        return
+
     if isinstance(order_or_oid, (dict,)):
         o = _from_order(order_or_oid)
         oid = o["oid"]
@@ -220,26 +255,28 @@ async def notify_admins_new_vip_order(
         oid = order_or_oid
 
     admins = list(admins) if admins else ADMIN_IDS
+    if not admins:
+        return
 
     text = (
-        "🧾 <b>طلب VIP جديد</b>:\n"
-        f"#<b>{oid}</b>\n"
-        f"• uid: <a href='tg://user?id={uid}'>{uid}</a>\n"
-        f"• hours: {_fmt_hours_ar(int(hours or 0))}\n"
-        f"• app: <code>{app_id or '-'}</code>\n"
-        f"• details: {details or '-'}\n"
-        f"• cost: {int(cost or 0)}"
+        "🧾 <b>طلب VIP جديد</b>\n"
+        f"• رقم: <b>#{oid}</b>\n"
+        f"• المستخدم: <a href='tg://user?id={uid}'>{uid}</a>\n"
+        f"• المدة: {_fmt_hours(int(hours or 0), 'ar')}\n"
+        f"• App: <code>{app_id or '-'}</code>\n"
+        f"• تفاصيل: {details or '-'}\n"
+        f"• التكلفة: {int(cost or 0)}"
     )
 
     markup = InlineKeyboardMarkup(
         inline_keyboard=[[
             InlineKeyboardButton(text="موافقة ✅", callback_data=f"rwdadm:vip:approve:{oid}"),
-            InlineKeyboardButton(text="رفض ❌", callback_data=f"rwdadm:vip:reject:{oid}"),
+            InlineKeyboardButton(text="رفض ❌",    callback_data=f"rwdadm:vip:reject:{oid}"),
         ]]
     )
 
     for aid in admins:
-        await _safe_send(bot, aid, text, reply_markup=markup, disable_web_page_preview=True)
+        await _safe_send(bot, aid, text, reply_markup=markup)
 
 
 async def notify_user_vip_approved(
@@ -267,14 +304,19 @@ async def notify_user_vip_approved(
         uid = int(order_or_uid)
 
     lang = _L(uid)
-    txt = t(lang, "rwd.vip.approved",
-            "✅ تمت الموافقة على طلب VIP #{oid} لمدة: {hours}") \
-        .format(oid=oid, hours=_fmt_hours_ar(int(hours or 0)))
+    txt = t(
+        lang,
+        "rwd.vip.approved",
+        _fb(lang, "✅ تمت الموافقة على طلب VIP #{oid} لمدة: {hours}",
+                    "✅ Your VIP order #{oid} was approved for: {hours}"),
+    ).format(oid=oid, hours=_fmt_hours(int(hours or 0), lang))
+
     extra = []
     if app_id:
-        extra.append(f"\napp: <code>{app_id}</code>")
+        extra.append(_fb(lang, "\nمعرّف التطبيق: ", "\nApp ID: ") + f"<code>{app_id}</code>")
     if details:
-        extra.append(f"\ndetails: {details}")
+        extra.append(_fb(lang, "\nالتفاصيل: ", "\nDetails: ") + details)
+
     await _safe_send(bot, uid, txt + "".join(extra))
 
 
@@ -299,11 +341,19 @@ async def notify_user_vip_rejected(
         uid = int(order_or_uid)
 
     lang = _L(uid)
-    base = t(lang, "rwd.vip.rejected", "❌ تم رفض طلب VIP #{oid}").format(oid=oid)
+    base = t(
+        lang,
+        "rwd.vip.rejected",
+        _fb(lang, "❌ تم رفض طلب VIP #{oid}", "❌ Your VIP order #{oid} was rejected"),
+    ).format(oid=oid)
     if reason:
-        base += f"\nسبب: {reason}"
+        base += _fb(lang, "\nالسبب: ", "\nReason: ") + reason
     if refunded > 0:
-        base += "\n" + t(lang, "rwd.vip.refund", "↩️ تم رد {amount} نقطة إلى رصيدك.").format(amount=refunded)
+        base += "\n" + t(
+            lang,
+            "rwd.vip.refund",
+            _fb(lang, "↩️ تم رد {amount} نقطة إلى رصيدك.", "↩️ {amount} points have been refunded."),
+        ).format(amount=refunded)
     await _safe_send(bot, uid, base)
 
 
@@ -321,6 +371,9 @@ async def notify_admins_vip_decision(
       - notify_admins_vip_decision(bot, oid, uid, "approved"/"rejected", reason=?, actor_id=?)
       - notify_admins_vip_decision(bot, order_dict, ..., decision=?, ...)
     """
+    if not NOTIFY_ADMINS:
+        return
+
     if isinstance(order_or_oid, (dict,)):
         o = _from_order(order_or_oid)
         oid = o["oid"]

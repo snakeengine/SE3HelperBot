@@ -1,39 +1,34 @@
 {
   "users": {
-    "7360982123": {
-      "status": "none",
-      "rejects": 0,
-      "attempts": [],
-      "cooldown_until": 0,
-      "banned_until": 0
-    },
     "6403644551": {
       "status": "approved",
       "rejects": 0,
       "attempts": [
-        1756346722,
-        1756346771
+        1757434845
       ],
       "cooldown_until": 0,
       "banned_until": 0,
-      "submitted_at": 1756346771,
-      "name": "guiwerfyuiwerfgiuwerf",
+      "submitted_at": 1757434845,
+      "name": "LJNGERLJKNHBRG",
       "links": [
-        "uioghewrfuighouewrf"
+        "https://www.youtube.com/watch?v=CTswZd4hK-Q"
       ],
       "telegram": {
-        "declared": "@jopgverfjopgerjpi",
+        "declared": "@SnakeOfficial_Support",
         "real": "@SnakeOfficial_Support",
-        "match": false
+        "match": true
       },
       "proof": {
         "photos": [
-          "AgACAgEAAxkBAAJR2mivuI2ZrLBuZOSm3F82cch7mxwcAALorzEbpS15RcI05GO-o1FZAQADAgADcwADNgQ",
-          "AgACAgEAAxkBAAJR2mivuI2ZrLBuZOSm3F82cch7mxwcAALorzEbpS15RcI05GO-o1FZAQADAgADbQADNgQ",
-          "AgACAgEAAxkBAAJR2mivuI2ZrLBuZOSm3F82cch7mxwcAALorzEbpS15RcI05GO-o1FZAQADAgADeAADNgQ"
+          "AgACAgEAAxkBAAIM4GjAUt2fFC2kPvpz6fHhzncxtngiAAJ6rzEbVdsJRl4cHXreBO-BAQADAgADcwADNgQ",
+          "AgACAgEAAxkBAAIM4GjAUt2fFC2kPvpz6fHhzncxtngiAAJ6rzEbVdsJRl4cHXreBO-BAQADAgADbQADNgQ",
+          "AgACAgEAAxkBAAIM4GjAUt2fFC2kPvpz6fHhzncxtngiAAJ6rzEbVdsJRl4cHXreBO-BAQADAgADeAADNgQ"
         ],
         "videos": []
-      }
+      },
+      "auto_links": [
+        "https://www.youtube.com/P;KLHJBVFEDIOPH"
+      ]
     }
   },
   "settings": {

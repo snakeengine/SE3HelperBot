@@ -13,6 +13,7 @@ from aiogram.types import (
     Message, CallbackQuery, InlineKeyboardButton, ChatMemberUpdated
 )
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+    # Aiogram v3 statuses:
 from aiogram.enums import ChatMemberStatus
 from aiogram.exceptions import TelegramBadRequest
 
@@ -64,16 +65,21 @@ def _parse_channels(value: str) -> List[Union[int, str]]:
 
 # مثال REWARDS_CHANNELS: "@SnakeEngine,-1001234567890"
 REQUIRED_CHANNELS = _parse_channels(os.getenv("REWARDS_CHANNELS", ""))
-LEAVE_DEDUCT_DEFAULT = int(os.getenv("REWARDS_LEAVE_DEDUCT", "50"))
-GRACE_SECONDS = int(os.getenv("REWARDS_GRACE_SECONDS", "120"))   # مهلة السماح
-MEMBERSHIP_TTL = int(os.getenv("REWARDS_RECHECK_TTL", "60"))     # كاش فحص الاشتراك
-ESCALATE = os.getenv("REWARDS_DEDUCT_ESCALATE", "").strip()      # "20,50,100"
-DEDUCT_SEQ = [int(x) for x in ESCALATE.split(",") if x.strip().isdigit()]
-SKIP_ADMINS = int(os.getenv("REWARDS_SKIP_ADMINS", "1"))         # إعفاء الأدمن
 
-# تنبيه مبكّر وحد السلوك مع الرصيد الصفري:
+LEAVE_DEDUCT_DEFAULT = int(os.getenv("REWARDS_LEAVE_DEDUCT", "50"))
+GRACE_SECONDS        = int(os.getenv("REWARDS_GRACE_SECONDS", "120"))   # مهلة السماح
+MEMBERSHIP_TTL       = int(os.getenv("REWARDS_RECHECK_TTL", "60"))      # كاش فحص الاشتراك
+ESCALATE             = os.getenv("REWARDS_DEDUCT_ESCALATE", "").strip() # "20,50,100"
+DEDUCT_SEQ           = [int(x) for x in ESCALATE.split(",") if x.strip().isdigit()]
+SKIP_ADMINS          = int(os.getenv("REWARDS_SKIP_ADMINS", "1"))       # إعفاء الأدمن
+
+# تنبيه مبكّر وحدّ السلوك مع الرصيد الصفري:
 PREWARN_ON_LEAVE = int(os.getenv("REWARDS_PREWARN", "1"))        # 1=فعّال
 WARN_ZERO_BAL    = int(os.getenv("REWARDS_WARN_ZERO_BAL", "0"))  # 0=لا تنبّه إن الرصيد صفر
+
+# ✅ مفاتيح كتم إشعارات الأدمن (افتراضيًا متوقفة)
+NOTIFY_LEAVE      = int(os.getenv("REWARDS_NOTIFY_LEAVE", "0"))        # إشعار "Leave detected"
+NOTIFY_JOIN_BACK  = int(os.getenv("REWARDS_NOTIFY_JOIN_BACK", "0"))    # إشعار "User re-subscribed"
 
 def _L(uid: int) -> str:
     return get_user_lang(uid) or "ar"
@@ -138,9 +144,7 @@ async def join_keyboard(bot, lang: str) -> InlineKeyboardBuilder:
     kb.row(
         InlineKeyboardButton(text=t(lang, "rewards.gate.ive_joined", "✅ اشتركت / تحقق"), callback_data="rwd:gate:recheck")
     )
-    kb.row(
-        InlineKeyboardButton(text=t(lang, "common.close", "إغلاق"), callback_data="rwd:gate:close")
-    )
+    kb.row(InlineKeyboardButton(text=t(lang, "common.close", "إغلاق"), callback_data="rwd:gate:close"))
     return kb
 
 # ---------------------- واجهة الإلزام ----------------------
@@ -284,8 +288,8 @@ async def _apply_grace_and_deduct(bot, uid: int, channel: Union[int, str], leave
     except Exception:
         bal = 0
 
-    title = await _get_channel_title(bot, channel)
-    lang = _L(uid)
+    title  = await _get_channel_title(bot, channel)
+    lang   = _L(uid)
     deduct = abs(_calc_deduct(uid))
 
     # إقفال الجوائز دائمًا بعد ثبوت المغادرة
@@ -293,24 +297,25 @@ async def _apply_grace_and_deduct(bot, uid: int, channel: Union[int, str], leave
     mark_warn(uid, "left_required_channel")
 
     if bal <= 0:
-        # لا خصم لعدم وجود رصيد
-        try:
-            await _notify_admins(
-                bot,
-                (
-                    "🚫 <b>Leave detected</b>\n"
-                    f"• User: <a href='tg://user?id={uid}'>{uid}</a>\n"
-                    f"• Channel: <b>{title}</b>\n"
-                    "• Deducted: <b>0</b> pts (no balance)\n"
-                    "• Rewards blocked."
+        # لا خصم لعدم وجود رصيد — إشعار أدمن اختياري
+        if NOTIFY_LEAVE:
+            try:
+                await _notify_admins(
+                    bot,
+                    (
+                        "🚫 <b>Leave detected</b>\n"
+                        f"• User: <a href='tg://user?id={uid}'>{uid}</a>\n"
+                        f"• Channel: <b>{title}</b>\n"
+                        "• Deducted: <b>0</b> pts (no balance)\n"
+                        "• Rewards blocked."
+                    )
                 )
-            )
-        except Exception:
-            pass
+            except Exception:
+                pass
         return
 
     if deduct > 0:
-        add_points(uid, -deduct, reason="left_required_channel")
+        add_points(uid, -deduct, reason="left_required_channel", typ="penalty")
 
     try:
         await bot.send_message(
@@ -326,26 +331,28 @@ async def _apply_grace_and_deduct(bot, uid: int, channel: Union[int, str], leave
     except Exception:
         pass
 
-    try:
-        await _notify_admins(
-            bot,
-            (
-                "🚫 <b>Leave detected</b>\n"
-                f"• User: <a href='tg://user?id={uid}'>{uid}</a>\n"
-                f"• Channel: <b>{title}</b>\n"
-                f"• Deducted: <b>{deduct}</b> pts\n"
-                "• Rewards blocked."
+    # إشعار الأدمن — اختياري
+    if NOTIFY_LEAVE:
+        try:
+            await _notify_admins(
+                bot,
+                (
+                    "🚫 <b>Leave detected</b>\n"
+                    f"• User: <a href='tg://user?id={uid}'>{uid}</a>\n"
+                    f"• Channel: <b>{title}</b>\n"
+                    f"• Deducted: <b>{deduct}</b> pts\n"
+                    "• Rewards blocked."
+                )
             )
-        )
-    except Exception:
-        pass
+        except Exception:
+            pass
 
 # ---------------------- مراقبة تغيّرات العضوية ----------------------
 @router.chat_member()
 async def on_chat_member_update(event: ChatMemberUpdated):
     """
-    - عند الانضمام: فكّ الحظر وأرسل ترحيب مع زر فتح الجوائز + إشعار الأدمن.
-    - عند المغادرة: تنبيه مبكّر + مهلة سماح ثم خصم/إقفال + إشعار الأدمن.
+    - عند الانضمام: فكّ الحظر وأرسل ترحيب مع زر فتح الجوائز + (إشعار أدمن اختياري).
+    - عند المغادرة: تنبيه مبكّر + مهلة سماح ثم خصم/إقفال + (إشعار أدمن اختياري).
     """
     chat_id = event.chat.id
     if not REQUIRED_CHANNELS:
@@ -383,20 +390,21 @@ async def on_chat_member_update(event: ChatMemberUpdated):
                 )
             except Exception:
                 pass
-            # إشعار الأدمن بعودة الاشتراك
-            try:
-                title = await _get_channel_title(event.bot, chat_id)
-                await _notify_admins(
-                    event.bot,
-                    (
-                        "✅ <b>User re-subscribed</b>\n"
-                        f"• User: <a href='tg://user?id={uid}'>{uid}</a>\n"
-                        f"• Channel: <b>{title}</b>\n"
-                        "• Rewards unlocked."
+            # إشعار الأدمن بعودة الاشتراك — اختياري
+            if NOTIFY_JOIN_BACK:
+                try:
+                    title = await _get_channel_title(event.bot, chat_id)
+                    await _notify_admins(
+                        event.bot,
+                        (
+                            "✅ <b>User re-subscribed</b>\n"
+                            f"• User: <a href='tg://user?id={uid}'>{uid}</a>\n"
+                            f"• Channel: <b>{title}</b>\n"
+                            "• Rewards unlocked."
+                        )
                     )
-                )
-            except Exception:
-                pass
+                except Exception:
+                    pass
         return
 
     # ===== غادر القناة

@@ -1,0 +1,6 @@
+{"ts": 1757471641, "status": "invoice_sent", "oid": "8975c2392b62", "uid": 6403644551, "game": "8bp", "plan": "3d", "method": "stars"}
+{"ts": 1757472573, "status": "invoice_sent", "oid": "b5e5f6a2b0b1", "uid": 7360982123, "game": "8bp", "plan": "3d", "method": "stars", "currency": "XTR", "amount": 500}
+{"ts": 1757505393, "status": "invoice_sent", "oid": "362f647b1845", "uid": 7360982123, "game": "8bp", "plan": "3d", "method": "stars", "currency": "XTR", "amount": 500}
+{"ts": 1757505676, "status": "paid", "oid": "362f647b1845", "uid": 7360982123, "currency": "XTR", "total": 500, "sku": "sevip", "game": "8bp", "plan": "3d", "method": "stars"}
+{"ts": 1757506518, "status": "invoice_sent", "oid": "80952a8ee287", "uid": 7360982123, "game": "8bp", "plan": "3d", "method": "stars", "currency": "XTR", "amount": 500}
+{"ts": 1757822037, "status": "invoice_sent", "oid": "271f468b277e", "uid": 7360982123, "game": "8bp", "plan": "3d", "method": "stars", "currency": "XTR", "amount": 500}

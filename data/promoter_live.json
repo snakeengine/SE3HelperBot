@@ -1,0 +1,63 @@
+{
+  "streams": [
+    {
+      "id": 1757383798841,
+      "uid": 6403644551,
+      "platform": "tiktok",
+      "handle": "@بتبيءتبلتءن",
+      "title": "ةبال",
+      "started_at": 1757383798,
+      "active": true
+    },
+    {
+      "id": 1757385178694,
+      "uid": 6403644551,
+      "platform": "other",
+      "handle": "ثيفقغا6",
+      "title": "ثقلثقثق",
+      "started_at": 1757385178,
+      "active": true,
+      "approved": true,
+      "approved_by": 7360982123,
+      "approved_at": 1757385185
+    },
+    {
+      "id": 1757385741282,
+      "uid": 6403644551,
+      "platform": "other",
+      "handle": "جنخحقفغاجخهنح",
+      "title": "خحت6ا45لتخهح",
+      "started_at": 1757385741,
+      "active": true,
+      "approved": true,
+      "approved_by": 7360982123,
+      "approved_at": 1757385745
+    }
+  ],
+  "active": {},
+  "history": [
+    {
+      "id": "1757420902",
+      "user_id": 6403644551,
+      "platform": "youtube",
+      "handle": "@لاتوبلانتلات",
+      "title": "غتنغفتتبايلتابل",
+      "started_at": 1757420902,
+      "status": "ended",
+      "ended_at": 1757421391,
+      "ended_by": "user"
+    },
+    {
+      "id": "7360982123-1757427385",
+      "user_id": 7360982123,
+      "platform": "tiktok",
+      "handle": "@jdjdjjdjd",
+      "title": "Jdhd",
+      "started_at": 1757427385,
+      "display_name": "نيني",
+      "ended_at": 1757429202
+    }
+  ],
+  "user_map": {},
+  "seq": 10
+}

@@ -13,9 +13,32 @@ from aiogram.types import (
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest
+
 from lang import t, get_user_lang
 
 router = Router(name="admin_hub")
+
+# === Imports خاصة بالجوائز (مع Fallbacks لكي لا تتعطل اللوحة لو غابت الوحدات) ===
+try:
+    from utils.rewards_store import list_blocked_users, set_blocked
+except Exception:
+    # Fallbacks لا تُفشل الراوتر لو الملفات ناقصة
+    def list_blocked_users(offset: int = 0, limit: int = 20):
+        return [], 0
+    def set_blocked(uid: int, blocked: bool):
+        return None
+
+try:
+    from utils.rewards_notify import notify_user_unban
+except Exception:
+    # إشعار افتراضي صامت عند رفع الحظر (لا يوقف التنفيذ لو ملف الإشعارات غير موجود)
+    async def notify_user_unban(bot, uid: int, actor_id: int | None = None):
+        try:
+            lang = get_user_lang(uid) or "en"
+            msg = "✅ تم رفع الحظر." if str(lang).startswith("ar") else "✅ Your ban has been lifted."
+            await bot.send_message(uid, msg)
+        except Exception:
+            pass
 
 # ===================== أدوات عامة =====================
 def _load(p: Path):
@@ -313,18 +336,138 @@ def _kb_alerts(lang: str) -> InlineKeyboardMarkup:
     kb.adjust(2,2,2,2,2,1)
     return kb.as_markup()
 
+# ============== جوائز: قائمة المحظورين داخل لوحة الأدمن ==============
+_ADMRWD_BLOCKED_PAGE_SIZE = 10
+
+def _blocked_page_kb_admin(lang: str, page: int, has_prev: bool, has_next: bool) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    nav = []
+    if has_prev:
+        nav.append(InlineKeyboardButton(text="«", callback_data=f"ah:rwd:blocked:p:{page-1}"))
+    nav.append(InlineKeyboardButton(text=str(page+1), callback_data=f"ah:rwd:blocked:p:{page}"))
+    if has_next:
+        nav.append(InlineKeyboardButton(text="»", callback_data=f"ah:rwd:blocked:p:{page+1}"))
+    if nav:
+        kb.row(*nav)
+    kb.row(InlineKeyboardButton(text="⬅️ " + tt(lang, "admin.back", "رجوع"), callback_data="ah:rewards"))
+    return kb.as_markup()
+
+async def _render_blocked_list(ev: Message | CallbackQuery, page: int = 0):
+    """عرض قائمة المحظورين الخاصة بالجوائز ضمن لوحة الأدمن."""
+    lang = get_user_lang(ev.from_user.id) or "en"
+    offset = page * _ADMRWD_BLOCKED_PAGE_SIZE
+    items, total = list_blocked_users(offset=offset, limit=_ADMRWD_BLOCKED_PAGE_SIZE)
+
+    if total == 0:
+        txt = tt(lang, "rwdadm.blocked.empty", "لا يوجد مستخدمون محظورون حاليًا.")
+        kb = _blocked_page_kb_admin(lang, 0, False, False)
+        if isinstance(ev, CallbackQuery):
+            try:
+                await ev.message.edit_text(txt, reply_markup=kb)
+            except Exception:
+                await ev.message.answer(txt, reply_markup=kb)
+            await ev.answer()
+        else:
+            await ev.answer(txt, reply_markup=kb)
+        return
+
+    lines = [
+        tt(lang, "rwdadm.blocked.title", "🚫 قائمة المحظورين") +
+        f"\n{tt(lang,'rwdadm.total','الإجمالي')}: {total}"
+    ]
+
+    kb = InlineKeyboardBuilder()
+    for uid, row in items:
+        pts = int((row or {}).get("points", 0))
+        warns = int((row or {}).get("warns", 0))
+        lines.append(f"\n• <b>{uid}</b> — {tt(lang,'rwdadm.points','النقاط')}: {pts} | {tt(lang,'rwdadm.warns','تحذيرات')}: {warns}")
+        kb.row(
+            InlineKeyboardButton(text=tt(lang, "rwdadm.open_panel", "فتح لوحة 🧩"), callback_data=f"rwdadm:panel:{uid}"),
+            InlineKeyboardButton(text=tt(lang, "rwdadm.unban_btn", "رفع الحظر ✅"),  callback_data=f"ah:rwd:unban:{uid}"),
+        )
+
+    has_prev = offset > 0
+    has_next = (offset + _ADMRWD_BLOCKED_PAGE_SIZE) < total
+    nav_kb = _blocked_page_kb_admin(lang, page, has_prev, has_next)
+    for row in InlineKeyboardBuilder.from_markup(nav_kb).export():
+        kb.row(*row)
+
+    text = "\n".join(lines)
+    if isinstance(ev, CallbackQuery):
+        try:
+            await ev.message.edit_text(text, reply_markup=kb.as_markup(), disable_web_page_preview=True)
+        except Exception:
+            await ev.message.answer(text, reply_markup=kb.as_markup(), disable_web_page_preview=True)
+        await ev.answer()
+    else:
+        await ev.answer(text, reply_markup=kb.as_markup(), disable_web_page_preview=True)
+
+async def _refresh_blocked_current_page_admin(cb: CallbackQuery):
+    """استخراج الصفحة الحالية من كيبورد القائمة وإعادة عرضها."""
+    try:
+        for row in (cb.message.reply_markup.inline_keyboard or []):
+            for btn in row:
+                data = getattr(btn, "callback_data", "") or ""
+                if data.startswith("ah:rwd:blocked:p:"):
+                    page = int(data.split(":")[-1])
+                    await _render_blocked_list(cb, page)
+                    return
+    except Exception:
+        pass
+    await _render_blocked_list(cb, 0)
+
+@router.callback_query(F.data == "ah:rwd:blocked")
+async def ah_rwd_blocked(cb: CallbackQuery):
+    if not _is_admin(cb.from_user.id):
+        l = get_user_lang(cb.from_user.id) or "en"
+        return await cb.answer(tt(l, "admins_only", "للمشرفين فقط"), show_alert=True)
+    await _render_blocked_list(cb, 0)
+
+@router.callback_query(F.data.startswith("ah:rwd:blocked:p:"))
+async def ah_rwd_blocked_page(cb: CallbackQuery):
+    if not _is_admin(cb.from_user.id):
+        l = get_user_lang(cb.from_user.id) or "en"
+        return await cb.answer(tt(l, "admins_only", "للمشرفين فقط"), show_alert=True)
+    try:
+        page = int(cb.data.split(":")[-1])
+    except Exception:
+        page = 0
+    await _render_blocked_list(cb, page)
+
+@router.callback_query(F.data.startswith("ah:rwd:unban:"))
+async def ah_rwd_unban(cb: CallbackQuery):
+    """رفع الحظر من داخل قائمة المحظورين، مع إعادة تحميل الصفحة الحالية."""
+    if not _is_admin(cb.from_user.id):
+        l = get_user_lang(cb.from_user.id) or "en"
+        return await cb.answer(tt(l, "admins_only", "للمشرفين فقط"), show_alert=True)
+    uid = int(cb.data.split(":")[-1])
+    set_blocked(uid, False)
+    try:
+        await notify_user_unban(cb.bot, uid, actor_id=cb.from_user.id)
+    except Exception:
+        pass
+    await _refresh_blocked_current_page_admin(cb)
+
 # === [NEW] لوحة فرعية لإدارة الجوائز
 def _kb_rewards_admin(lang: str, me_uid: int) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.button(text="🏆 " + tt(lang, "rwdadm.open_my_panel", "فتح لوحتي"),
-              callback_data=f"rwdadm:panel:{me_uid}")
-    kb.button(text="📋 " + tt(lang, "rwdadm.users_list", "قائمة المستخدمين"),
-              callback_data="rwdadm:list:p:0")
-    kb.button(text="🧰 " + tt(lang, "rwdadm.cmds", "أوامر سريعة"),
-              callback_data="ah:rwd:cmds")
-    kb.button(text="⬅️ " + tt(lang, "admin.back", "رجوع"),
-              callback_data="ah:menu")
-    kb.adjust(1,1,1,1)
+    kb.button(
+        text="🏆 " + tt(lang, "rwdadm.open_my_panel", "فتح لوحتي"),
+        callback_data=f"rwdadm:panel:{me_uid}"
+    )
+    kb.button(
+        text="📋 " + tt(lang, "rwdadm.users_list", "قائمة المستخدمين"),
+        callback_data="rwdadm:list:p:0"
+    )
+    kb.button(
+        text="🚫 " + tt(lang, "rwdadm.blocked.title", "قائمة المحظورين"),
+        callback_data="ah:rwd:blocked"
+    )
+    kb.button(
+        text="⬅️ " + tt(lang, "admin.back", "رجوع"),
+        callback_data="ah:menu"
+    )
+    kb.adjust(1, 1, 1, 1)
     return kb.as_markup()
 
 # ===================== واجهات وتحكم =====================
@@ -525,14 +668,17 @@ async def liveadm_block(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
         l = get_user_lang(cb.from_user.id) or "en"
         return await cb.answer(t(l, "admins_only"), show_alert=True)
+
     lang = get_user_lang(cb.from_user.id) or "en"
-    uid = int(cb.data.split(":")[-1])
+    uid = int(cb.data.split(":")[-1])  # استخرج uid مرة واحدة
+
     await cb.message.answer(
-        tt(lang, "admin.live.block.pick", "اختر مدة الحظر للمستخدم: ") + f"<code>{uid}</code>",
+        tt(lang, "admin.live.block.pick", "اختر مدة الحظر للمستخدم: ") + f"<code>{uid:d}</code>",
         reply_markup=_kb_live_block_durations(uid, lang),
         parse_mode=ParseMode.HTML
     )
     await cb.answer()
+
 
 @router.callback_query(F.data.startswith("liveadm:ban:"))
 async def liveadm_ban(cb: CallbackQuery):
@@ -648,7 +794,6 @@ async def ahc_slash_all(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
     text = (
         "🧰 <b>" + tt(lang, "admin.cmds.slash_title", "أوامر السلاش") + "</b>\n"
-        # جوائز (جديد)
         "<code>/rewards_admin</code> — " + tt(lang, "rwdadm.cmds.rewards_admin", "لوحة إدارة الجوائز") + "\n"
         "<code>/r_grant &lt;uid&gt; &lt;points&gt;</code> — " + tt(lang, "rwdadm.cmds.r_grant", "منح/خصم نقاط") + "\n"
         "<code>/r_setpts &lt;uid&gt; &lt;points&gt;</code> — " + tt(lang, "rwdadm.cmds.setpts", "تعيين النقاط") + "\n"
@@ -658,7 +803,6 @@ async def ahc_slash_all(cb: CallbackQuery):
         "<code>/r_del &lt;uid&gt;</code> — " + tt(lang, "rwdadm.cmds.del", "حذف المستخدم") + "\n"
         "<code>/r_notify &lt;uid&gt; &lt;text&gt;</code> — " + tt(lang, "rwdadm.cmds.notify", "إشعار المستخدم") + "\n"
         "\n"
-        # VIP وباقي الأوامر
         "<code>/vipadm</code> — " + tt(lang, "admin.cmds.tip.vipadm", "لوحة إدارة VIP") + "\n"
         "<code>/vip</code> — " + tt(lang, "admin.cmds.tip.vip", "لوحة المستخدم VIP") + "\n"
         "<code>/vip_status</code> — " + tt(lang, "admin.cmds.tip.vip_status", "حالةاشتراك VIP ") + "\n"
@@ -771,7 +915,7 @@ async def app_send(cb: CallbackQuery):
 async def app_info(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
         l = get_user_lang(cb.from_user.id) or "en"
-        return await cb.answer(tt(lang, "admins_only", "للمشرفين فقط"), show_alert=True)
+        return await cb.answer(tt(l, "admins_only", "للمشرفين فقط"), show_alert=True)
     lang = get_user_lang(cb.from_user.id) or "en"
     if not app_load_release or not app_info_text:
         return await cb.answer(tt(lang, "admin_hub_module_missing", "الوحدة غير متاحة"), show_alert=True)
@@ -786,7 +930,7 @@ async def app_info(cb: CallbackQuery):
 async def app_remove(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
         l = get_user_lang(cb.from_user.id) or "en"
-        return await cb.answer(tt(lang, "admins_only", "للمشرفين فقط"), show_alert=True)
+        return await cb.answer(tt(l, "admins_only", "للمشرفين فقط"), show_alert=True)
     lang = get_user_lang(cb.from_user.id) or "en"
     kb = InlineKeyboardBuilder()
     kb.button(text=tt(lang, "app.remove_confirm_yes", "نعم"), callback_data="app:rm_yes")
@@ -960,7 +1104,8 @@ async def ah_reports_shortcuts(cb: CallbackQuery):
 async def ah_close(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
         l = get_user_lang(cb.from_user.id) or "en"
-        return await cb.answer(tt(lang, "admins_only", "للمشرفين فقط"), show_alert=True)
+        # ✅ إصلاح: كان يستخدم lang غير معرّف هنا
+        return await cb.answer(tt(l, "admins_only", "للمشرفين فقط"), show_alert=True)
     lang = get_user_lang(cb.from_user.id) or "en"
     await cb.message.edit_text(tt(lang, "admin_closed", "تم الإغلاق"))
     await cb.answer()

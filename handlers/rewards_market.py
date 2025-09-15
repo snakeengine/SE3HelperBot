@@ -20,7 +20,7 @@ from lang import t, get_user_lang
 from utils.rewards_store import (
     ensure_user, get_points, add_points, is_blocked, can_do
 )
-from .rewards_gate import require_membership  # احترام الإيقاف الإداري والاشتراك
+from .rewards_gate import require_membership  # احترام الاشتراك الإلزامي
 
 # طلبات وإشعارات
 from utils.rewards_orders import create_order, get_order, set_status
@@ -30,6 +30,18 @@ from utils.rewards_notify import (
     notify_user_vip_approved,
     notify_user_vip_rejected,
 )
+
+# ✅ كابتشا بشرية + استئناف تلقائي بعد النجاح (مع fallback آمن)
+try:
+    from .human_check import require_human, ensure_human_then  # type: ignore
+except Exception:
+    async def require_human(msg_or_cb, level: str = "normal") -> bool:
+        return True
+    async def ensure_human_then(msg_or_cb, level: str, resume):
+        if await require_human(msg_or_cb, level=level):
+            await resume(msg_or_cb)
+            return True
+        return False
 
 router = Router(name="rewards_market")
 log = logging.getLogger(__name__)
@@ -55,9 +67,10 @@ def _fmt_hours_ar(hours: int) -> str:
     return f"{days} يومًا"
 
 # ========= عناصر المتجر =========
-COST_1H = int(os.getenv("SHOP_VIP1H_COST", "100"))
-COST_1D = int(os.getenv("SHOP_VIP1D_COST", "500"))
-COST_3D = int(os.getenv("SHOP_VIP3D_COST", "1000"))
+COST_1H  = int(os.getenv("SHOP_VIP1H_COST",  "100"))
+COST_1D  = int(os.getenv("SHOP_VIP1D_COST",  "500"))
+COST_3D  = int(os.getenv("SHOP_VIP3D_COST",  "1000"))
+COST_30D = int(os.getenv("SHOP_VIP30D_COST", "8000"))  # جديد: 30 يوم
 
 SHOP_ITEMS: Dict[str, Dict[str, Any]] = {
     "vip1h": {
@@ -81,6 +94,14 @@ SHOP_ITEMS: Dict[str, Dict[str, Any]] = {
         "kind": "vip_hours",
         "hours": 72,
     },
+    # ✅ جديد: 30 يوم
+    "vip30d": {
+        "title_ar": f"اشتراك VIP • {_fmt_hours_ar(24 * 30)}",
+        "title_en": "VIP • 30 days",
+        "cost": COST_30D,
+        "kind": "vip_hours",
+        "hours": 24 * 30,
+    },
 }
 
 # ======== واجهة المتجر ========
@@ -94,7 +115,8 @@ def _kb_market(lang: str) -> InlineKeyboardBuilder:
     kb.row(InlineKeyboardButton(text=t(lang, "market.back", "⬅️ رجوع"), callback_data="rwd:hub"))
     return kb
 
-async def open_market(msg_or_cb: Message | CallbackQuery):
+async def _show_market(msg_or_cb: Message | CallbackQuery):
+    """يعرض قائمة المتجر (تفصلنا لكي نستعملها مع ensure_human_then)."""
     uid = msg_or_cb.from_user.id
     lang = _L(uid)
 
@@ -116,6 +138,10 @@ async def open_market(msg_or_cb: Message | CallbackQuery):
                 raise
     else:
         await msg_or_cb.answer(title, reply_markup=kb)
+
+async def open_market(msg_or_cb: Message | CallbackQuery):
+    """يعرض المتجر مع كابتشا خفيفة واستئناف تلقائي عند الحاجة."""
+    await ensure_human_then(msg_or_cb, level="normal", resume=_show_market)
 
 @router.callback_query(F.data == "rwd:hub:market")
 async def cb_open_market(cb: CallbackQuery):
@@ -139,9 +165,13 @@ async def cb_buy_item(cb: CallbackQuery):
     if not it:
         return await cb.answer("Item not found", show_alert=True)
 
+    # عضوية + كابتشا خفيفة + تبريد
+    if await require_membership(cb) is False:
+        return
+    if not await require_human(cb, level="normal"):
+        return
     if is_blocked(uid):
         return await cb.answer(t(lang, "market.locked", "⚠️ لا يمكنك استخدام المتجر الآن."), show_alert=True)
-
     if not can_do(uid, f"mkt_buy_{item_id}", cooldown_sec=3):
         return await cb.answer(t(lang, "common.too_fast", "⏳ حاول بعد قليل."), show_alert=False)
 
@@ -168,11 +198,33 @@ class BuyStates(StatesGroup):
     wait_app = State()
     wait_details = State()
 
-_CANCEL_WORDS = {"إلغاء","الغاء","cancel","Cancel","إلغاء واسترجاع","رجوع"}
+# --- اكتشاف الإلغاء بشكل مرن (AR/EN) ---
+_CANCEL_WORDS = {"إلغاء", "الغاء", "cancel", "رجوع"}  # الأساسية
+
+def _norm(s: str) -> str:
+    return re.sub(r"\s+", " ", (s or "").strip().lower())
+
+def _is_cancel(txt: str, lang: str) -> bool:
+    n = _norm(txt)
+    try:
+        lbl_ar = _norm(t("ar", "market.cancel_refund", "إلغاء واسترجاع"))
+        lbl_en = _norm(t("en", "market.cancel_refund", "Cancel & refund"))
+    except Exception:
+        lbl_ar, lbl_en = _norm("إلغاء واسترجاع"), _norm("Cancel & refund")
+
+    if n in {_norm(w) for w in _CANCEL_WORDS}:
+        return True
+    if n == lbl_ar or n == lbl_en:
+        return True
+    if n.startswith("cancel"):  # يقبل "cancel & refund" وغيرها
+        return True
+    if "إلغاء" in txt or "الغاء" in txt:
+        return True
+    return False
 
 def _cancel_rk(lang: str) -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text=t(lang,"market.cancel_refund","إلغاء واسترجاع"))]],
+        keyboard=[[KeyboardButton(text=t(lang, "market.cancel_refund", "إلغاء واسترجاع"))]],
         resize_keyboard=True, one_time_keyboard=True, selective=True
     )
 
@@ -194,20 +246,28 @@ async def cb_confirm_buy(cb: CallbackQuery, state: FSMContext):
     if not it:
         return await cb.answer("Item not found", show_alert=True)
 
+    # عضوية + كابتشا أقوى + منع النقر المكرر
+    if await require_membership(cb) is False:
+        return
+    if not await require_human(cb, level="high"):
+        return
+    if not can_do(uid, f"mkt_cfm_{item_id}", cooldown_sec=3):
+        return await cb.answer(t(lang, "common.too_fast", "⏳ حاول بعد قليل."), show_alert=False)
+
     cost = int(it["cost"])
     bal = get_points(uid)
     if bal < cost:
         return await cb.answer(t(lang, "market.no_balance", "رصيدك لا يكفي لإتمام الشراء."), show_alert=True)
 
-    # خصم فوري قبل جمع البيانات (كما طُلب)
-    add_points(uid, -cost, reason=f"market_buy_{item_id}")
+    # خصم فوري قبل جمع البيانات (يسجّل في السجل تلقائيًا)
+    add_points(uid, -cost, reason=f"market_buy_{item_id}", typ="buy")
 
     # خزّن سياق الطلب
     await state.clear()
     await state.set_state(BuyStates.wait_app)
     await state.update_data(item_id=item_id, cost=cost, hours=int(it.get("hours", 0)))
 
-    # اطلب معرّف التطبيق (صيغة مبسطة حسب طلبك)
+    # اطلب معرّف التطبيق (صيغة مبسطة)
     tip = t(
         lang, "market.vip.ask_app",
         "اذهب إلى تطبيق ثعبان، ومن أعلى الواجهة يسارًا ستجد <b>معرّف التطبيق</b> الخاص بك — انسخه وأرسله هنا."
@@ -229,11 +289,11 @@ async def buy_get_app(msg: Message, state: FSMContext):
     lang = _L(uid)
     txt = (msg.text or "").strip()
 
-    if txt in _CANCEL_WORDS:
+    if _is_cancel(txt, lang):
         data = await state.get_data()
-        add_points(uid, +int(data.get("cost", 0)), reason="market_refund_cancel")
+        add_points(uid, +int(data.get("cost", 0)), reason="market_refund_cancel", typ="refund")
         await state.clear()
-        await msg.answer(t(lang,"market.vip.cancelled_refund","تم الإلغاء واستُرجعت نقاطك."), reply_markup=ReplyKeyboardRemove())
+        await msg.answer(t(lang, "market.vip.cancelled_refund", "تم الإلغاء واستُرجعت نقاطك."), reply_markup=ReplyKeyboardRemove())
         # إشعار الأدمن
         for aid in ADMIN_IDS:
             try:
@@ -245,7 +305,7 @@ async def buy_get_app(msg: Message, state: FSMContext):
     app_id = _normalize_app_id(txt)
     if not app_id:
         return await msg.reply(
-            t(lang,"market.vip.invalid_app","صيغة المعرّف غير صحيحة. اكتب @username أو اسمًا بدون @."),
+            t(lang, "market.vip.invalid_app", "صيغة المعرّف غير صحيحة. اكتب @username أو اسمًا بدون @."),
             reply_markup=_cancel_rk(lang)
         )
 
@@ -265,11 +325,11 @@ async def buy_get_details(msg: Message, state: FSMContext):
     lang = _L(uid)
     txt = (msg.text or "").strip()
 
-    if txt in _CANCEL_WORDS:
+    if _is_cancel(txt, lang):
         data = await state.get_data()
-        add_points(uid, +int(data.get("cost", 0)), reason="market_refund_cancel")
+        add_points(uid, +int(data.get("cost", 0)), reason="market_refund_cancel", typ="refund")
         await state.clear()
-        await msg.answer(t(lang,"market.vip.cancelled_refund","تم الإلغاء واستُرجعت نقاطك."), reply_markup=ReplyKeyboardRemove())
+        await msg.answer(t(lang, "market.vip.cancelled_refund", "تم الإلغاء واستُرجعت نقاطك."), reply_markup=ReplyKeyboardRemove())
         for aid in ADMIN_IDS:
             try:
                 await msg.bot.send_message(aid, f"↩️ استرجاع: المستخدم <code>{uid}</code> ألغى العملية أثناء جمع التفاصيل.")
@@ -298,8 +358,8 @@ async def buy_get_details(msg: Message, state: FSMContext):
     await notify_admins_new_vip_order(msg.bot, oid, uid, hours, app_id, txt, cost)
 
 # ======== (أدمن) قبول/رفض الطلب ========
-# اختيارياً: جسر تفعيل VIP إن وُجد admin.vip_manager.grant_vip_hours
 async def _grant_vip_hours_bridge(bot, uid: int, hours: int, reason: str = "rewards_approved") -> bool:
+    """جسر اختياري لتفعيل VIP إن توفرت وحدة الإدارة المناسبة."""
     try:
         from admin.vip_manager import grant_vip_hours
         ok = await grant_vip_hours(bot, uid, hours, reason=reason)  # يجب أن ترجع True/False
@@ -308,7 +368,6 @@ async def _grant_vip_hours_bridge(bot, uid: int, hours: int, reason: str = "rewa
         log.warning(f"[VIP BRIDGE] not available / failed: {e}")
         return False
 
-# ✅ طابقنا أسماء الكولباكات مع رسالة الإشعار للأدمن
 @router.callback_query(F.data.startswith("rwdadm:vip:approve:"))
 async def approve_vip_order(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
@@ -328,7 +387,6 @@ async def approve_vip_order(cb: CallbackQuery):
     app = str(p.get("app") or "-")
     details = str(p.get("details") or "-")
 
-    # محاولة تفعيل فعلية إن توفر الجسر
     ok = await _grant_vip_hours_bridge(cb.bot, uid, hours, reason="market_approved")
     if not ok:
         try:
@@ -364,7 +422,7 @@ async def reject_vip_order(cb: CallbackQuery):
 
     # ردّ النقاط ثم علّم الطلب مرفوض
     if cost > 0:
-        add_points(uid, +cost, reason="vip_order_refund")
+        add_points(uid, +cost, reason="vip_order_refund", typ="refund")
     set_status(oid, "rejected", admin_id=cb.from_user.id)
 
     await notify_user_vip_rejected(cb.bot, uid, oid, refunded=cost)

@@ -18,10 +18,29 @@ from aiogram.fsm.context import FSMContext
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.enums import ChatType
 from aiogram.types import MessageOriginUser  # لفحص forward_origin
-from utils.rewards_flags import is_global_paused, is_user_paused
 
 from lang import t, get_user_lang
+from utils.rewards_flags import is_global_paused, is_user_paused
 from utils.rewards_store import ensure_user, add_points, is_blocked, can_do
+
+# ✅ بوابة الاشتراك الإلزامي
+from .rewards_gate import require_membership
+
+# --- settings ---
+import os
+MIN_TRANSFER_POINTS = int(os.getenv("WALLET_MIN_TRANSFER", "100"))  # الحد الأدنى للتحويل
+
+# ✅ فحص مكافحة الغش + الاستئناف بعد النجاح (مع Fallbackات آمنة)
+try:
+    from .human_check import require_human, ensure_human_then  # type: ignore
+except Exception:
+    async def require_human(msg_or_cb, level: str = "normal") -> bool:
+        return True
+    async def ensure_human_then(msg_or_cb, level: str, resume):
+        if await require_human(msg_or_cb, level=level):
+            await resume(msg_or_cb)
+            return True
+        return False
 
 router = Router(name="rewards_wallet")
 log = logging.getLogger(__name__)
@@ -87,11 +106,14 @@ def _tx_intro_text(lang: str) -> str:
     )
 
 def _tx_amount_text(lang: str, display: str) -> str:
-    return t(
+    base = t(
         lang,
         "wallet.tx_amount_username",
         "أدخل المبلغ (عدد صحيح أكبر من 0) لإرساله إلى {who}."
     ).format(who=display)
+    # تلميح الحد الأدنى
+    hint = t(lang, "wallet.min_hint", "(الحد الأدنى {n} نقطة)").format(n=MIN_TRANSFER_POINTS)
+    return f"{base}\n{hint}"
 
 def _tx_summary_text(lang: str, display: str, amount: int) -> str:
     return t(
@@ -179,6 +201,10 @@ async def open_wallet(event: Message | CallbackQuery, edit: bool = True):
     uid = event.from_user.id
     lang = _L(uid)
 
+    # ✅ تحقق الاشتراك الإلزامي
+    if await require_membership(event) is False:
+        return
+
     # احترام الإيقاف الإداري العام/الشخصي
     if is_global_paused() or is_user_paused(uid):
         txt = t(lang, "rewards.paused", "⏸️ نظام الجوائز متوقف مؤقتًا من الإدارة.")
@@ -235,37 +261,45 @@ async def cb_tx_start(cb: CallbackQuery, state: FSMContext):
     uid = cb.from_user.id
     lang = _L(uid)
 
-    # احترام الإيقاف الإداري
-    if is_global_paused() or is_user_paused(uid):
-        await cb.answer(t(lang, "rewards.paused", "⏸️ نظام الجوائز متوقف مؤقتًا من الإدارة."), show_alert=True)
+    # تحقق الاشتراك أولًا
+    if await require_membership(cb) is False:
         return
 
-    if is_blocked(uid):
-        await cb.answer(t(lang, "wallet.locked",
-                          "⚠️ لا يمكنك استخدام المحفظة الآن. اشترك بالقنوات المطلوبة أولًا."), show_alert=True)
-        return
+    async def _start_flow(_ev: CallbackQuery | Message):
+        # احترام الإيقاف الإداري
+        if is_global_paused() or is_user_paused(uid):
+            await cb.answer(t(lang, "rewards.paused", "⏸️ نظام الجوائز متوقف مؤقتًا من الإدارة."), show_alert=True)
+            return
 
-    if not can_do(uid, "wal_tx", cooldown_sec=2):
-        await cb.answer(t(lang, "common.too_fast", "⏳ حاول بعد قليل."), show_alert=False)
-        return
+        if is_blocked(uid):
+            await cb.answer(t(lang, "wallet.locked",
+                              "⚠️ لا يمكنك استخدام المحفظة الآن. اشترك بالقنوات المطلوبة أولًا."), show_alert=True)
+            return
 
-    await state.clear()
-    await state.set_state(TxStates.wait_target)
-    await state.update_data(msg_owner_id=uid)
+        if not can_do(uid, "wal_tx", cooldown_sec=2):
+            await cb.answer(t(lang, "common.too_fast", "⏳ حاول بعد قليل."), show_alert=False)
+            return
 
-    # 1) نحرر رسالة المراحل
-    await _safe_edit(
-        cb,
-        text=_tx_intro_text(lang),
-        kb=InlineKeyboardBuilder().row(
-            InlineKeyboardButton(text=t(lang, "wallet.back", "⬅️ رجوع"), callback_data="rwd:wal:back")
+        await state.clear()
+        await state.set_state(TxStates.wait_target)
+        await state.update_data(msg_owner_id=uid)
+
+        # 1) نحرر رسالة المراحل
+        await _safe_edit(
+            cb,
+            text=_tx_intro_text(lang),
+            kb=InlineKeyboardBuilder().row(
+                InlineKeyboardButton(text=t(lang, "wallet.back", "⬅️ رجوع"), callback_data="rwd:wal:back")
+            )
         )
-    )
-    # 2) نرسل ReplyKeyboard لطلب مستخدم مضمون
-    await cb.message.answer(
-        t(lang, "wallet.pick_user_tip", "أو اضغط «📇 اختيار مستلم» لمشاركة الحساب مباشرةً."),
-        reply_markup=_pick_user_rk(lang)
-    )
+        # 2) نرسل ReplyKeyboard لطلب مستخدم مضمون
+        await cb.message.answer(
+            t(lang, "wallet.pick_user_tip", "أو اضغط «📇 اختيار مستلم» لمشاركة الحساب مباشرةً."),
+            reply_markup=_pick_user_rk(lang)
+        )
+
+    # ✅ كابتشا خفيفة قبل البدء + استئناف تلقائي
+    await ensure_human_then(cb, level="normal", resume=_start_flow)
 
 # ---- Collect target by username / ID (text)
 @router.message(TxStates.wait_target, F.text)
@@ -384,6 +418,13 @@ async def tx_get_amount(msg: Message, state: FSMContext):
         await msg.reply(t(lang, "wallet.amount_invalid", "أدخل مبلغًا صحيحًا (عدد صحيح أكبر من 0)."))
         return
 
+    # ✅ تحقق الحد الأدنى
+    if amount < MIN_TRANSFER_POINTS:
+        await msg.reply(
+            t(lang, "wallet.err_min_transfer", "الحد الأدنى للتحويل هو {n} نقطة.").format(n=MIN_TRANSFER_POINTS)
+        )
+        return
+
     bal = _points_of(uid)
     if amount > bal:
         await msg.reply(t(lang, "wallet.amount_too_high", "المبلغ يتجاوز رصيدك ({bal}).").format(bal=bal))
@@ -409,50 +450,73 @@ async def tx_confirm(cb: CallbackQuery, state: FSMContext):
     uid = cb.from_user.id
     lang = _L(uid)
 
-    # احترام الإيقاف الإداري قبل التنفيذ
-    if is_global_paused() or is_user_paused(uid):
-        await cb.answer(t(lang, "rewards.paused", "⏸️ نظام الجوائز متوقف مؤقتًا من الإدارة."), show_alert=True)
+    # ✅ منع النقر السريع المتكرر
+    if not can_do(uid, "wal_tx_confirm_rate", cooldown_sec=5):
+        await cb.answer(t(lang, "common.too_fast", "⏳ حاول بعد قليل."), show_alert=False)
+        return
+
+    # تحقق الاشتراك أولًا
+    if await require_membership(cb) is False:
         await state.clear()
         return
 
-    data = await state.get_data()
-    target_id: Optional[int] = data.get("target_id")
-    target_display: str = data.get("target_display") or (f"ID#{target_id}" if target_id else "?")
-    amount: Optional[int] = data.get("amount")
+    async def _do_confirm(_ev: CallbackQuery | Message):
+        # احترام الإيقاف الإداري قبل التنفيذ
+        if is_global_paused() or is_user_paused(uid):
+            await cb.answer(t(lang, "rewards.paused", "⏸️ نظام الجوائز متوقف مؤقتًا من الإدارة."), show_alert=True)
+            await state.clear()
+            return
 
-    if not target_id or not amount:
-        await cb.answer(t(lang, "wallet.flow_reset", "انتهت الجلسة. ابدأ التحويل من جديد."), show_alert=True)
+        data = await state.get_data()
+        target_id: Optional[int] = data.get("target_id")
+        target_display: str = data.get("target_display") or (f"ID#{target_id}" if target_id else "?")
+        amount: Optional[int] = data.get("amount")
+
+        if not target_id or not amount:
+            await cb.answer(t(lang, "wallet.flow_reset", "انتهت الجلسة. ابدأ التحويل من جديد."), show_alert=True)
+            await state.clear()
+            return
+
+        # ✅ تحقق الحد الأدنى مرة أخرى (أمان)
+        if int(amount) < MIN_TRANSFER_POINTS:
+            await cb.answer(
+                t(lang, "wallet.err_min_transfer", "الحد الأدنى للتحويل هو {n} نقطة.").format(n=MIN_TRANSFER_POINTS),
+                show_alert=True
+            )
+            await state.clear()
+            return
+
+        # تحقق الرصيد مرة ثانية
+        if _points_of(uid) < int(amount):
+            await cb.answer(t(lang, "wallet.amount_too_high", "المبلغ يتجاوز رصيدك."), show_alert=True)
+            await state.clear()
+            return
+
+        # نفّذ التحويل في مخزن النقاط (يسجّل السجل تلقائيًا)
+        ensure_user(target_id)
+        add_points(uid, -abs(int(amount)), reason="wallet_transfer_out", typ="send")
+        add_points(target_id, +abs(int(amount)), reason="wallet_transfer_in", typ="recv")
+
         await state.clear()
-        return
 
-    # تحقق الرصيد مرة ثانية
-    if _points_of(uid) < int(amount):
-        await cb.answer(t(lang, "wallet.amount_too_high", "المبلغ يتجاوز رصيدك."), show_alert=True)
-        await state.clear()
-        return
+        await cb.answer(t(lang, "wallet.tx_done_toast", "تم تحويل النقاط بنجاح ✅"), show_alert=False)
+        await _safe_edit(cb, text=_wallet_text(uid, lang), kb=_kb_wallet(lang))
 
-    # نفّذ التحويل في مخزن النقاط
-    ensure_user(target_id)
-    add_points(uid, -abs(int(amount)), reason="wallet_transfer_out")
-    add_points(target_id, +abs(int(amount)), reason="wallet_transfer_in")
+        # إشعار المستلم (قد يفشل إن لم يبدأ محادثة مع البوت — لا مشكلة)
+        try:
+            await cb.bot.send_message(
+                chat_id=target_id,
+                text=t(
+                    _L(target_id),
+                    "wallet.tx_in_notify_username",
+                    "📥 وصلك {amt} نقطة من المستخدم {who}."
+                ).format(amt=amount, who=f"@{cb.from_user.username}" if cb.from_user.username else uid)
+            )
+        except Exception:
+            pass
 
-    await state.clear()
-
-    await cb.answer(t(lang, "wallet.tx_done_toast", "تم تحويل النقاط بنجاح ✅"), show_alert=False)
-    await _safe_edit(cb, text=_wallet_text(uid, lang), kb=_kb_wallet(lang))
-
-    # إشعار المستلم (قد يفشل إن لم يبدأ محادثة مع البوت — لا مشكلة)
-    try:
-        await cb.bot.send_message(
-            chat_id=target_id,
-            text=t(
-                _L(target_id),
-                "wallet.tx_in_notify_username",
-                "📥 وصلك {amt} نقطة من المستخدم {who}."
-            ).format(amt=amount, who=f"@{cb.from_user.username}" if cb.from_user.username else uid)
-        )
-    except Exception:
-        pass
+    # ✅ كابتشا أقوى عند التنفيذ + استئناف تلقائي
+    await ensure_human_then(cb, level="high", resume=_do_confirm)
 
 # ===================== Optional shortcuts =====================
 

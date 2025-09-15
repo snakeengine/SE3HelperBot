@@ -1,20 +1,14 @@
 {
   "users": {
-    "1483576923": {
-      "id": "1483576923"
-    },
     "6403644551": {
-      "id": "6403644551",
-      "first_name": "SE Support",
-      "last_name": "",
-      "username": "snakeofficial_support",
-      "last_seen": "2025-09-06T11:51:57Z"
+      "id": "6403644551"
     },
     "7360982123": {
-      "id": "7360982123"
-    },
-    "8344237891": {
-      "id": "8344237891"
+      "id": 7360982123,
+      "first_name": "Dev",
+      "last_name": "S.E2",
+      "username": "devse2",
+      "last_seen": "2025-09-14T04:32:24Z"
     }
   }
 }

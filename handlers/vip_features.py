@@ -857,13 +857,41 @@ async def manage_ids_start(cb: CallbackQuery, state: FSMContext):
     await cb.message.edit_text("🗂 " + _t_safe(lang, "vip.common.ask_seller", "أرسل @اسم مستخدم التلغرام للبائع.", "Send seller @username."), reply_markup=_kb_cancel(lang))
     await cb.answer()
 
+
 @router.message(ManageIdFSM.ask_seller)
 async def mi_seller(msg: Message, state: FSMContext):
     lang = _lang(msg.from_user.id)
-    h = (msg.text or "").strip()
-    if not h.startswith("@") or len(h) < 3:
-        return await msg.reply(_t_safe(lang, "vip.common.bad_seller", "الاسم غير صالح.", "Invalid seller."))
-    await state.update_data(seller=h)
+
+    raw = (msg.text or "").strip()
+    if not raw:
+        return await msg.reply(_t_safe(lang, "vip.common.bad_seller", "الاسم/المعرف غير صالح.", "Invalid seller."))
+
+    # قبول @username أو t.me/username أو رقم (مع أو بدون +)
+    s = raw
+
+    # لو أرسل رابط t.me/username نزّل اليوزر منه
+    m = re.match(r"^(?:https?://)?t\.me/(@?[A-Za-z0-9_]{3,})/?$", s, re.IGNORECASE)
+    if m:
+        s = m.group(1)
+
+    # حالات القبول
+    is_username = bool(re.fullmatch(r"@?[A-Za-z0-9_]{3,}", s))
+    # إزالة + إن وُجدت، وقبول أرقام بطول >= 3 (عدّل الطول لو تحب)
+    num = s.lstrip("+")
+    is_numeric = num.isdigit() and len(num) >= 3
+
+    if not (is_username or is_numeric):
+        return await msg.reply(_t_safe(lang, "vip.common.bad_seller", "الاسم/المعرف غير صالح.", "Invalid seller."))
+
+    # تطبيع التخزين:
+    # - لو يوزر: خزّنه بصيغة تبدأ بـ @
+    # - لو رقم: خزّنه كأرقام فقط (بدون +)
+    if is_numeric:
+        seller_val = num
+    else:
+        seller_val = s if s.startswith("@") else f"@{s}"
+
+    await state.update_data(seller=seller_val)
     await state.set_state(ManageIdFSM.ask_pay_method)
     await msg.reply(_t_safe(lang, "vip.common.ask_pay_method", "طريقة الدفع؟", "Payment method?"))
 

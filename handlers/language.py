@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import os
-from typing import List
+from typing import List, Tuple
 
 from aiogram import Router, F
 from aiogram.types import (
@@ -12,9 +12,8 @@ from aiogram.types import (
 from aiogram.filters import Command
 from aiogram.exceptions import TelegramBadRequest
 
-# ⬅️ استخدم التخزين المركزي للغة من lang.py
 from lang import t, get_user_lang, set_user_lang
-from handlers.persistent_menu import make_bottom_kb  # لإظهار الكيبورد السفلي مباشرة
+from handlers.persistent_menu import make_bottom_kb
 
 router = Router()
 
@@ -22,7 +21,6 @@ router = Router()
 SUPPORTED_LOCALES = ("en", "ar")
 DEFAULT_LOCALE = "en"
 
-# تحكم بإظهار رسالة الكيبورد السفلي بعد تغيير اللغة (من .env)
 SHOW_MENU_ON_LANG_CHANGE = (os.getenv("SHOW_MENU_ON_LANG_CHANGE") or "0").strip().lower() not in {
     "0", "false", "no", "off", ""
 }
@@ -33,42 +31,62 @@ ADMIN_IDS = [int(x) for x in str(_admin_env).split(",") if str(x).strip().isdigi
 if not ADMIN_IDS:
     ADMIN_IDS = [7360982123]
 
-# ===== أوامر البوت حسب اللغة =====
+# ===== ترجمة آمنة مع fallback محلي =====
+def _tt(lang: str, key: str, fb: str) -> str:
+    """إذا كانت الترجمة مفقودة/فارغة/ترجع نفس المفتاح -> استخدم fb."""
+    try:
+        v = t(lang, key)
+        if isinstance(v, str):
+            v = v.strip()
+            if v and v != key:
+                return v
+    except Exception:
+        pass
+    return fb
+
+def _loc(lang: str, ar: str, en: str) -> str:
+    return ar if lang == "ar" else en
+
+# ===== أوامر البوت حسب اللغة (مع fallbacks) =====
 def _public_commands(lang: str) -> List[BotCommand]:
     lang = lang if lang in SUPPORTED_LOCALES else DEFAULT_LOCALE
-    return [
-        BotCommand(command="start",     description=t(lang, "cmd_start")),
-        BotCommand(command="sections",  description=t(lang, "cmd_sections")),
-        BotCommand(command="rewards",  description=t(lang, "cmd_rewards")),
-        BotCommand(command="help",      description=t(lang, "cmd_help")),
-        BotCommand(command="about",     description=t(lang, "cmd_about")),
-        BotCommand(command="alerts",    description=t(lang, "cmd_alerts")),
-        BotCommand(command="report",    description=t(lang, "cmd_report")),
-        BotCommand(command="language",  description=t(lang, "cmd_language")),
+    pairs: List[Tuple[str, str]] = [
+        ("start",    _tt(lang, "cmd_start",    _loc(lang, "ابدأ البوت", "Start the bot"))),
+        ("sections", _tt(lang, "cmd_sections", _loc(lang, "الأقسام السريعة", "Quick sections"))),
+        ("rewards",  _tt(lang, "cmd_rewards",  _loc(lang, "الجوائز", "Open rewards"))),
+        ("help",     _tt(lang, "cmd_help",     _loc(lang, "المساعدة والقائمة", "Help & menu"))),
+        ("about",    _tt(lang, "cmd_about",    _loc(lang, "عن الخدمة", "About"))),
+        ("alerts",   _tt(lang, "cmd_alerts",   _loc(lang, "التنبيهات", "Alerts"))),
+        ("report",   _tt(lang, "cmd_report",   _loc(lang, "الإبلاغ والدعم", "Report / Support"))),
+        ("language", _tt(lang, "cmd_language", _loc(lang, "تغيير اللغة", "Change language"))),
     ]
+    # تجاهل أي عنصر وصفه فاضي بعد الفلترة
+    return [BotCommand(command=c, description=d) for c, d in pairs if c and d and d.strip()]
 
 def _admin_extra_commands(lang: str) -> List[BotCommand]:
     lang = lang if lang in SUPPORTED_LOCALES else DEFAULT_LOCALE
-    return [
-        BotCommand(command="admin", description=t(lang, "cmd_admin_center")),
-    ]
+    desc = _tt(lang, "cmd_admin_center", _loc(lang, "لوحة الإدارة", "Admin center"))
+    return [BotCommand(command="admin", description=desc)] if desc.strip() else []
 
 async def update_user_commands(bot, chat_id: int, lang: str) -> None:
+    """يضبط أوامر هذه الدردشة فقط، ويتجاهل الوصف الفارغ بدون أن يكرّش."""
     is_admin = int(chat_id) in ADMIN_IDS
     cmds = _public_commands(lang)
     if is_admin:
         cmds += _admin_extra_commands(lang)
 
-    # امسح أوامر هذه المحادثة ثم اضبطها
+    # امسح أوامر هذه المحادثة ثم اضبط الجديدة
     try:
         await bot.delete_my_commands(scope=BotCommandScopeChat(chat_id=chat_id))
     except Exception:
         pass
 
-    await bot.set_my_commands(
-        commands=cmds,
-        scope=BotCommandScopeChat(chat_id=chat_id)
-    )
+    try:
+        await bot.set_my_commands(commands=cmds, scope=BotCommandScopeChat(chat_id=chat_id))
+    except Exception as e:
+        # سجل الخطأ فقط بدون تعطيل التفاعل
+        import logging
+        logging.getLogger(__name__).warning(f"set_my_commands failed: {e}")
 
 # ===== لوحات المفاتيح =====
 def language_keyboard(display_lang: str, selected_lang: str) -> InlineKeyboardMarkup:
@@ -78,54 +96,32 @@ def language_keyboard(display_lang: str, selected_lang: str) -> InlineKeyboardMa
     rows = [
         [
             InlineKeyboardButton(
-                text=("✅ " if selected_lang == "en" else "") + t(display_lang, "btn_lang_en"),
+                text=("✅ " if selected_lang == "en" else "") + _tt(display_lang, "btn_lang_en", "English"),
                 callback_data="set_lang_en"
             ),
             InlineKeyboardButton(
-                text=("✅ " if selected_lang == "ar" else "") + t(display_lang, "btn_lang_ar"),
+                text=("✅ " if selected_lang == "ar" else "") + _tt(display_lang, "btn_lang_ar", "العربية"),
                 callback_data="set_lang_ar"
             ),
         ],
-        [InlineKeyboardButton(text=t(display_lang, "back_to_menu"), callback_data="back_to_menu")],
+        [InlineKeyboardButton(text=_tt(display_lang, "back_to_menu", _loc(display_lang, "رجوع", "Back")), callback_data="back_to_menu")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 # ===== مساعد: تعديل ذكي مع fallback =====
 async def smart_edit(message: Message, text: str, reply_markup: InlineKeyboardMarkup | None = None):
-    """
-    يحاول تعديل نفس الرسالة إن كان فيها نص/وصف، وإلا يرسل رسالة جديدة.
-    كما يتعامل مع أخطاء 'there is no text in the message to edit' و 'message is not modified'.
-    """
     try:
         if message.text is not None:
             return await message.edit_text(
-                text,
-                reply_markup=reply_markup,
-                parse_mode="HTML",
-                disable_web_page_preview=True,
+                text, reply_markup=reply_markup, parse_mode="HTML", disable_web_page_preview=True
             )
         if message.caption is not None:
-            return await message.edit_caption(
-                caption=text,
-                reply_markup=reply_markup,
-                parse_mode="HTML",
-            )
-        # لا نص ولا وصف → أرسل رسالة جديدة
-        return await message.answer(
-            text,
-            reply_markup=reply_markup,
-            parse_mode="HTML",
-            disable_web_page_preview=True,
-        )
+            return await message.edit_caption(caption=text, reply_markup=reply_markup, parse_mode="HTML")
+        return await message.answer(text, reply_markup=reply_markup, parse_mode="HTML", disable_web_page_preview=True)
     except TelegramBadRequest as e:
         msg = str(e).lower()
         if "there is no text in the message to edit" in msg or "message is not modified" in msg:
-            return await message.answer(
-                text,
-                reply_markup=reply_markup,
-                parse_mode="HTML",
-                disable_web_page_preview=True,
-            )
+            return await message.answer(text, reply_markup=reply_markup, parse_mode="HTML", disable_web_page_preview=True)
         raise
 
 # ===== الأوامر/الكولباكات =====
@@ -133,7 +129,7 @@ async def smart_edit(message: Message, text: str, reply_markup: InlineKeyboardMa
 async def language_command(message: Message):
     lang = get_user_lang(message.from_user.id) or DEFAULT_LOCALE
     await message.answer(
-        t(lang, "choose_language"),
+        _tt(lang, "choose_language", _loc(lang, "اختر لغتك:", "Choose your language:")),
         reply_markup=language_keyboard(display_lang=lang, selected_lang=lang),
         parse_mode="HTML",
         disable_web_page_preview=True
@@ -145,7 +141,7 @@ async def change_lang(callback: CallbackQuery):
     lang = get_user_lang(user_id) or DEFAULT_LOCALE
     await smart_edit(
         callback.message,
-        t(lang, "choose_language"),
+        _tt(lang, "choose_language", _loc(lang, "اختر لغتك:", "Choose your language:")),
         language_keyboard(display_lang=lang, selected_lang=lang),
     )
     await callback.answer()
@@ -155,21 +151,18 @@ async def set_language_callback(callback: CallbackQuery):
     user_id = callback.from_user.id
     new_lang = "en" if callback.data.endswith("_en") else "ar"
 
-    # احفظ اللغة وحدث أوامر هذه الدردشة
     set_user_lang(user_id, new_lang)
     await update_user_commands(callback.message.bot, callback.message.chat.id, new_lang)
 
-    # عدّل رسالة اختيار اللغة
     await smart_edit(
         callback.message,
-        t(new_lang, "language_changed"),
+        _tt(new_lang, "language_changed", _loc(new_lang, "تم تغيير اللغة ✅", "Language changed ✅")),
         language_keyboard(display_lang=new_lang, selected_lang=new_lang),
     )
 
-    # (اختياري) أرسل الكيبورد السفلي فورًا باللغة الجديدة
     if SHOW_MENU_ON_LANG_CHANGE:
         await callback.message.answer(
-            t(new_lang, "menu.keyboard_ready") or ("تم تجهيز القائمة بالأسفل ⬇️" if new_lang == "ar" else "Menu ready ⬇️"),
+            _tt(new_lang, "menu.keyboard_ready", _loc(new_lang, "تم تجهيز القائمة بالأسفل ⬇️", "Menu ready ⬇️")),
             reply_markup=make_bottom_kb(new_lang),
             parse_mode="HTML",
             disable_web_page_preview=True
