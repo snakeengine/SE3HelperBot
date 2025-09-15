@@ -21,7 +21,6 @@ except Exception:
     pass
 # ---------------------------------------------------------------------------
 
-
 # ✅ تطبيع (توافق) لدالة الترجمة t() لتقبل (lang,key) أو (lang,key,fallback)
 import lang as _lang_mod
 try:
@@ -77,13 +76,8 @@ from aiogram.types import BotCommand, BotCommandScopeDefault, BotCommandScopeCha
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.client.session.aiohttp import AiohttpSession
-from handlers.sevip_store import router as sevip_store_router  # <<< أعلى الملف عند الاستيرادات موجود already
-from admin.sevip_activation_admin import router as sevip_activation_admin_router
-from admin.stars_revenue import router as stars_revenue_admin_router
-from handlers.sevip_shop import router as sevip_shop_router            # NEW
-from admin.sevip_inventory_admin import router as sevip_inventory_admin_router  # NEW
 
-# ✅ راووترات إجبارية (forced include)
+# ✅ راووترات إجبارية (forced include) - ملاحظة: أبقيناه لأنه ليس متجر المستخدم
 import handlers.supplier_payment as _supplier_payment
 from handlers.human_check import router as human_router
 
@@ -93,7 +87,6 @@ import handlers.rewards_hub as _rewards_hub
 import handlers.rewards_market as _rewards_market
 import handlers.rewards_wallet as _rewards_wallet
 import handlers.rewards_compat as _rewards_compat
-
 
 # ✅ (اختياري) بروفايل الجوائز الاحترافي — استيراد مرن
 try:
@@ -113,7 +106,6 @@ def _opt_import(mod_path: str):
             f"[IMPORT] optional module skipped: {mod_path} ({e})"
         )
         return None
-
 
 _rewards_market_admin = _opt_import("admin.rewards_market_admin")
 _rewards_admin        = _opt_import("admin.rewards_admin")
@@ -180,8 +172,7 @@ else:
 def _public_cmds(lang: str = "en") -> list[BotCommand]:
     return [
         BotCommand(command="start",        description=t(lang, "cmd_start")    or "Start"),
-        BotCommand(command="shop",         description=t(lang, "cmd_shop")     or ("SEVIP store" if lang == "en" else "متجر SEVIP")),
-
+        # تمت إزالة /shop نهائياً في نسخة التنظيف
         BotCommand(command="sections",     description=t(lang, "cmd_sections") or ("Quick sections" if lang == "en" else "الأقسام السريعة")),
         BotCommand(command="help",         description=t(lang, "cmd_help")     or "Help"),
         BotCommand(command="about",        description=t(lang, "cmd_about")    or "About"),
@@ -395,11 +386,9 @@ def register_routers(dp: Dispatcher):
             # ===== Alerts
             "alerts_on","alerts_off","alerts_status",
             "push_update","push_preview","push_schedule","push_stats",
-            # ===== Store & Wallet & Rewards
+            # ===== Rewards
             "rewards","wallet","store","send_points",
-             "shop", 
-            # أوامر أدمن المتجر
-            "orders","sendcode","inv_add","inv_stats",   # ✅ NEW
+            # (تمت إزالة أوامر متجر الشراء: shop, orders, sendcode, inv_add, inv_stats)
             # اختصارات إضافية
             "profile","my_rewards","rprofile",
             "revenue",
@@ -437,40 +426,21 @@ def register_routers(dp: Dispatcher):
     dp.include_router(home_hero_router)
     logging.info("Loaded handlers.home_hero")
 
-    # ✅ راووتر الدفع
+    # ✅ راووتر الدفع الخاص بالمورد (ليس متجر المستخدم) — أبقيناه
     dp.include_router(_supplier_payment.router)
     logging.info("Loaded handlers.supplier_payment (forced include)")
 
     dp.include_router(human_router)
     logging.info("Loaded handlers.human_check")
 
-
-    # ✅ متجر SEVIP (تضمين صريح)
-    dp.include_router(sevip_store_router)
-    logging.info("Loaded handlers.sevip_store (explicit include)")
-        # ✅ متجر USDT (شاشة الشراء والفواتير)
-    dp.include_router(sevip_shop_router)
-    logging.info("Loaded handlers.sevip_shop (explicit include)")
-
-    # ✅ أوامر مخزون الأكواد للأدمن (/inv_add /inv_stats)
-    dp.include_router(sevip_inventory_admin_router)
-    logging.info("Loaded admin.sevip_inventory_admin")
-
-
-    dp.include_router(sevip_activation_admin_router)
-    logging.info("Loaded admin.sevip_activation_admin")
-
-    dp.include_router(stars_revenue_admin_router)
-    logging.info("Loaded admin.stars_revenue")
-
     # ====== نظام الجوائز (الترتيب مهم)
     dp.include_router(_rewards_gate.router)     # بوابة الاشتراك + chat_member
     dp.include_router(_rewards_hub.router)      # الهَب (واجهة)
-    dp.include_router(_rewards_market.router)   # المتجر
+    dp.include_router(_rewards_market.router)   # المتجر الداخلي للجوائز (لا علاقة له بشراء SEVIP)
     dp.include_router(_rewards_wallet.router)   # المحفظة
     dp.include_router(_rewards_compat.router)   # توافق /rewards
     dp.include_router(rewards_shim)             # يمسك callbacks: rewards/wallet/store
-    
+
     # ✅ NEW: بروفايل الجوائز الاحترافية (إن وُجد)
     if _rewards_profile_pro and hasattr(_rewards_profile_pro, "router"):
         dp.include_router(_rewards_profile_pro.router)
@@ -595,7 +565,6 @@ async def main():
     register_routers(dp)
     dp.startup.register(_alerts_startup)
 
-    
     try:
         asyncio.create_task(run_vip_cron(bot))
         logging.info("⏰ VIP reminder task started.")
@@ -613,28 +582,8 @@ async def main():
         logging.exception("Polling crashed with an exception.")
         raise
 
-    try:
-        asyncio.create_task(_payments_cron(bot))
-        logging.info("🔔 Payments monitor started.")
-    except Exception as e:
-        logging.warning(f"Payments monitor failed to start: {e}")
-
-
-# يمرّ كل دقيقة ليتحقق من مدفوعات USDT ويسلّم الأكواد
-async def _payments_cron(bot):
-    from handlers.sevip_shop import check_payments_and_fulfill
-    interval = int(os.getenv("PAYMENTS_POLL_INTERVAL", "60"))
-    while True:
-        try:
-            await check_payments_and_fulfill(bot)
-        except Exception:
-            logging.exception("payments_cron crashed")
-        await asyncio.sleep(interval)
-
-
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
-        logging.info("🛑 Bot stopped.")  
-
+        logging.info("🛑 Bot stopped.")

@@ -29,6 +29,35 @@
       "auto_links": [
         "https://www.youtube.com/P;KLHJBVFEDIOPH"
       ]
+    },
+    "7360982123": {
+      "status": "pending",
+      "rejects": 0,
+      "attempts": [
+        1757957774
+      ],
+      "cooldown_until": 0,
+      "banned_until": 0,
+      "submitted_at": 1757957774,
+      "name": "Ksksjs",
+      "links": [
+        "Bdbd"
+      ],
+      "telegram": {
+        "declared": "@DevSE2",
+        "real": "@DevSE2",
+        "match": true
+      },
+      "proof": {
+        "photos": [
+          "AgACAgIAAxkBAAIQyGjITX2X9TUNUTG8dwSQL3rrpANuAAIn-zEbPG1BSkWs2YV78OQhAQADAgADcwADNgQ",
+          "AgACAgIAAxkBAAIQyGjITX2X9TUNUTG8dwSQL3rrpANuAAIn-zEbPG1BSkWs2YV78OQhAQADAgADbQADNgQ",
+          "AgACAgIAAxkBAAIQyGjITX2X9TUNUTG8dwSQL3rrpANuAAIn-zEbPG1BSkWs2YV78OQhAQADAgADeAADNgQ",
+          "AgACAgIAAxkBAAIQyGjITX2X9TUNUTG8dwSQL3rrpANuAAIn-zEbPG1BSkWs2YV78OQhAQADAgADeQADNgQ",
+          "AgACAgIAAxkBAAIQyGjITX2X9TUNUTG8dwSQL3rrpANuAAIn-zEbPG1BSkWs2YV78OQhAQADAgADdwADNgQ"
+        ],
+        "videos": []
+      }
     }
   },
   "settings": {

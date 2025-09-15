@@ -1,3 +1,20 @@
-.env
-venv/
+# Python
 __pycache__/
+*.py[cod]
+*.log
+.venv/
+venv/
+.env
+.env.*
+*.sqlite3
+*.db
+
+# Project data
+data/
+*.json.backup
+
+# OS/IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

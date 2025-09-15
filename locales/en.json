@@ -425,7 +425,7 @@
   "admin_btn_open_vip_panel": "👑 Open VIP panel (/vip_admin)",
   "admin_btn_setupdate": "📝 Send update (/setupdate)",
   "admin_btn_disableupdate": "🔕 Disable update (/disableupdate)",
-  "admin_setupdate_help": "Use the command as:\n/setupdate |English text|Arabic text|Hindi text|", 
+  "admin_setupdate_help": "Use the command as:\n/setupdate |English text|Arabic text|Hindi text|",
   "admin_server_title": "💻 Server Control",
   "admin_server_status_title": "📊 Server Status",
   "admin_server_status_desc": "Here you can check the current status of our servers.",
@@ -1521,7 +1521,7 @@
   "spub_adm_delete": "Delete 🗑️",
   "spub_adm_ban": "Ban 🚫",
   "spub_adm_unban": "Unban ✅",
-  "spub_adm_demote": "Demote supplier ⬇️", 
+  "spub_adm_demote": "Demote supplier ⬇️",
   "sd_admin_deleted_ok": "Deleted.",
   "sd_user_deleted": "Your public card was removed.",
   "sd_user_banned_notice": "You were banned from publishing.",
@@ -1749,13 +1749,11 @@
   "promadm.stats.banned": "Banned (active)",
   "promadm.stats.total": "Total",
   "promadm.daily_limit": "Daily request limit",
-
   "promadm.btn.pending": "Pending requests",
   "promadm.btn.search": "Search ID",
   "promadm.btn.settings": "Settings",
   "promadm.btn.refresh": "Refresh",
   "promadm.btn.back": "Back",
-
   "promadm.pending_title": "Pending requests",
   "promadm.none_pending": "No pending requests.",
   "promadm.user_not_found": "Not found.",
@@ -1820,14 +1818,12 @@
   "promadm.q.view": "View card",
   "promadm.cdlist.title": "Active cooldowns",
   "promadm.cdlist.empty": "No users currently under cooldown.",
-  
   "promp.title": "Promoters Panel",
   "promp.name": "Name",
   "promp.links": "Links",
   "promp.sub": "Subscription",
   "promp.sub.left": "left",
   "promp.sub.exp": "Expires at",
-
   "promp.btn.profile": "My profile / Edit",
   "promp.btn.sub": "My subscription",
   "promp.btn.activate": "Activate (App ID)",
@@ -1835,7 +1831,6 @@
   "promp.btn.support": "Direct support",
   "promp.btn.back": "Back",
   "promp.btn.refresh": "Refresh",
-
   "promp.profile": "Profile",
   "promp.edit.name": "Edit name",
   "promp.edit.links": "Edit links",
@@ -1844,28 +1839,22 @@
   "promp.ask.links": "Send links, one per line:",
   "promp.ask.tg": "Send your Telegram @username:",
   "promp.ok": "Saved ✅",
-
   "promp.sub.title": "Subscription details",
   "promp.sub.status": "Status",
   "promp.sub.started": "Started at",
   "promp.sub.remind": "Reminder before expiry",
   "promp.remind.off": "Off",
-
   "promp.sub.active": "Active",
   "promp.sub.pending": "Pending activation",
   "promp.sub.denied": "Denied",
   "promp.sub.none": "None",
   "promp.saved": "Saved ✅",
-
-
   "promp.ask.appid": "Send the \"Snake\" App ID to activate your subscription:",
   "promp.activate.sent": "App ID received. Your subscription will be activated after admin review ✅",
   "promp.sub.activated": "Your subscription is activated ✅",
   "promp.sub.denied_msg": "Sorry, your activation request was denied.",
-
   "promp.proof.ask": "Send a photo/video or link that proves your activity (live/video, etc.)",
   "promp.proof.ok": "Thanks! Your proof was sent to admins ✅",
-
   "promp.support.ask": "Type your support message now (text/photo/video). Send /cancel to cancel.",
   "promp.cancel": "Cancelled.",
   "promp.support.sent": "Your message was sent to support ✅",
@@ -1878,12 +1867,10 @@
   "sup.user.replying": "Type your reply now… (/cancel to abort).",
   "sup.user.cancelled": "Reply mode cancelled.",
   "sup.user.closed": "Conversation ended ✅",
-
   "sup.adm.reply": "↩️ Reply",
   "sup.adm.cancel": "❌ Cancel",
   "sup.adm.end": "🛑 End",
   "sup.adm.replying": "Type your reply to the user… (/cancel to abort).",
-
   "prom.pn.support": "Live Support",
   "prom.pn.back": "Back",
   "prom.pn.update": "Refresh",
@@ -1901,7 +1888,6 @@
   "en.promp.support.self_forbidden": "You can’t start a support chat from an admin account. Use another account to test.",
   "en.promp.support.self_claim": "You can’t claim a chat with yourself. Please use another account.",
   "en.promp.support.self_echo": "This is a self chat; messages won’t be forwarded. Use another account to test.",
-
   "promp.sub.renew": "Renew request",
   "promp.renew.sent": "Your renewal request was sent to the admins ✅",
   "promp.renew.custom": "Custom duration",
@@ -2020,7 +2006,7 @@
   "menu.my_channel.desc": "Manage your channels.",
   "menu.my_forum.desc": "Manage your forums.",
   "common.coming_soon": "Coming soon…",
-  "cmd_menu": "Open menu" ,
+  "cmd_menu": "Open menu",
   "menu.placeholder": "Choose from the menu…",
   "menu.keyboard_on": "✅ Bottom menu enabled.",
   "menu.keyboard_off": "❎ Bottom menu hidden.",
@@ -2038,9 +2024,9 @@
   "menu.user.tg_premium_yes": "Yes",
   "menu.user.tg_premium_no": "No",
   "menu.user.joined_unknown": "N/A",
-  "menu.links.forums":  "💬 <b>Forums</b>\nhttps://t.me/SnakeEngine2/1",
-  "menu.links.channels":"📣 <b>Our official channel</b>\nhttps://t.me/SnakeEngine",
-  "menu.links.groups":  "👥 <b>Our groups</b>\nhttps://t.me/SnakeEngine2",
+  "menu.links.forums": "💬 <b>Forums</b>\nhttps://t.me/SnakeEngine2/1",
+  "menu.links.channels": "📣 <b>Our official channel</b>\nhttps://t.me/SnakeEngine",
+  "menu.links.groups": "👥 <b>Our groups</b>\nhttps://t.me/SnakeEngine2",
   "menu.my_forums.info": "💬 <b>My Forums</b>\n• Developer: Snake Engine\n• Skills: Python, Aiogram, Telegram Bots, Automation, APIs\n• More links: https://t.me/SnakeEngine2/1",
   "menu.my_channels.link": "📣 <b>My Channels</b>\nhttps://t.me/SnakeEngine2/10211",
   "menu.my_groups.link": "👥 <b>My Groups</b>\nhttps://t.me/+THPSw2oRskJjMDFi",
@@ -2330,16 +2316,13 @@
   "wallet.support.join_first": "Join the required channel then try again.",
   "wallet.support.already": "You already received today’s support points.",
   "wallet.support.ok": "{points} pts added for supporting the channel. Thanks! 🎉",
-
   "store.btn.wallet": "My wallet",
   "store.btn.orders": "My orders",
   "store.btn.help": "How it works",
   "store.btn.refresh": "Refresh",
   "store.refreshed": "Refreshed",
-  
   "store.welcome.title": "Welcome to the Rewards Store!",
   "store.welcome.body": "• Earn daily points by supporting the channel from (My wallet).\n• Send/receive points as gifts with friends.\n• Redeem points for VIP here and track status under (My orders).",
-
   "store.help.title": "How does the rewards system work?",
   "store.help.p1": "1) Earn points: open (My wallet) then tap (Support the channel) to get daily points.",
   "store.help.p2": "2) Gifts: use /send_points to gift points to a friend (or receive).",
@@ -2396,9 +2379,7 @@
   "common.back": "Back",
   "common.error": "Unexpected error",
   "common.slow_down": "Please slow down…",
-
   "rewards.gate.join_channel": "Open channel",
-
   "rewards.hub.title": "🎉 Welcome to Rewards!",
   "rewards.hub.balance": "Your balance: {points}",
   "rewards.hub.market": "🎁 Market",
@@ -2408,13 +2389,11 @@
   "rewards.hub.daily": "🎯 Daily points",
   "rewards.hub.daily_ok": "Daily points added ✅",
   "rewards.hub.daily_already": "You already took today's reward ✅",
-
   "rewards.market.title": "🛍️ Market — choose an item",
   "rewards.market.not_found": "Item not found.",
   "rewards.market.no_points": "Not enough points for this purchase.",
   "rewards.market.ok": "Purchased ✅",
   "rewards.market.after_buy": "✅ Order #{order_id} created for {title}. It will be processed soon.",
-
   "rewards.wallet.title": "👛 My Wallet",
   "rewards.wallet.transfer": "🔁 Transfer points",
   "rewards.wallet.support": "💚 Support the channel",
@@ -2426,15 +2405,12 @@
   "rewards.wallet.tx_ok": "Transfer completed ✅",
   "rewards.wallet.no_points": "You don't have enough points.",
   "rewards.wallet.support_ok": "Thanks for your support! -10 points",
-
   "wallet.title": "💳 My Wallet",
   "wallet.balance": "Current balance: {pts} points",
- 
   "wallet.tx_intro": "Send the recipient's numeric User ID as a text message.\nExample: 123456789",
   "wallet.tx_amount": "Enter the amount (positive integer) to send to {uid}.",
   "wallet.tx_summary": "Confirm transfer: {amt} points to {uid}.\nTap Confirm to proceed.",
   "wallet.target_invalid": "Please enter a valid numeric User ID.",
- 
   "wallet.tx_in_notify": "📥 You received {amt} points from user {uid}.",
   "wallet.tx_in_notify_username": "📥 You received {amt} points from {who}.",
   "wallet.pick_user_tip": "Or tap “📇 Pick recipient” to share the account directly.",
@@ -2474,7 +2450,6 @@
   "rwdadm.set_to_100": "Set → 100",
   "rwdadm.set_to_1000": "Set → 1000",
   "rwdadm.open_list_tip": "Open the users list or search directly.",
-
   "rwdadm.cmds.title": "Rewards commands (Admin)",
   "rwdadm.cmds.rewards_admin": "Rewards admin panel",
   "rwdadm.cmds.r_grant": "Grant/Deduct points",
@@ -2506,58 +2481,49 @@
   "rwdadm.user_notice.unbanned": "Your access to the rewards system has been restored.",
   "rwdadm.user_notice.streak": "Your daily streak was set to: <b>{n}</b>.",
   "admin_hub_btn_rewards_admin": "Rewards Admin",
-    "admin_hub_rewards_title": "Rewards Management",
-    "admin_hub_rewards_desc": "Full control to grant/deduct/ban/reset and review history.",
-    "rwdadm.stats.users": "Users",
-    "rwdadm.stats.total": "Total points",
-    "rwdadm.stats.banned": "Banned",
-
-    "rwdadm.open_my_panel": "Open my panel",
-    "rwdadm.users_list": "Users list",
-    "rwdadm.cmds": "Quick commands",
-
-  
-    "rwdadm.search_placeholder": "Type @username or ID...",
-    "rwdadm.users_list_page": "page {page}/{pages}",
-
-    "rwdadm.user_notice.set": "📢 Your balance was set to {balance} points.",
-    "rwdadm.user_notice.reset": "📢 Your balance has been reset.\nCurrent balance: {balance}.",
-    "rwdadm.user_notice.ban": "⛔ Rewards system has been disabled on your account by admin.",
-    "rwdadm.user_notice.unban": "✅ Rewards system has been enabled on your account by admin.",
-
-    "rwdadm.admin_notice.delta": "✅ Adjusted user {uid} by {delta} (balance: {balance}).",
-    "rwdadm.admin_notice.set": "✅ Set user {uid} balance to {balance}.",
-    "rwdadm.admin_notice.reset": "✅ Reset user {uid} balance.",
-    "rwdadm.admin_notice.ban": "⛔ Rewards banned for user {uid}.",
-    "rwdadm.admin_notice.unban": "✅ Rewards unbanned for user {uid}.",
-
-   
-    "wallet.already_here": "You are already on this screen.",
-    "wallet.locked": "⚠️ You can't use the wallet now. Join the required channels first.",
-    "wallet.send_points": "🔁 Transfer points",
-    "wallet.back_home": "⬅️ Back",
-    "wallet.back": "⬅️ Back",
-    "wallet.confirm": "✅ Confirm",
-    "wallet.cancel": "✖️ Cancel",
-    "wallet.pick_user": "📇 Pick recipient",
-    "wallet.cancel_rk": "Cancel",
-    "wallet.tx_intro_username": "Send the recipient’s real Telegram identifier as @username or a t.me/username link.\nIf @username doesn’t resolve, use “📇 Pick recipient” below or forward any message from the recipient here.\nYou can also input the numeric User ID when needed.\nExample: @SnakeEngine or https://t.me/SnakeEngine",
-    "wallet.tx_amount_username": "Enter an integer amount (>0) to send to {who}.",
-    "wallet.tx_summary_username": "Confirm transfer: {amt} points to {who}.\nPress Confirm to proceed.",
-    "wallet.target_is_not_user": "That handle belongs to a channel/group, not a user. Please send a person’s @username.",
-    "wallet.target_username_not_found": "Couldn't resolve that username. If it’s correct but the user hasn't started the bot, press “📇 Pick recipient” or forward a message from them here.",
-    "wallet.target_invalid_username": "Send a valid @username or t.me/username (numeric ID also supported).",
-    "wallet.target_self": "You can’t transfer points to yourself.",
-    "wallet.forward_hidden": "The sender's identity is hidden by privacy settings. Use “📇 Pick recipient” or ask them to start the bot.",
-    "wallet.amount_invalid": "Enter a valid integer amount (>0).",
-    "wallet.amount_too_high": "Amount exceeds your balance ({bal}).",
-    "wallet.flow_reset": "Session expired. Start the transfer again.",
-    "wallet.tx_done_toast": "Points transferred successfully ✅",
-    "market.no_balance": "Your balance is not enough to complete the purchase.",
- 
+  "admin_hub_rewards_title": "Rewards Management",
+  "admin_hub_rewards_desc": "Full control to grant/deduct/ban/reset and review history.",
+  "rwdadm.stats.users": "Users",
+  "rwdadm.stats.total": "Total points",
+  "rwdadm.stats.banned": "Banned",
+  "rwdadm.open_my_panel": "Open my panel",
+  "rwdadm.users_list": "Users list",
+  "rwdadm.cmds": "Quick commands",
+  "rwdadm.search_placeholder": "Type @username or ID...",
+  "rwdadm.users_list_page": "page {page}/{pages}",
+  "rwdadm.user_notice.set": "📢 Your balance was set to {balance} points.",
+  "rwdadm.user_notice.reset": "📢 Your balance has been reset.\nCurrent balance: {balance}.",
+  "rwdadm.user_notice.ban": "⛔ Rewards system has been disabled on your account by admin.",
+  "rwdadm.user_notice.unban": "✅ Rewards system has been enabled on your account by admin.",
+  "rwdadm.admin_notice.delta": "✅ Adjusted user {uid} by {delta} (balance: {balance}).",
+  "rwdadm.admin_notice.set": "✅ Set user {uid} balance to {balance}.",
+  "rwdadm.admin_notice.reset": "✅ Reset user {uid} balance.",
+  "rwdadm.admin_notice.ban": "⛔ Rewards banned for user {uid}.",
+  "rwdadm.admin_notice.unban": "✅ Rewards unbanned for user {uid}.",
+  "wallet.already_here": "You are already on this screen.",
+  "wallet.locked": "⚠️ You can't use the wallet now. Join the required channels first.",
+  "wallet.send_points": "🔁 Transfer points",
+  "wallet.back_home": "⬅️ Back",
+  "wallet.back": "⬅️ Back",
+  "wallet.confirm": "✅ Confirm",
+  "wallet.cancel": "✖️ Cancel",
+  "wallet.pick_user": "📇 Pick recipient",
+  "wallet.cancel_rk": "Cancel",
+  "wallet.tx_intro_username": "Send the recipient’s real Telegram identifier as @username or a t.me/username link.\nIf @username doesn’t resolve, use “📇 Pick recipient” below or forward any message from the recipient here.\nYou can also input the numeric User ID when needed.\nExample: @SnakeEngine or https://t.me/SnakeEngine",
+  "wallet.tx_amount_username": "Enter an integer amount (>0) to send to {who}.",
+  "wallet.tx_summary_username": "Confirm transfer: {amt} points to {who}.\nPress Confirm to proceed.",
+  "wallet.target_is_not_user": "That handle belongs to a channel/group, not a user. Please send a person’s @username.",
+  "wallet.target_username_not_found": "Couldn't resolve that username. If it’s correct but the user hasn't started the bot, press “📇 Pick recipient” or forward a message from them here.",
+  "wallet.target_invalid_username": "Send a valid @username or t.me/username (numeric ID also supported).",
+  "wallet.target_self": "You can’t transfer points to yourself.",
+  "wallet.forward_hidden": "The sender's identity is hidden by privacy settings. Use “📇 Pick recipient” or ask them to start the bot.",
+  "wallet.amount_invalid": "Enter a valid integer amount (>0).",
+  "wallet.amount_too_high": "Amount exceeds your balance ({bal}).",
+  "wallet.flow_reset": "Session expired. Start the transfer again.",
+  "wallet.tx_done_toast": "Points transferred successfully ✅",
+  "market.no_balance": "Your balance is not enough to complete the purchase.",
   "common.close": "Close",
   "common.too_fast": "⏳ Please try again shortly.",
-
   "market.title": "🛍️ Shop — choose an item",
   "market.back": "⬅️ Back",
   "market.locked": "⚠️ You can’t use the shop now. Please join the required channels first.",
@@ -2578,7 +2544,6 @@
   "market.vip.ask_details": "Send the subscription details (e.g., game/mode name, extra notes).",
   "market.vip.details_tip": "Write any details that help us activate your subscription correctly.",
   "market.vip.cancelled_refund": "Cancelled and your points were refunded.",
-
   "rewards.paused": "⏸️ Rewards system is temporarily paused by admins.",
   "rewards.gate.required": "Joining the channels is required to use rewards.",
   "rewards.gate.missing_list": "Required channels you haven’t joined:",
@@ -2587,17 +2552,14 @@
   "rewards.gate.still_missing": "We didn’t see your join yet. Make sure and press “Re-check” again.",
   "rewards.gate.left_warn": "⚠️ You left a required channel ({name}). {deduct} points were deducted and rewards are locked until you rejoin.",
   "rewards.gate.joined_back": "🎉 Rewards are enabled again after your join.",
-
   "rwdadm.user_notice.delta": "Your balance changed by {delta} points.\nNew balance: {balance}",
   "rwdadm.users_list_title": "📋 Users list",
   "rwdadm.users_list_desc": "Tap a user to open the control panel.",
   "rwdadm.search": "🔎 Search",
   "rwdadm.search_tip": "Send @username or numeric ID to search.",
-
   "rwd.vip.submitted": "✅ VIP exchange request submitted for {hours}. Awaiting admin approval.",
   "rwd.vip.approved_user": "🎉 Your VIP request was approved for {hours}. App ID: {app}",
   "rwd.vip.rejected_user": "❌ Your request was rejected and {refund} points were refunded.",
-  
   "rwd.vip.new_order_title": "🧾 New VIP request:",
   "rwd.vip.new_order_body": "#{oid}\n• uid: {uid}\n• duration: {hours}\n• app: {app}\n• details: {details}\n• cost: {cost}",
   "rwd.vip.btn.approve": "Approve ✅",
@@ -2606,7 +2568,6 @@
   "rwd.vip.rejected_admin": "↩️ Rejected request #{oid} and refunded {refund} points to {uid}.",
   "rwd.vip.approve_failed_admin": "⚠️ Failed to approve request #{oid}: {reason}",
   "rwd.vip.already_processed": "ℹ️ This request has already been processed.",
-
   "market.vip.ask_app": "Open the Snake Engine app. At the top-left of the screen you'll find your <b>App ID</b>. Copy it and send it here.",
   "rwd.vip.approved": "✅ Your VIP order #{oid} was approved for {hours}",
   "rwd.vip.approved.app": "app: <code>{app}</code>",
@@ -2629,84 +2590,74 @@
   "rwdadm.blocked.empty": "No blocked users.",
   "rwd.vip.rejected": "Rejected",
   "rwd.vip.refund": "Payment refunded",
-  "rwd.welcome":"Welcome to Rewards!",
-  "rwd.balance":"Your balance:",
-  "rwd.level":"Level",
-  "rwd.rank":"Your rank",
-  "rwd.streak":"Streak",
-  "rwd.btn.wallet":"My wallet 👜",
-  "rwd.btn.store":"Store 🎁",
-  "rwd.btn.how":"ℹ️ How to use",
-  "rwd.btn.daily":"🎯 Daily points",
-  "rwd.btn.daily.wait":"⏳ Daily later",
-  "rwd.btn.history":"History 📜",
-  "rwd.btn.badges":"My badges 🏅",
-  "rwd.btn.export":"Export CSV ⬇️",
-  "rwd.wallet":"My wallet",
-  "rwd.history":"Recent activity",
-  "rwd.hist.empty":"No activity yet.",
-  "rwd.badges":"My badges",
-  "rwd.badges.none":"No badges yet. Earn more points and keep your streak!",
-  "rwd.store":"Store",
-  "rwd.store.soon":"Store coming soon — redeem points for perks & discounts. ✨",
-  "rwd.how.title":"How to use",
-  "rwd.how.1":"Claim daily points from the button.",
-  "rwd.how.2":"Keep your daily streak to boost rewards.",
-  "rwd.how.3":"Your level increases automatically with points.",
-  "rwd.how.4":"See your badges and progress in the profile.",
-  "rwd.err.banned":"Rewards are disabled for your account.",
-  "rwd.daily.wait":"You can’t claim yet.",
-  "rwd.daily.ok":"Daily points added.",
-  "rwd.export.caption":"Rewards history export",
-  "rwd.export.err":"Could not create file.",
-    "rewards.hub.profile": "👤 Profile",
-   
-
-    "common.refresh": "🔄 Refresh",
-    "common.no_changes": "No changes.",
-
-    "vip.expires": "expires",
-
-    "rwd.profile": "Profile 👤",
-
-    "rwd.coin": "🪙",
-
-    "rwd.hist.title": "📜 History",
-    "rwd.hist.item": "• {date} — {amount} {coin} — {icon} {type}{note}",
-    "rwd.hist.note": " — <i>{note}</i>",
-    "rwd.hist.page": "{page}/{pages}",
-    "rwd.hist.prev": "«",
-    "rwd.hist.next": "»",
-
-    "rwd.hist.type.daily": "Daily reward",
-    "rwd.hist.type.buy": "Purchase",
-    "rwd.hist.type.send": "Transfer out",
-    "rwd.hist.type.recv": "Transfer in",
-    "rwd.hist.type.admin": "Admin",
-    "rwd.hist.type.order": "Order",
-
-    "rwd.hist.icon.daily": "🎯",
-    "rwd.hist.icon.buy": "🛒",
-    "rwd.hist.icon.send": "📤",
-    "rwd.hist.icon.recv": "📥",
-    "rwd.hist.icon.admin": "⚙️",
-    "rwd.hist.icon.order": "🧾",
-
-    "rwd.profile.history": "📜 History",
-    "rwd.profile.history.title": "Recent history",
-    "rwd.profile.invite": "👥 Invite a friend",
-    "rwd.profile.invite_text": "Share this link to invite friends and earn rewards:\n{link}",
-    "rwd.profile.promoter": "📣 Promoter",
-
-    "rwd.profile.balance": "Balance: {points}",
-    "rwd.profile.rank": "Rank: {rank}",
-    "rwd.profile.to_next": "to next tier",
-    "rwd.profile.earned": "Earned: {n}",
-    "rwd.profile.spent": "Spent: {n}",
-    "rwd.profile.streak": "Daily streak: {n}",
-    "rwd.profile.last_claim": "Last claim: ",
-    "rwd.profile.referrals": "Referrals: {n}",
-    "rwd.profile.joined": "Joined: ",
+  "rwd.welcome": "Welcome to Rewards!",
+  "rwd.balance": "Your balance:",
+  "rwd.level": "Level",
+  "rwd.rank": "Your rank",
+  "rwd.streak": "Streak",
+  "rwd.btn.wallet": "My wallet 👜",
+  "rwd.btn.store": "Store 🎁",
+  "rwd.btn.how": "ℹ️ How to use",
+  "rwd.btn.daily": "🎯 Daily points",
+  "rwd.btn.daily.wait": "⏳ Daily later",
+  "rwd.btn.history": "History 📜",
+  "rwd.btn.badges": "My badges 🏅",
+  "rwd.btn.export": "Export CSV ⬇️",
+  "rwd.wallet": "My wallet",
+  "rwd.history": "Recent activity",
+  "rwd.hist.empty": "No activity yet.",
+  "rwd.badges": "My badges",
+  "rwd.badges.none": "No badges yet. Earn more points and keep your streak!",
+  "rwd.store": "Store",
+  "rwd.store.soon": "Store coming soon — redeem points for perks & discounts. ✨",
+  "rwd.how.title": "How to use",
+  "rwd.how.1": "Claim daily points from the button.",
+  "rwd.how.2": "Keep your daily streak to boost rewards.",
+  "rwd.how.3": "Your level increases automatically with points.",
+  "rwd.how.4": "See your badges and progress in the profile.",
+  "rwd.err.banned": "Rewards are disabled for your account.",
+  "rwd.daily.wait": "You can’t claim yet.",
+  "rwd.daily.ok": "Daily points added.",
+  "rwd.export.caption": "Rewards history export",
+  "rwd.export.err": "Could not create file.",
+  "rewards.hub.profile": "👤 Profile",
+  "common.refresh": "🔄 Refresh",
+  "common.no_changes": "No changes.",
+  "vip.expires": "expires",
+  "rwd.profile": "Profile 👤",
+  "rwd.coin": "🪙",
+  "rwd.hist.title": "📜 History",
+  "rwd.hist.item": "• {date} — {amount} {coin} — {icon} {type}{note}",
+  "rwd.hist.note": " — <i>{note}</i>",
+  "rwd.hist.page": "{page}/{pages}",
+  "rwd.hist.prev": "«",
+  "rwd.hist.next": "»",
+  "rwd.hist.type.daily": "Daily reward",
+  "rwd.hist.type.buy": "Purchase",
+  "rwd.hist.type.send": "Transfer out",
+  "rwd.hist.type.recv": "Transfer in",
+  "rwd.hist.type.admin": "Admin",
+  "rwd.hist.type.order": "Order",
+  "rwd.hist.icon.daily": "🎯",
+  "rwd.hist.icon.buy": "🛒",
+  "rwd.hist.icon.send": "📤",
+  "rwd.hist.icon.recv": "📥",
+  "rwd.hist.icon.admin": "⚙️",
+  "rwd.hist.icon.order": "🧾",
+  "rwd.profile.history": "📜 History",
+  "rwd.profile.history.title": "Recent history",
+  "rwd.profile.invite": "👥 Invite a friend",
+  "rwd.profile.invite_text": "Share this link to invite friends and earn rewards:\n{link}",
+  "rwd.profile.promoter": "📣 Promoter",
+  "rwd.profile.balance": "Balance: {points}",
+  "rwd.profile.rank": "Rank: {rank}",
+  "rwd.profile.to_next": "to next tier",
+  "rwd.profile.earned": "Earned: {n}",
+  "rwd.profile.spent": "Spent: {n}",
+  "rwd.profile.streak": "Daily streak: {n}",
+  "rwd.profile.last_claim": "Last claim: ",
+  "rwd.profile.referrals": "Referrals: {n}",
+  "rwd.profile.joined": "Joined: ",
   "ac.ok": "Verified ✅",
   "ac.bad": "Verification failed. Try again.",
   "ac.cooldown": "Too many attempts. Try later.",
@@ -2797,7 +2748,6 @@
   "promp.live.platform.facebook": "Facebook",
   "promp.live.platform.twitch": "Twitch",
   "btn.sevip.buy": "🛒 Buy SEVIP subscription",
-  
   "store.title": "SEVIP Store",
   "store.choose_game": "Choose a game to subscribe to:",
   "store.8bp": "8 Ball Pool",
@@ -2835,43 +2785,8 @@
   "sevip.usdt.buy30": "Buy 30 days (USDT)",
   "sevip.usdt.pending": "My pending payments",
   "sevip.usdt.invoice": "Your invoice is ready ✅\\nSend exactly: {pay_amount} USDT\\nTo (TRC20):\\n`{pay_address}`\\nWait for confirmations.\\nPayment ID: `{payment_id}`",
-  "sevip.deliver.code": "Payment received ✅\\nYour {days}-day activation code:\\n`{code}`\\nRedeem it via (Activate)."
-
-
-
-  
-
-
-  
-  
-
-
-
-
-
-
-
+  "sevip.deliver.code": "Payment received ✅\\nYour {days}-day activation code:\\n`{code}`\\nRedeem it via (Activate).",
+  "btn_sevip_buy": "SEVIP Store",
+  "btn_alerts_inbox": "Alerts Inbox",
+  "btn_contact": "Contact"
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-   
-
-
