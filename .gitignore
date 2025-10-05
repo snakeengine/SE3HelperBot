@@ -19,3 +19,15 @@ Thumbs.db
 # Runtime / cache
 cache/
 *.log
+
+# Runtime data (لا تُرفع)
+data/**
+!data/.gitkeep
+
+# بيئات محلية
+.env
+*.env
+
+# نظام التشغيل
+.DS_Store
+Thumbs.db
