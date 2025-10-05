@@ -221,13 +221,7 @@ def _mount_rewards_routers(dp: Dispatcher):
         _pin(_rewards_profile_pro.router)
         dp.include_router(_rewards_profile_pro.router)
 
-    # أولوية عالية
-    dp.include_router(_rewards_gate.router)
-    dp.include_router(_rewards_hub.router)
-    dp.include_router(_rewards_wallet.router)
-    dp.include_router(_rewards_market.router)
-    dp.include_router(_rewards_compat.router)
-
+    
     # الشِم يبقى بدون فلتر البادئات لأنه يستخدم قيم بسيطة مثل "rewards"/"wallet"/"store"
     dp.include_router(rewards_shim)
 
@@ -566,6 +560,13 @@ def register_routers(dp: Dispatcher):
     # Rewards (fallback: لو لأي سبب ما رُكّبت مبكراً)
     if not _REWARDS_MOUNTED:
         _mount_rewards_routers(dp)
+
+    # أولوية عالية
+    dp.include_router(_rewards_gate.router)
+    dp.include_router(_rewards_hub.router)
+    dp.include_router(_rewards_wallet.router)
+    dp.include_router(_rewards_market.router)
+    dp.include_router(_rewards_compat.router)
 
     dp.include_router(admin_manage)
     dp.include_router(admin_access)
