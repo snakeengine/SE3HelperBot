@@ -1,71 +1,82 @@
 # utils/rewards_store.py
 from __future__ import annotations
 
-import json, time, threading
+import json, time, threading, os
 from pathlib import Path
 from typing import Dict, Any, Tuple, List, Optional, Literal
 import datetime as _dt
-import os  # ← نحتاجه هنا
 
-# ===== مسارات التخزين =====
-DATA_DIR = Path("data") / "rewards"
+# ░░░ مسارات التخزين الدائمة مع دعم Railway Volume ░░░
+# BASE يأتي من utils.paths، حيث يكون BASE=/data على السيرفر و .../data محليًا
+from utils.paths import BASE
+
+# الجذر الفعلي للتخزين (DATA_DIR env إذا محدد، وإلا BASE)
+ROOT = Path(os.getenv("DATA_DIR")) if os.getenv("DATA_DIR") else BASE  # /data على Railway
+DATA_DIR = ROOT / "rewards"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 USERS_FILE  = DATA_DIR / "users.json"
 ORDERS_FILE = DATA_DIR / "orders.json"
-ITEMS_FILE  = DATA_DIR / "items.json"   # كتالوج اختياري
+ITEMS_FILE  = DATA_DIR / "items.json"
+
+# ترحيل ملفات قديمة من المسار النسبي data/rewards/* إلى المسار الدائم
+try:
+    _old_dir = Path("data") / "rewards"
+    if _old_dir.exists():
+        _old = _old_dir / "users.json"
+        if _old.exists() and not USERS_FILE.exists():
+            USERS_FILE.write_text(_old.read_text(encoding="utf-8"), encoding="utf-8")
+        _old = _old_dir / "orders.json"
+        if _old.exists() and not ORDERS_FILE.exists():
+            ORDERS_FILE.write_text(_old.read_text(encoding="utf-8"), encoding="utf-8")
+        _old = _old_dir / "items.json"
+        if _old.exists() and not ITEMS_FILE.exists():
+            ITEMS_FILE.write_text(_old.read_text(encoding="utf-8"), encoding="utf-8")
+except Exception:
+    pass
 
 _LOCK = threading.Lock()
 _MAX_HISTORY = 300  # الحد الأقصى لسجل كل مستخدم (الأحدث أولًا)
-
 
 # ===== أدوات I/O آمنة =====
 def _atomic_write(path: Path, data: Any):
     """
     كتابة ذرّية متحملة لأخطاء ويندوز/OneDrive:
     - ملف مؤقت فريد في نفس المجلد
-    - flush + fsync لضمان الكتابة على القرص
-    - os.replace بمحاولات وتراجع تدريجي
+    - flush + fsync لضمان التزامن
+    - os.replace بمحاولات وتراجع تدريجي عند قفل الهدف
     """
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    # 1) أنشئ اسمًا مؤقتًا فريدًا لتجنّب التضارب بين عمليات متزامنة
     suffix = f".{int(time.time()*1000)}.{os.getpid()}.{threading.get_ident()}.tmp"
     tmp = path.parent / (path.name + suffix)
 
-    # 2) اكتب المحتوى ثم fsync
     payload = json.dumps(data, ensure_ascii=False, indent=2)
     with open(tmp, "w", encoding="utf-8", newline="\n") as f:
         f.write(payload)
         f.flush()
         os.fsync(f.fileno())
 
-    # 3) حاول الاستبدال بعدة محاولات (يعالج قفل الملف الهدف مؤقتًا)
     last_err = None
     for i in range(8):
         try:
-            # أحيانًا يكون الهدف للقراءة فقط بفعل المزامنة — حاول فتح الصلاحيات
             try:
                 if path.exists():
                     path.chmod(0o666)
             except Exception:
                 pass
-
-            os.replace(tmp, path)  # ذرّي على ويندوز/لينكس
+            os.replace(tmp, path)
             return
         except PermissionError as e:
             last_err = e
-            # محاولة تنظيف لطيفة في حال قفل شديد
             if i >= 3:
                 try:
-                    # إذا كان الملف الهدف موجودًا ومقفلًا، جرّب حذفه (قد يفشل فتُعاد المحاولة)
                     if path.exists():
                         os.remove(path)
                 except Exception:
                     pass
-            time.sleep(0.15 * (i + 1))  # backoff تدريجي
+            time.sleep(0.15 * (i + 1))
         except FileExistsError:
-            # نادرة على ويندوز؛ أعد المحاولة بعد إزالة الهدف
             try:
                 if path.exists():
                     os.remove(path)
@@ -73,11 +84,9 @@ def _atomic_write(path: Path, data: Any):
                 pass
             time.sleep(0.1)
 
-    # 4) محاولة أخيرة أو ارفع آخر خطأ معروف
     try:
         os.replace(tmp, path)
     except Exception:
-        # نظّف المؤقت واترك آخر خطأ ليسهّل تتبّع المشكلة
         try:
             if tmp.exists():
                 tmp.unlink()
@@ -231,7 +240,6 @@ def replace_history(uid: int, new_history: List[Dict[str, Any]]) -> None:
 # ===== تصنيف تلقائي للنوع =====
 def _infer_type(reason: str, delta: int) -> str:
     r = (reason or "").lower().strip()
-    # تعديلات الأدمن -> نوع "adjust"
     if r in ("admin_set", "admin_grant", "admin_zero") or r.startswith("admin_"):
         return "adjust"
     if r.startswith("wallet_transfer_out") or r.startswith("to ") or r.startswith("to:") or "transfer_to" in r:
@@ -250,8 +258,7 @@ def _infer_type(reason: str, delta: int) -> str:
         return "order"
     if r.startswith("bonus") or r.startswith("task"):
         return "bonus"
-    return "admin"  # احتياطي
-
+    return "admin"
 
 # ===== نقاط: إضافة/خصم/شراء/تحويل =====
 def add_points(uid: int, delta: int, reason: str = "", typ: str = "admin") -> int:
@@ -274,7 +281,6 @@ def add_points(uid: int, delta: int, reason: str = "", typ: str = "admin") -> in
             u["spent"] = int(u.get("spent", 0)) + abs(int(delta))
 
         typ_eff = typ or "admin"
-        # لو الاستدعاء القديم ما مرّر النوع، نحدده من الـ reason
         if typ_eff == "admin":
             typ_eff = _infer_type(reason, int(delta))
 
@@ -303,8 +309,8 @@ def spend_points(uid: int, amount: int, note: str = "", typ: str = "buy") -> boo
         _save_users(store)
         return True
 
-# ملاحظة: هذه الدالة باقية للتوافق.
 def send_points(src: int, dst: int, amount: int, note: str = "") -> Tuple[bool, str]:
+    """تحويل نقاط بين مستخدمين (مع فحص مبسّط)."""
     if int(src) == int(dst):
         return False, "لا يمكنك التحويل لنفسك."
     if int(amount) < 5:
@@ -352,7 +358,6 @@ def daily_claim(uid: int, amount: int = 10) -> Tuple[bool, int]:
         if u.get("daily_date") == today:
             return False, 0
 
-        # تحديث سلسلة الأيام
         prev_date = u.get("daily_date", "")
         if prev_date:
             try:
@@ -445,7 +450,6 @@ def _get_tx_list_container(u: dict) -> tuple[str, list]:
         return "tx", u["tx"]
     if isinstance(u.get("history"), list):
         return "history", u["history"]
-    # أنشئ حاوية فارغة إذا لم تكن موجودة
     u.setdefault("tx", [])
     return "tx", u["tx"]
 
@@ -514,6 +518,7 @@ def purge_user_history(
         store[key] = u
         _save_users(store)
         return removed
+
 # ===== قائمة المحظورين مع ترقيم الصفحات =====
 def list_blocked_users(offset: int = 0, limit: int = 20):
     """
