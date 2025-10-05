@@ -70,18 +70,36 @@
     "history": []
   },
   "7360982123": {
-    "points": 0,
+    "points": 10,
     "blocked": false,
     "created_at": 1759657456,
-    "updated_at": 1759688450,
-    "last_actions": {},
+    "updated_at": 1759699057,
+    "last_actions": {
+      "daily_click": 1759699014,
+      "daily24": 1759699016
+    },
     "daily_date": "",
     "warns": 0,
-    "earned": 0,
+    "earned": 10,
     "spent": 0,
     "streak": 0,
     "last_claim": null,
-    "history": []
+    "history": [
+      {
+        "t": 1759699016,
+        "type": "daily",
+        "amount": 10,
+        "note": "daily"
+      }
+    ],
+    "abuse": {
+      "risk": 0,
+      "fails": 0,
+      "captcha_passed_at": 1759699016,
+      "last_captcha": 1759699014,
+      "ban_until": 0,
+      "captcha": {}
+    }
   },
   "8371697148": {
     "points": 110,
