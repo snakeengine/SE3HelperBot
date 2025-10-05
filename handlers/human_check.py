@@ -4,6 +4,7 @@ from typing import Callable, Awaitable, Dict, Union
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.enums import ParseMode
 
 from lang import t, get_user_lang
 from utils.anti_cheat import (
@@ -30,8 +31,12 @@ ResumeEvent = Union[Message, CallbackQuery]
 ResumeFn = Callable[[ResumeEvent], Awaitable[None]]
 _PENDING_RESUME: Dict[int, ResumeFn] = {}   # user_id -> coroutine
 
-# ===== إرسال الكابتشا =====
-async def _send_captcha(msg_or_cb: ResumeEvent):
+# ===== إرسال/تحديث الكابتشا =====
+async def _send_captcha(msg_or_cb: ResumeEvent, *, refresh: bool = False):
+    """
+    إذا refresh=True ومعنا CallbackQuery -> نُحدّث نفس الرسالة (edit_text).
+    وإلا نرسل رسالة جديدة.
+    """
     uid = msg_or_cb.from_user.id
     lang = _L(uid)
 
@@ -48,10 +53,20 @@ async def _send_captcha(msg_or_cb: ResumeEvent):
     kb.adjust(3, 3)
     markup = kb.as_markup()
 
+    # تحديث نفس الرسالة إن أمكن (قادم من كب كويري)
+    if refresh and isinstance(msg_or_cb, CallbackQuery):
+        try:
+            await msg_or_cb.message.edit_text(text, reply_markup=markup, parse_mode=ParseMode.HTML)
+        except Exception:
+            # fallback: أرسل رسالة جديدة إن فشل التعديل
+            await msg_or_cb.message.answer(text, reply_markup=markup, parse_mode=ParseMode.HTML)
+        return
+
+    # إرسال جديد
     if isinstance(msg_or_cb, Message):
-        await msg_or_cb.answer(text, reply_markup=markup)
+        await msg_or_cb.answer(text, reply_markup=markup, parse_mode=ParseMode.HTML)
     else:
-        await msg_or_cb.message.answer(text, reply_markup=markup)
+        await msg_or_cb.message.answer(text, reply_markup=markup, parse_mode=ParseMode.HTML)
 
 # ===== واجهات عامة =====
 async def require_human(msg_or_cb: ResumeEvent, level: str = "normal") -> bool:
@@ -91,14 +106,31 @@ async def _cb_try(cb: CallbackQuery):
         ok = False
 
     if ok:
-        await cb.answer(_tt(lang, "ac.ok", "تم التحقق ✅"), show_alert=False)
+        # إشعار صغير
+        try:
+            await cb.answer(_tt(lang, "ac.ok", "تم التحقق ✅"), show_alert=False)
+        except Exception:
+            pass
+        # احذف رسالة التحقق لتختفي من الدردشة
+        try:
+            await cb.message.delete()
+        except Exception:
+            # لو فشل الحذف (مثلاً قديمة/لا صلاحية)، عدّل النص وأزل الأزرار
+            try:
+                await cb.message.edit_text(_tt(lang, "ac.ok", "تم التحقق ✅"), reply_markup=None)
+            except Exception:
+                pass
         # نفّذ الإجراء المعلّق (إن وُجد)
         resume = _PENDING_RESUME.pop(uid, None)
         if resume:
             try:
                 await resume(cb)
             except Exception:
-                # نتجاهل أي خطأ هنا حتى لا يؤثر على تجربة الكابتشا
                 pass
     else:
-        await cb.answer(_tt(lang, "ac.bad", "تحقق فاشل."), show_alert=True)
+        # خطأ -> أعط محاولة جديدة على نفس الرسالة
+        try:
+            await cb.answer(_tt(lang, "ac.bad", "تحقق فاشل. أعد المحاولة."), show_alert=False)
+        except Exception:
+            pass
+        await _send_captcha(cb, refresh=True)

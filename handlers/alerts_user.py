@@ -1,3 +1,4 @@
+# handlers/alerts_user.py
 from __future__ import annotations
 import json, asyncio, time, datetime
 from pathlib import Path
@@ -6,6 +7,7 @@ from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.exceptions import TelegramBadRequest
 
 from lang import t, get_user_lang
 from utils.alerts_broadcast import get_active_alerts
@@ -16,6 +18,10 @@ DATA_DIR = Path("data"); DATA_DIR.mkdir(parents=True, exist_ok=True)
 USERBOX_FILE = DATA_DIR / "alerts_userbox.json"   # { "<uid>": {"seen":[...], "ignored":[...], "deleted":[...] } }
 
 # ---------- storage helpers ----------
+# قفل بسيط لتفادي تضارب الكتابة المتزامنة
+import threading as _th
+_LOCK = _th.Lock()
+
 def _jload(path: Path) -> dict:
     try:
         return json.loads(path.read_text("utf-8"))
@@ -23,18 +29,23 @@ def _jload(path: Path) -> dict:
         return {}
 
 def _jsave(path: Path, data: dict) -> None:
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    # كتابة ذرّية لتفادي تلف الملف عند الإنهاء المفاجئ
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp.replace(path)
 
 def _state(uid: int) -> Dict[str, List[str]]:
-    db = _jload(USERBOX_FILE)
-    s = db.get(str(uid)) or {}
-    s.setdefault("seen", []); s.setdefault("ignored", []); s.setdefault("deleted", [])
-    return s
+    with _LOCK:
+        db = _jload(USERBOX_FILE)
+        s = db.get(str(uid)) or {}
+        s.setdefault("seen", []); s.setdefault("ignored", []); s.setdefault("deleted", [])
+        return s
 
 def _save_state(uid: int, s: Dict[str, List[str]]) -> None:
-    db = _jload(USERBOX_FILE)
-    db[str(uid)] = s
-    _jsave(USERBOX_FILE, db)
+    with _LOCK:
+        db = _jload(USERBOX_FILE)
+        db[str(uid)] = s
+        _jsave(USERBOX_FILE, db)
 
 # ---------- ui helpers ----------
 def _kind_display(kind: str, lang: str) -> str:
@@ -66,28 +77,50 @@ def _reminder_menu_kb(alert_id: str, lang: str) -> InlineKeyboardBuilder:
     kb.adjust(1,1,1,1)
     return kb
 
+async def _safe_edit_text(msg_or_cb, text: str, *, reply_markup=None):
+    """تحرير آمن لتفادي TelegramBadRequest: message is not modified"""
+    msg = msg_or_cb.message if isinstance(msg_or_cb, CallbackQuery) else msg_or_cb
+    try:
+        await msg.edit_text(text, reply_markup=reply_markup)
+    except TelegramBadRequest as e:
+        if "message is not modified" not in str(e).lower():
+            raise
+
 async def _schedule_reminder(cb_or_msg, uid: int, alert_id: str, delay: int, lang: str):
     """ينشئ تذكيرًا بعد مدة؛ يتأكد أن الإشعار ما زال صالحًا ولم يُفتح/يُتجاهل/يُحذف."""
+    # حماية: لا نجعل التأخير خارج نطاق معقول
+    delay = max(1, min(int(delay), 7 * 24 * 3600))  # حتى 7 أيام
     bot = cb_or_msg.bot
+
     async def _task():
-        await asyncio.sleep(max(1, delay))
-        # تحقق من الحالة الحالية
-        st = _state(uid)
-        if (alert_id in st.get("seen", [])
-            or alert_id in st.get("ignored", [])
-            or alert_id in st.get("deleted", [])):
+        try:
+            await asyncio.sleep(delay)
+            # تحقق من الحالة الحالية
+            st = _state(uid)
+            if (alert_id in st.get("seen", [])
+                or alert_id in st.get("ignored", [])
+                or alert_id in st.get("deleted", [])):
+                return
+            items = get_active_alerts(lang)
+            it = next((x for x in items if x["id"] == alert_id), None)
+            if not it:
+                return
+            # أرسل التذكير
+            kb = InlineKeyboardBuilder()
+            label = (t(lang, "alerts.user.open_kind") or "Open {kind}").replace("{kind}", _kind_display(it["kind"], lang))
+            kb.button(text=label, callback_data=f"inb:open:{alert_id}")
+            kb.button(text=t(lang, "alerts.user.ignore") or "Ignore", callback_data=f"inb:ignore:{alert_id}")
+            kb.adjust(1,1)
+            await bot.send_message(
+                uid,
+                (t(lang, "alerts.user.remind_due") or "You have a pending alert"),
+                reply_markup=kb.as_markup(),
+                disable_web_page_preview=True
+            )
+        except Exception:
+            # لا نفشل السايكلر بأكمله لو حدث استثناء
             return
-        items = get_active_alerts(lang)
-        it = next((x for x in items if x["id"] == alert_id), None)
-        if not it:
-            return
-        # أرسل التذكير
-        kb = InlineKeyboardBuilder()
-        label = (t(lang, "alerts.user.open_kind") or "Open {kind}").replace("{kind}", _kind_display(it["kind"], lang))
-        kb.button(text=label, callback_data=f"inb:open:{alert_id}")
-        kb.button(text=t(lang, "alerts.user.ignore") or "Ignore", callback_data=f"inb:ignore:{alert_id}")
-        kb.adjust(1,1)
-        await bot.send_message(uid, (t(lang, "alerts.user.remind_due") or "You have a pending alert"), reply_markup=kb.as_markup())
+
     asyncio.create_task(_task())
 
 # ---------- commands ----------
@@ -97,7 +130,8 @@ async def alerts_inbox(msg: Message):
     st = _state(msg.from_user.id)
     items_all = get_active_alerts(lang)
     # استبعد المحذوف والمُتجاهَل
-    items = [it for it in items_all if it["id"] not in st["deleted"] and it["id"] not in st["ignored"]]
+    ignored = set(st["ignored"]); deleted = set(st["deleted"])
+    items = [it for it in items_all if it["id"] not in deleted and it["id"] not in ignored]
     if not items:
         return await msg.answer(t(lang, "alerts.user.box.empty") or "No active alerts.")
     count_unseen = len([it for it in items if it["id"] not in st["seen"]])
@@ -112,13 +146,14 @@ async def inb_back(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "ar"
     st = _state(cb.from_user.id)
     items_all = get_active_alerts(lang)
-    items = [it for it in items_all if it["id"] not in st["deleted"] and it["id"] not in st["ignored"]]
+    ignored = set(st["ignored"]); deleted = set(st["deleted"])
+    items = [it for it in items_all if it["id"] not in deleted and it["id"] not in ignored]
     if not items:
-        await cb.message.edit_text(t(lang, "alerts.user.box.empty") or "No active alerts.")
+        await _safe_edit_text(cb, t(lang, "alerts.user.box.empty") or "No active alerts.")
         return await cb.answer()
     kb = _list_keyboard(items, lang)
     header = t(lang, "alerts.user.list.title") or "Your active alerts:"
-    await cb.message.edit_text(header, reply_markup=kb.as_markup())
+    await _safe_edit_text(cb, header, reply_markup=kb.as_markup())
     await cb.answer()
 
 @router.callback_query(F.data.regexp(r"^inb:open:(.+)$"))
@@ -166,7 +201,12 @@ async def inb_reminder_menu(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "ar"
     alert_id = cb.data.split(":", 2)[-1]
     kb = _reminder_menu_kb(alert_id, lang)
-    await cb.message.edit_reply_markup(reply_markup=kb.as_markup())
+    # تعديل آمن للكيبورد
+    try:
+        await cb.message.edit_reply_markup(reply_markup=kb.as_markup())
+    except TelegramBadRequest as e:
+        if "message is not modified" not in str(e).lower():
+            raise
     await cb.answer()
 
 @router.callback_query(F.data.regexp(r"^inb:rem:(.+):(\d+)$"))

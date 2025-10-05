@@ -22,8 +22,29 @@ from lang import t, get_user_lang
 from utils.rewards_store import (
     set_blocked, is_blocked, add_points, ensure_user, mark_warn, get_points
 )
+from aiogram.filters import StateFilter
+from handlers.live_chat import LiveChat
+
 
 router = Router(name="rewards_gate")
+# امنع التنفيذ أثناء جلسة الدردشة الحيّة، واشتغل بالخاص فقط
+router.message.filter(F.chat.type == "private", ~StateFilter(LiveChat.active))
+router.callback_query.filter(F.message.chat.type == "private", ~StateFilter(LiveChat.active))
+
+# امنع أي رسائل/كولباكات خاصة أثناء جلسة الدردشة الحيّة،
+# وحصّر كولباكات هذا الملف على بادئة rwd:gate:
+router.message.filter(
+    F.chat.type == "private",
+    ~StateFilter(LiveChat.active)
+)
+router.callback_query.filter(
+    F.message.chat.type == "private",
+    ~StateFilter(LiveChat.active),
+    F.data.func(lambda s: isinstance(s, str) and s.startswith("rwd:gate:"))
+)
+
+# ملاحظة: chat_member updates لا نقيّدها لأنها تأتي من القنوات/السوبرجروبات
+# وليست جزءًا من محادثة المستخدم الخاصة، وبالتالي ما تتأثر بـ LiveChat.
 log = logging.getLogger(__name__)
 
 # ---------------------- إعداد إشعار الأدمن ----------------------

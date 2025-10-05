@@ -22,6 +22,28 @@ VIP_PUBLIC_APPLY = os.getenv("VIP_PUBLIC_APPLY", "1").strip() not in ("0", "fals
 
 router = Router(name="start")
 
+# 👇 خاص فقط لتقليل التعارض
+router.message.filter(F.chat.type == "private")
+router.callback_query.filter(F.message.chat.type == "private")
+
+# 👇 منع فتح القوائم أثناء الدردشة الحيّة
+try:
+    from handlers.live_chat import LiveChat
+except Exception:
+    class LiveChat:  # fallback آمن
+        active = None
+
+async def _is_live_active(state: FSMContext) -> bool:
+    try:
+        if not state:
+            return False
+        cur = await state.get_state()  # aiogram v3: coroutine
+        want = getattr(LiveChat, "active", None)
+        # بعض البيئات قد لا تملك .state لو fallback، نتأكد بأمان:
+        target = getattr(want, "state", None)
+        return bool(target and cur == target)
+    except Exception:
+        return False
 # ===== استيرادات اختيارية مع fallback =====
 try:
     from utils.user_stats import log_user
@@ -67,6 +89,13 @@ except Exception:
         from aiogram.utils.keyboard import InlineKeyboardBuilder
         return InlineKeyboardBuilder().as_markup()
 
+# (اختياري) خريطة CB بسيطة للاستهلاك من ملفات أخرى إن احتاجت
+CB = {
+    "BOT_OPEN": "bot:open",
+    "TRUSTED_SUPPLIERS": "trusted_suppliers",
+    "VIP_BUY_INTERNAL": "shop:sevip",
+}
+
 # ===== إعدادات الأدمن =====
 def _load_admin_ids() -> set[int]:
     raw = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
@@ -88,7 +117,7 @@ class UserMini:
     user_id: int
     first_name: str
     username: str | None
-    role: str   # "user" | "supplier" | "pending" | "banned"
+    role: str   # "user" | "supplier"
     lang: str   # "ar" | "en"
 
 async def _get_user_mini(tg_user) -> UserMini:
@@ -112,12 +141,21 @@ async def _send_welcome_single_message(
     promoter_real: bool,
     vip_member: bool,
 ):
-    # ⬅️ تمرير اللغة لضمان ثبات الواجهة
     await render_home_card(target_msg, lang=lang)
 
 # ======================== /start ========================
-@router.message(CommandStart(), StateFilter(None))
+@router.message(CommandStart())
 async def start_handler(message: Message, state: FSMContext):
+    # لو فيه جلسة دردشة حية نشطة — لا تفتح القائمة، اطلب إنهاء الدردشة أولًا
+    if await _is_live_active(state):
+        lang = get_user_lang(message.from_user.id) or "ar"
+        txt = ("⚠️ لديك جلسة دردشة حيّة مفتوحة.\n"
+               "يرجى إنهاء الدردشة من الزر «❌ إنهاء الدردشة» أولًا للعودة للقائمة.")
+        if lang != "ar":
+            txt = "⚠️ You have an active live chat.\nPlease end the chat first (❌ End chat) to go back to the menu."
+        await message.answer(txt)
+        return
+
     await state.clear()
 
     # إخفاء أي لوحة رد سابقة (التبويبات /sections مثلاً)
@@ -129,8 +167,18 @@ async def start_handler(message: Message, state: FSMContext):
 
     await _serve_home(message)
 
+# في حال كان فيه أي حالة أخرى غير LiveChat، /start يلغيها ويعيدك للقائمة
 @router.message(~StateFilter(None), F.text.regexp(r"^/start(\s|$)"))
 async def start_handler_in_state(message: Message, state: FSMContext):
+    if await _is_live_active(state):
+        lang = get_user_lang(message.from_user.id) or "ar"
+        txt = ("⚠️ لديك جلسة دردشة حيّة مفتوحة.\n"
+               "يرجى إنهاء الدردشة من الزر «❌ إنهاء الدردشة» أولًا للعودة للقائمة.")
+        if lang != "ar":
+            txt = "⚠️ You have an active live chat.\nPlease end the chat first (❌ End chat) to go back to the menu."
+        await message.answer(txt)
+        return
+
     await state.clear()
     try:
         rm = await message.answer("\u2063", reply_markup=ReplyKeyboardRemove())
@@ -164,7 +212,7 @@ async def _serve_home(message: Message):
 
     await _send_welcome_single_message(
         target_msg=message,
-        lang=user.lang,   # ⬅️ مهم
+        lang=user.lang,
         user=user,
         vip_real=vip_real,
         promoter_real=promoter_real,
@@ -212,6 +260,20 @@ async def _serve_home(message: Message):
 # ===== زر رجوع عام =====
 @router.callback_query(F.data.in_({"back_to_menu", "home"}))
 async def back_to_menu_handler(callback: CallbackQuery, state: FSMContext):
+    # لا نعرض القائمة أثناء الدردشة الحيّة
+    if await _is_live_active(state):
+        lang = get_user_lang(callback.from_user.id) or "ar"
+        txt = ("⚠️ لديك جلسة دردشة حيّة مفتوحة.\n"
+               "يرجى إنهاء الدردشة من الزر «❌ إنهاء الدردشة» أولًا للعودة للقائمة.")
+        if lang != "ar":
+            txt = "⚠️ You have an active live chat.\nPlease end the chat first (❌ End chat) to go back to the menu."
+        await callback.answer()
+        try:
+            await callback.message.answer(txt)
+        except Exception:
+            pass
+        return
+
     await state.clear()
     try:
         rm = await callback.message.answer("\u2063", reply_markup=ReplyKeyboardRemove())
@@ -232,7 +294,7 @@ async def back_to_menu_handler(callback: CallbackQuery, state: FSMContext):
 
     await _send_welcome_single_message(
         target_msg=callback.message,
-        lang=user.lang,   # ⬅️ مهم
+        lang=user.lang,
         user=user,
         vip_real=vip_real,
         promoter_real=promoter_real,

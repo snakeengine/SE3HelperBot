@@ -9,7 +9,7 @@ from utils.updates import (
     mark_user_notified,
 )
 
-DEFAULT_APK_URL = "https://example.com/app-latest.apk"
+DEFAULT_APK_URL = "https://www.mediafire.com/file/gjd3dx7ztdlbtdl/SE_2.0.6.apk/file"
 
 def _valid_http(url: str | None) -> bool:
     return isinstance(url, str) and url.lower().startswith(("http://", "https://"))

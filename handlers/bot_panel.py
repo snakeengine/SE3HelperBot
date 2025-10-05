@@ -20,6 +20,36 @@ router.message.filter(lambda m: not ((m.text or "").lstrip().startswith("/")))
 # كولباكات هذا القسم تبدأ بـ "bot:"
 router.callback_query.filter(lambda cq: (cq.data or "").startswith("bot:"))
 
+# =========================================================
+# Safe edit helper — يتفادى BadRequest: message is not modified
+# =========================================================
+async def _safe_edit(message, *, text: Optional[str] = None, reply_markup=None,
+                    parse_mode: Optional[ParseMode] = None,
+                    disable_web_page_preview: Optional[bool] = None):
+    """
+    يحاول تعديل الرسالة بأمان:
+      1) إن تغيّر النص فعلاً → edit_text
+      2) إن لم يتغيّر النص لكن تغيّر المارك-أب → edit_reply_markup فقط
+      3) إن لم يتغيّر شيء → لا يرمي استثناء
+    """
+    try:
+        cur_text = getattr(message, "text", None) or ""
+        if text is not None and text != cur_text:
+            return await message.edit_text(
+                text,
+                reply_markup=reply_markup,
+                parse_mode=parse_mode,
+                disable_web_page_preview=disable_web_page_preview,
+            )
+        if reply_markup is not None:
+            return await message.edit_reply_markup(reply_markup=reply_markup)
+        return None
+    except TelegramBadRequest as e:
+        # في حال لم يتغيّر شيء فعلاً
+        if "message is not modified" in str(e):
+            return None
+        raise
+
 # ===== إعدادات الإدمن =====
 _admin_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
 ADMIN_IDS = [int(x) for x in str(_admin_env).split(",") if str(x).strip().isdigit()]
@@ -88,7 +118,7 @@ def _faq(lang: str) -> list[tuple[str, str]]:
     items = []
     d = _load_json(FAQ_PATH) or {}
     for it in d.get("items", []):
-        if not isinstance(it, dict): 
+        if not isinstance(it, dict):
             continue
         if (lang or "ar").startswith("ar"):
             q = it.get("q_ar") or it.get("q") or ""
@@ -102,15 +132,23 @@ def _faq(lang: str) -> list[tuple[str, str]]:
     if not items:
         if (lang or "ar").startswith("ar"):
             items = [
-                ("كيف أبلّغ عن مشكلة؟", "استخدم الأمر /report ووصف المشكلة، أو أرفق لقطة شاشة."),
-                ("كيف أغيّر اللغة؟", "اكتب /language ثم اختر العربية أو الإنجليزية."),
-                ("ما هي قنوات التواصل؟", " المنتدى: https://t.me/SnakeEngine1")
+                ("كيف أبلّغ عن مشكلة؟",
+                 "استخدم الأمر /report ووصف المشكلة، أو أرفق لقطة شاشة."),
+                ("كيف أغيّر اللغة؟",
+                 "اكتب /language ثم اختر العربية أو الإنجليزية."),
+                ("كيف يمكنني الاتصال بكم؟",
+                 "اضغط زر «💬 دردشة حية» بالأسفل للتواصل مباشرة مع فريق الدعم. "
+                 "كما يمكنك استخدام /report عند الحاجة.")
             ]
         else:
             items = [
-                ("How to report an issue?", "Use /report and describe the issue, attach a screenshot if possible."),
-                ("How to change language?", "Send /language and choose Arabic or English."),
-                ("Where to contact/support?", "Channel: https://t.me/SnakeEngine — Forum: https://t.me/SnakeEngine1")
+                ("How to report an issue?",
+                 "Use /report and describe the issue, attach a screenshot if possible."),
+                ("How to change language?",
+                 "Send /language and choose Arabic or English."),
+                ("How can I contact you?",
+                 "Tap the “💬 Live chat” button below to talk to support directly. "
+                 "You can also use /report if needed.")
             ]
     return items
 
@@ -125,7 +163,6 @@ def _kb_main(lang: str, is_admin: bool) -> InlineKeyboardBuilder:
     kb.button(text=_tt(lang, "bot.menu.ping",     _LBL(lang, "🏓 بينغ", "🏓 Ping")),          callback_data="bot:ping")
     kb.button(text=_tt(lang, "bot.menu.close",    _LBL(lang, "❌ إغلاق", "❌ Close")),        callback_data="bot:close")
     kb.adjust(2, 2, 2, 2)
-    
     return kb
 
 @router.callback_query(F.data == "bot:forum")
@@ -134,17 +171,22 @@ async def bot_forum(cb: CallbackQuery):
     meta_forum = (json.loads(Path("data/public_meta.json").read_text(encoding="utf-8")).get("forum")
                   if Path("data/public_meta.json").exists() else "https://t.me/SnakeEngine1")
     txt = "رابط المنتدى:\n" + meta_forum if lang.startswith("ar") else "Forum link:\n" + meta_forum
-    await cb.message.edit_text(txt, reply_markup=_kb_main(lang, _is_admin(cb.from_user.id)).as_markup(), disable_web_page_preview=False)
+    await _safe_edit(
+        cb.message,
+        text=txt,
+        reply_markup=_kb_main(lang, _is_admin(cb.from_user.id)).as_markup(),
+        disable_web_page_preview=False
+    )
     await cb.answer()
-
 
 @router.callback_query(F.data.in_({"bot:open", "menu:bot"}))
 async def open_panel(cb: CallbackQuery):
     lang = _L(cb.from_user.id)
     is_admin = _is_admin(cb.from_user.id)
     title = _tt(lang, "bot.title", _LBL(lang, "🤖 البوت", "🤖 Bot"))
-    await cb.message.edit_text(
-        f"<b>{title}</b>\n{_tt(lang,'bot.hint', _LBL(lang, 'اختر إجراء:', 'Choose an action:'))}",
+    await _safe_edit(
+        cb.message,
+        text=f"<b>{title}</b>\n{_tt(lang,'bot.hint', _LBL(lang, 'اختر إجراء:', 'Choose an action:'))}",
         parse_mode=ParseMode.HTML,
         reply_markup=_kb_main(lang, is_admin).as_markup()
     )
@@ -191,14 +233,14 @@ async def bot_info(cb: CallbackQuery):
         for al in app_lines:
             lines.append("  - " + al)
 
-    await cb.message.edit_text(
-        "\n".join(lines),
+    await _safe_edit(
+        cb.message,
+        text="\n".join(lines),
         parse_mode=ParseMode.HTML,
         reply_markup=_kb_main(lang, _is_admin(cb.from_user.id)).as_markup(),
         disable_web_page_preview=False
     )
     await cb.answer()
-
 
 @router.callback_query(F.data == "bot:faq")
 async def bot_faq(cb: CallbackQuery):
@@ -208,8 +250,9 @@ async def bot_faq(cb: CallbackQuery):
     out = [title]
     for q, a in items[:10]:
         out.append(f"\n<b>• {q}</b>\n{a}")
-    await cb.message.edit_text(
-        "\n".join(out),
+    await _safe_edit(
+        cb.message,
+        text="\n".join(out),
         parse_mode=ParseMode.HTML,
         reply_markup=_kb_main(lang, _is_admin(cb.from_user.id)).as_markup(),
         disable_web_page_preview=True
@@ -223,20 +266,28 @@ async def bot_support(cb: CallbackQuery):
     contact = meta.get("support_contact") or "@SnakeEngine"
     hours   = meta.get("support_hours") or _LBL(lang, "10:00–22:00 (بتوقيت الرياض)", "10:00–22:00 (GMT+3)")
     title = _LBL(lang, "🆘 <b>الدعم</b>", "🆘 <b>Support</b>")
+
     lines = [
         title,
-        _LBL(lang, f"• تواصل معنا: <a href='https://t.me/{contact.lstrip('@')}'>{contact}</a>",
-                    f"• Contact: <a href='https://t.me/{contact.lstrip('@')}'>{contact}</a>"),
+        _LBL(lang,
+             "• للدردشة الفورية: اضغط «💬 دردشة حية» بالأسفل.",
+             "• For instant help: tap “💬 Live chat” below."),
+        _LBL(lang,
+             f"• تواصل معنا: <a href='https://t.me/{contact.lstrip('@')}'>{contact}</a>",
+             f"• Contact: <a href='https://t.me/{contact.lstrip('@')}'>{contact}</a>"),
         _LBL(lang, f"• ساعات العمل: <code>{hours}</code>", f"• Hours: <code>{hours}</code>"),
-        _LBL(lang, "• للإبلاغ عن مشكلة: استخدم /report", "• To report an issue: use /report")
+        _LBL(lang, "• للإبلاغ عن مشكلة: استخدم /report", "• To report an issue: use /report"),
     ]
-    await cb.message.edit_text(
-        "\n".join(lines),
+
+    await _safe_edit(
+        cb.message,
+        text="\n".join(lines),
         parse_mode=ParseMode.HTML,
         reply_markup=_kb_main(lang, _is_admin(cb.from_user.id)).as_markup(),
         disable_web_page_preview=True
     )
     await cb.answer()
+
 def _kb_premium(lang: str, contact_user: str | None, forum_url: str | None):
     kb = InlineKeyboardBuilder()
     if contact_user:
@@ -270,9 +321,6 @@ def _fmt_period(lang: str, period: str | None) -> str:
         if n % 30 == 0:  return f"{n//30} month(s)"
         return f"{n} day(s)"
 
-
-
-
 @router.callback_query(F.data == "bot:ping")
 async def bot_ping(cb: CallbackQuery):
     lang = _L(cb.from_user.id)
@@ -283,8 +331,9 @@ async def bot_ping(cb: CallbackQuery):
         pass
     ms = int((time.perf_counter() - t0) * 1000)
     txt = _tt(lang, "bot.ping.ok", _LBL(lang, "🏓 بونغ", "🏓 Pong")) + f" <b>{ms} ms</b>"
-    await cb.message.edit_text(
-        txt, parse_mode=ParseMode.HTML,
+    await _safe_edit(
+        cb.message,
+        text=txt, parse_mode=ParseMode.HTML,
         reply_markup=_kb_main(lang, _is_admin(cb.from_user.id)).as_markup()
     )
 
@@ -302,8 +351,9 @@ async def bot_admin(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
         await cb.answer("Admins only.", show_alert=True); return
     lang = _L(cb.from_user.id)
-    await cb.message.edit_text(
-        _LBL(lang, "🔧 <b>لوحة الإدارة</b>", "🔧 <b>Admin Panel</b>"),
+    await _safe_edit(
+        cb.message,
+        text=_LBL(lang, "🔧 <b>لوحة الإدارة</b>", "🔧 <b>Admin Panel</b>"),
         parse_mode=ParseMode.HTML,
         reply_markup=_kb_admin(lang).as_markup()
     )
@@ -338,8 +388,9 @@ async def bot_admin_stats(cb: CallbackQuery):
         _LBL(lang, f"• إجمالي المستخدمين: <b>{users_total:,}</b>",
                     f"• Total users: <b>{users_total:,}</b>"),
     ]
-    await cb.message.edit_text(
-        "\n".join(lines),
+    await _safe_edit(
+        cb.message,
+        text="\n".join(lines),
         parse_mode=ParseMode.HTML,
         reply_markup=_kb_admin(lang).as_markup()
     )
@@ -387,7 +438,12 @@ async def bot_set_cmds(cb: CallbackQuery):
         log.exception("set_my_commands failed: %r", e); ok = False
 
     msg = _LBL(lang, "✅ تم تحديث الأوامر.", "✅ Commands updated.") if ok else _LBL(lang, "❌ فشل تحديث الأوامر.", "❌ Failed to update commands.")
-    await cb.message.edit_text(msg, parse_mode=ParseMode.HTML, reply_markup=_kb_admin(lang).as_markup())
+    await _safe_edit(
+        cb.message,
+        text=msg,
+        parse_mode=ParseMode.HTML,
+        reply_markup=_kb_admin(lang).as_markup()
+    )
     await cb.answer()
 
 @router.callback_query(F.data == "bot:close")
@@ -396,3 +452,4 @@ async def bot_close(cb: CallbackQuery):
         await cb.message.delete()
     except Exception:
         await cb.answer()
+

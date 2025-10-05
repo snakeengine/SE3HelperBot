@@ -9,7 +9,7 @@ from aiogram.enums import ChatType, ChatMemberStatus
 router = Router(name="anti_groups")
 
 # قناة وحيدة مسموح بوجود البوت فيها (اختياري)
-_ALLOWED_CHANNEL_ID = int(os.getenv("ADMIN_CHANNEL_ID", "0") or "0")
+_ALLOWED_CHANNEL_ID = -1001947565627
 
 # تفعيل/تعطيل تنبيهات الأدمن
 _ADMIN_NOTIFY = os.getenv("ADMIN_NOTIFY", "1").strip().lower() not in {"0", "false", "no"}

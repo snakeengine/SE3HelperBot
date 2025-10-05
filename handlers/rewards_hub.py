@@ -10,6 +10,10 @@ from lang import t, get_user_lang
 from utils.rewards_store import get_points, ensure_user, can_do
 from utils.daily_guard import try_claim_daily  # ✅ المطالبة اليومية (24 ساعة حقيقية)
 from .rewards_gate import require_membership
+# أعلى الملف مع الاستيرادات
+from aiogram.filters import StateFilter
+from handlers.live_chat import LiveChat
+
 
 # ✅ كابتشا بشرية + الاستئناف بعد النجاح (مع Fallbackات آمنة)
 try:
@@ -24,6 +28,20 @@ except Exception:
         return False
 
 router = Router(name="rewards_hub")
+# امنع التنفيذ أثناء جلسة الدردشة الحيّة، واشتغل بالخاص فقط
+router.message.filter(F.chat.type == "private", ~StateFilter(LiveChat.active))
+router.callback_query.filter(F.message.chat.type == "private", ~StateFilter(LiveChat.active))
+
+# امنع التداخل مع الدردشة الحيّة + احصر الكولباكات على rwd:
+router.message.filter(
+    F.chat.type == "private",
+    ~StateFilter(LiveChat.active)
+)
+router.callback_query.filter(
+    F.message.chat.type == "private",
+    ~StateFilter(LiveChat.active),
+    F.data.func(lambda s: isinstance(s, str) and s.startswith("rwd:"))
+)
 
 # ===================== Helpers =====================
 

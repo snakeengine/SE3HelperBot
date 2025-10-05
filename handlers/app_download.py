@@ -2,13 +2,17 @@
 from __future__ import annotations
 
 import os, json, datetime, logging, re
+from pathlib import Path
+
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+
 from lang import t, get_user_lang
+from utils.paths import BASE  # ✅ توحيد المسارات
 
 logging.info("✅ handlers.app_download loaded")
 
@@ -24,24 +28,22 @@ ADMIN_IDS = [int(x) for x in str(_admin_env).split(",") if str(x).strip().isdigi
 def _is_admin(uid: int) -> bool:
     return uid in ADMIN_IDS
 
-# ===== ملف بيانات الإصدار =====
-APP_FILE = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "data", "app_release.json"))
+# ===== ملف بيانات الإصدار (موحّد مع لوحة الأدمن) =====
+APP_FILE: Path = BASE / "app_latest.json"  # ← نفس الملف الذي تعتمد عليه لوحة الأدمن
 
 def _load_release() -> dict | None:
     try:
-        if os.path.exists(APP_FILE):
-            with open(APP_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
+        if APP_FILE.exists():
+            return json.loads(APP_FILE.read_text(encoding="utf-8"))
     except Exception as e:
         logging.warning(f"[app] read release failed: {e}")
     return None
 
 def _save_release(data: dict) -> None:
     try:
-        os.makedirs(os.path.dirname(APP_FILE), exist_ok=True)
-        tmp = APP_FILE + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        APP_FILE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = APP_FILE.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
         os.replace(tmp, APP_FILE)
     except Exception as e:
         logging.error(f"[app] save release failed: {e}")
@@ -49,14 +51,14 @@ def _save_release(data: dict) -> None:
 
 def _remove_release() -> bool:
     try:
-        if os.path.exists(APP_FILE):
-            os.remove(APP_FILE)
+        if APP_FILE.exists():
+            APP_FILE.unlink()
             return True
     except Exception as e:
         logging.error(f"[app] remove release failed: {e}")
     return False
 
-# ===== نصوص العرض =====
+# ===== نصوص العرض (تُستخدم في لوحة الأدمن) =====
 def _caption(lang: str, rel: dict) -> str:
     return f"{t(lang, 'app.caption.title')}\n{t(lang, 'app.caption.version')}: <b>{rel.get('version','-')}</b>"
 
@@ -71,12 +73,13 @@ def _info_text(lang: str, rel: dict) -> str:
         f"{t(lang, 'app.info_uploaded_at')}: <code>{up_at}</code>"
     )
 
-# ===== FSM لحالة الرفع من لوحة الأدمن =====
+# ===== FSM لحالة الرفع (تستخدمها لوحة الأدمن عند الضغط على «رفع») =====
 class AppUpload(StatesGroup):
     wait_apk = State()
 
 def _is_apk(doc) -> bool:
-    if not doc: return False
+    if not doc:
+        return False
     name = (doc.file_name or "").lower()
     mt   = (doc.mime_type or "").lower()
     return name.endswith(".apk") or mt.endswith("android.package-archive")
@@ -87,17 +90,19 @@ def _guess_version(doc_name: str, caption: str | None) -> str:
     # 1) من الكابتشن لو فيه
     if caption:
         m = _ver_re.search(caption.strip())
-        if m: return m.group(1)
+        if m:
+            return m.group(1)
     # 2) من اسم الملف
     m = _ver_re.search((doc_name or "").lower())
-    if m: return m.group(1)
+    if m:
+        return m.group(1)
     return "-"
 
 async def _save_and_ack(msg: Message, lang: str, doc) -> None:
     version = _guess_version(doc.file_name or "", msg.caption)
     rel = {
         "file_id": doc.file_id,
-        "file_name": doc.file_name,
+        "file_name": doc.file_name or "app.apk",
         "version": version,
         "uploaded_by": msg.from_user.id,
         "uploaded_at": datetime.datetime.utcnow().isoformat() + "Z",
@@ -106,7 +111,7 @@ async def _save_and_ack(msg: Message, lang: str, doc) -> None:
     logging.info(f"[app] release saved v={version} by {msg.from_user.id}")
     await msg.reply(t(lang, "app.updated_ok") or "✅ تم تحديث الإصدار.")
 
-# ===== أزرار المستخدم (تحميل التطبيق) =====
+# ===== زر المستخدم (تحميل التطبيق من أي مكان) =====
 @router.callback_query(F.data == "app:download")
 async def on_download_app(cb: CallbackQuery):
     lang = _locale(cb.from_user.id)
@@ -179,7 +184,7 @@ async def recv_apk_fallback(msg: Message):
     lang = _locale(msg.from_user.id)
     await _save_and_ack(msg, lang, msg.document)
 
-# ===== حذف الإصدار الحالي =====
+# ===== حذف الإصدار الحالي (تُنفَّذ الأزرار من لوحة الأدمن) =====
 def _rm_confirm_kb(lang: str):
     kb = InlineKeyboardBuilder()
     kb.button(text=t(lang, "app.remove_confirm_yes") or "نعم", callback_data="app:rm_yes")
@@ -198,25 +203,3 @@ async def remove_app_cmd(msg: Message):
         await msg.reply(t(lang, "app.no_release_short") or "لا يوجد إصدار مرفوع بعد.")
         return
     await msg.reply(t(lang, "app.remove_confirm") or "تأكيد الحذف؟", reply_markup=_rm_confirm_kb(lang))
-
-@router.callback_query(F.data == "app:rm_yes")
-async def do_remove_app(cb: CallbackQuery):
-    lang = _locale(cb.from_user.id)
-    if not _is_admin(cb.from_user.id):
-        await cb.answer(t(lang, "app.only_admin") or "للمشرفين فقط.", show_alert=True)
-        return
-    ok = _remove_release()
-    try:
-        await cb.message.edit_text(t(lang, "app.removed_ok") if ok else (t(lang, "app.no_release_short") or "لا يوجد إصدار."))
-    except Exception:
-        await cb.message.answer(t(lang, "app.removed_ok") if ok else (t(lang, "app.no_release_short") or "لا يوجد إصدار."))
-    await cb.answer()
-
-@router.callback_query(F.data == "app:rm_no")
-async def cancel_remove_app(cb: CallbackQuery):
-    lang = _locale(cb.from_user.id)
-    try:
-        await cb.message.edit_text(t(lang, "app.remove_canceled") or "أُلغي الحذف.")
-    except Exception:
-        await cb.message.answer(t(lang, "app.remove_canceled") or "أُلغي الحذف.")
-    await cb.answer()

@@ -7,7 +7,7 @@ from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
-from aiogram.filters import Command
+from aiogram.filters import Command, StateFilter
 from aiogram.enums import ParseMode
 
 from lang import t, get_user_lang
@@ -42,9 +42,6 @@ def _tr(lang: str, key: str, en: str, ar: str) -> str:
     return ar if (lang or "ar").startswith("ar") else en
 
 def _tr_fmt(lang: str, key: str, en: str, ar: str, **fmt) -> str:
-    """
-    مثل _tr لكن يدعم format(**fmt) بأمان حتى لو المفتاح ناقص.
-    """
     base = _tr(lang, key, en, ar)
     try:
         return base.format(**fmt)
@@ -249,6 +246,26 @@ async def app_restart(cb: CallbackQuery, state: FSMContext):
         parse_mode=ParseMode.HTML
     )
     await cb.answer()
+
+# ===== أثناء تعبئة الطلب: /cancel فقط، والباقي مرفوض =====
+_APPLY_STATES = (
+    ApplyStates.name, ApplyStates.country, ApplyStates.channel,
+    ApplyStates.exp, ApplyStates.vol, ApplyStates.pref, ApplyStates.confirm
+)
+
+@router.message(StateFilter(*_APPLY_STATES), Command("cancel"))
+async def apply_cancel_cmd(msg: Message, state: FSMContext):
+    lang = get_user_lang(msg.from_user.id) or "ar"
+    await state.clear()
+    await msg.reply(_tr(lang, "apply_cancelled", "Application cancelled. You can start again anytime.", "تم إلغاء الطلب. يمكنك البدء مجددًا في أي وقت."))
+
+@router.message(
+    StateFilter(*_APPLY_STATES),
+    F.text.func(lambda s: isinstance(s, str) and s.startswith("/") and not s.lower().startswith("/cancel"))
+)
+async def apply_block_commands(msg: Message, state: FSMContext):
+    lang = get_user_lang(msg.from_user.id) or "ar"
+    await msg.reply(_tr(lang, "apply_no_cmd_in_state", "You're filling the supplier form. Please answer or use /cancel.", "أنت الآن تُكمل نموذج المورد. أرسل الإجابة المطلوبة أو استخدم /cancel."))
 
 # ===== الأسئلة =====
 @router.message(ApplyStates.name)

@@ -5,6 +5,7 @@ import json, time, threading
 from pathlib import Path
 from typing import Dict, Any, Tuple, List, Optional, Literal
 import datetime as _dt
+import os  # ← نحتاجه هنا
 
 # ===== مسارات التخزين =====
 DATA_DIR = Path("data") / "rewards"
@@ -17,11 +18,73 @@ ITEMS_FILE  = DATA_DIR / "items.json"   # كتالوج اختياري
 _LOCK = threading.Lock()
 _MAX_HISTORY = 300  # الحد الأقصى لسجل كل مستخدم (الأحدث أولًا)
 
+
 # ===== أدوات I/O آمنة =====
 def _atomic_write(path: Path, data: Any):
-    tmp = path.with_suffix(".tmp")
-    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-    tmp.replace(path)
+    """
+    كتابة ذرّية متحملة لأخطاء ويندوز/OneDrive:
+    - ملف مؤقت فريد في نفس المجلد
+    - flush + fsync لضمان الكتابة على القرص
+    - os.replace بمحاولات وتراجع تدريجي
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    # 1) أنشئ اسمًا مؤقتًا فريدًا لتجنّب التضارب بين عمليات متزامنة
+    suffix = f".{int(time.time()*1000)}.{os.getpid()}.{threading.get_ident()}.tmp"
+    tmp = path.parent / (path.name + suffix)
+
+    # 2) اكتب المحتوى ثم fsync
+    payload = json.dumps(data, ensure_ascii=False, indent=2)
+    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
+        f.write(payload)
+        f.flush()
+        os.fsync(f.fileno())
+
+    # 3) حاول الاستبدال بعدة محاولات (يعالج قفل الملف الهدف مؤقتًا)
+    last_err = None
+    for i in range(8):
+        try:
+            # أحيانًا يكون الهدف للقراءة فقط بفعل المزامنة — حاول فتح الصلاحيات
+            try:
+                if path.exists():
+                    path.chmod(0o666)
+            except Exception:
+                pass
+
+            os.replace(tmp, path)  # ذرّي على ويندوز/لينكس
+            return
+        except PermissionError as e:
+            last_err = e
+            # محاولة تنظيف لطيفة في حال قفل شديد
+            if i >= 3:
+                try:
+                    # إذا كان الملف الهدف موجودًا ومقفلًا، جرّب حذفه (قد يفشل فتُعاد المحاولة)
+                    if path.exists():
+                        os.remove(path)
+                except Exception:
+                    pass
+            time.sleep(0.15 * (i + 1))  # backoff تدريجي
+        except FileExistsError:
+            # نادرة على ويندوز؛ أعد المحاولة بعد إزالة الهدف
+            try:
+                if path.exists():
+                    os.remove(path)
+            except Exception:
+                pass
+            time.sleep(0.1)
+
+    # 4) محاولة أخيرة أو ارفع آخر خطأ معروف
+    try:
+        os.replace(tmp, path)
+    except Exception:
+        # نظّف المؤقت واترك آخر خطأ ليسهّل تتبّع المشكلة
+        try:
+            if tmp.exists():
+                tmp.unlink()
+        finally:
+            if last_err:
+                raise last_err
+            raise
 
 def _load(path: Path, default):
     if not path.exists():

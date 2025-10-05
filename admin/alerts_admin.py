@@ -1,10 +1,10 @@
 # admin/alerts_admin.py
 from __future__ import annotations
-import os, time, datetime
+import os, time, datetime, secrets
 from pathlib import Path
 from aiogram import Router, F
 from aiogram.filters import Command
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, ForceReply
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.state import State, StatesGroup
@@ -24,7 +24,7 @@ if not ADMIN_IDS:
     ADMIN_IDS = [7360982123]
 
 DATA_DIR = Path("data"); DATA_DIR.mkdir(parents=True, exist_ok=True)
-DRAFT_FILE = DATA_DIR / "alerts_draft.json"  # {"en": str, "ar": str, "lang_mode": "auto|en|ar", "kind": "app_update|maintenance", "await": "", "ttl": 0}
+DRAFT_FILE = DATA_DIR / "alerts_draft.json"
 
 DEFAULT_KIND = "app_update"
 DEFAULT_LANG_MODE = "auto"
@@ -47,7 +47,6 @@ def _load_draft() -> dict:
 def _save_draft(d: dict):
     _save_json(DRAFT_FILE, d)
 
-# ===== helper: edit_text بدون خطأ "message is not modified"
 async def _safe_edit(target: CallbackQuery | Message, text: str, kb: InlineKeyboardBuilder | None = None):
     msg = target.message if isinstance(target, CallbackQuery) else target
     try:
@@ -72,11 +71,11 @@ def _menu_kb(lang: str) -> InlineKeyboardMarkup:
     kb.adjust(2,2,2,2,2)
     return kb.as_markup()
 
-# =============== FSM للحالات ===============
+# =============== FSM ===============
 class AlStates(StatesGroup):
-    # للإرسال الفوري (TTL)
-    wait_ttl   = State()
-    # ⬇️ حالات مخصّصة للإعدادات حتى لا تتعارض مع VIP
+    wait_en  = State()
+    wait_ar  = State()
+    wait_ttl = State()
     wait_rate  = State()
     wait_quiet = State()
     wait_maxw  = State()
@@ -88,36 +87,79 @@ async def open_menu(msg: Message):
     if not _is_admin(msg.from_user.id):
         return
     lang = _L(msg.from_user.id)
-    await msg.reply(t(lang, "alerts.menu.title") or "إدارة الإشعارات 🔔\nتحكم كامل: تعديل/معاينة/إرسال/جدولة/إلغاء/إعدادات.", reply_markup=_menu_kb(lang))
+    await msg.reply(
+        t(lang, "alerts.menu.title") or "إدارة الإشعارات 🔔\nتحكم كامل: تعديل/معاينة/إرسال/جدولة/إلغاء/إعدادات.",
+        reply_markup=_menu_kb(lang)
+    )
 
-# =============== تعديل النص ===============
+# =============== تعديل النص (مع ForceReply + Token) ===============
+def _make_token() -> str:
+    return f"AL-{int(time.time())}-{secrets.token_hex(3)}"
+
 @router.callback_query(F.data == "al:edit")
-async def al_edit(cb: CallbackQuery):
+async def al_edit(cb: CallbackQuery, state: FSMContext):
     if not _is_admin(cb.from_user.id):
         return await cb.answer("no", show_alert=True)
+
     lang = _L(cb.from_user.id)
     d = _load_draft(); d["await"] = "en"; _save_draft(d)
-    await _safe_edit(
-        cb,
-        (t(lang, "alerts.enter_text") or "أرسل نص الإشعار (EN أولًا ثم AR).")
-        + f"\n\n— kind: {d.get('kind')}\n— lang_mode: {d.get('lang_mode')}\n\nSend as: EN\nThen send as: AR"
-    )
+
+    tok = _make_token()
+    await state.set_state(AlStates.wait_en)
+    await state.update_data(tok=tok, ts=int(time.time()))
+
+    prompt = (t(lang, "alerts.enter_text") or "أرسل نص الإشعار (EN أولًا ثم AR).") + \
+             f"\n\n— kind: {d.get('kind')}\n— lang_mode: {d.get('lang_mode')}\n\nSend as: EN\nThen send as: AR\n\n[token:{tok}]"
+    # نرسل رسالة جديدة مع ForceReply حتى يُجبَر الأدمن على الرد عليها
+    await cb.message.answer(prompt, reply_markup=ForceReply(selective=True))
     await cb.answer()
 
-@router.message(
-    F.from_user.func(lambda u: u.id in ADMIN_IDS)
-    & F.text.func(lambda v: (v or "").strip() and not (v or "").startswith("/") and (_load_draft().get("await") in ("en", "ar")))
-)
-async def capture_text(msg: Message):
+# يلتقط EN فقط لو كانت رسالة **Reply** على المطالبة وبنفس التوكِن
+@router.message(AlStates.wait_en, F.from_user.func(lambda u: u.id in ADMIN_IDS))
+async def capture_text_en(msg: Message, state: FSMContext):
+    data = await state.get_data()
+    tok = data.get("tok")
+    ok_reply = bool(msg.reply_to_message and tok and tok in (msg.reply_to_message.text or ""))
+    if not ok_reply:
+        return  # تجاهل أي رسالة ليست ردًا على طلبنا
+
     txt = (msg.text or "").strip()
+    if not txt or txt.startswith("/"):
+        return
+
     d = _load_draft()
-    awaiting = d.get("await") or ""
-    if awaiting == "en":
-        d["en"] = txt; d["await"] = "ar"; _save_draft(d)
-        return await msg.reply("تم الحفظ [EN]")
-    elif awaiting == "ar":
-        d["ar"] = txt; d["await"] = "";  _save_draft(d)
-        return await msg.reply("تم الحفظ [AR]")
+    d["en"] = txt
+    d["await"] = "ar"
+    _save_draft(d)
+
+    # نطلب AR بتوكِن جديد
+    tok2 = _make_token()
+    await state.set_state(AlStates.wait_ar)
+    await state.update_data(tok=tok2, ts=int(time.time()))
+
+    await msg.reply("تم الحفظ [EN] — أرسل العربية الآن\n[token:{}]".format(tok2),
+                    reply_markup=ForceReply(selective=True))
+
+# يلتقط AR فقط لو كانت رسالة **Reply** على المطالبة وبنفس التوكِن
+@router.message(AlStates.wait_ar, F.from_user.func(lambda u: u.id in ADMIN_IDS))
+async def capture_text_ar(msg: Message, state: FSMContext):
+    data = await state.get_data()
+    tok = data.get("tok")
+    ok_reply = bool(msg.reply_to_message and tok and tok in (msg.reply_to_message.text or ""))
+    if not ok_reply:
+        return
+
+    txt = (msg.text or "").strip()
+    if not txt or txt.startswith("/"):
+        return
+
+    d = _load_draft()
+    d["ar"] = txt
+    d["await"] = ""
+    _save_draft(d)
+
+    await state.clear()
+    await msg.reply("تم الحفظ [AR] ✅")
 
 # =============== معاينة ===============
 @router.callback_query(F.data == "al:prev")
@@ -140,9 +182,8 @@ async def al_send(cb: CallbackQuery, state: FSMContext):
     if not (d.get("en") or d.get("ar")):
         return await cb.answer(t(lang, "alerts.no_draft") or "لا توجد مسودة.", show_alert=True)
 
-    # اطلب TTL بالثواني واستعمل FSM
     await state.set_state(AlStates.wait_ttl)
-    d["await"] = ""  # نعتمد FSM الآن
+    d["await"] = ""
     _save_draft(d)
     await _safe_edit(cb, t(lang, "alerts.ask_ttl") or "أدخل مدة بقاء الرسالة بالثواني (0 يعني لا حذف)، مثال: 60")
     await cb.answer()
@@ -159,21 +200,16 @@ async def handle_ttl_send_now(msg: Message, state: FSMContext):
     ar = d.get("ar") if d.get("lang_mode") in ("auto", "ar") else None
 
     sent, skipped, failed = await broadcast(
-        msg.bot,
-        text_en=en,
-        text_ar=ar,
+        msg.bot, text_en=en, text_ar=ar,
         kind=d.get("kind", "app_update"),
-        delivery="inbox",   # إرسال تنبيه + وضع الإشعار في الصندوق
-        ping_ttl=ttl,       # حذف رسالة التنبيه بعد N ثانية
-        active_for=7*24*3600  # مدة بقاء الإشعار في الصندوق (أسبوع)
+        delivery="inbox", ping_ttl=ttl, active_for=7*24*3600
     )
 
     d["ttl"] = ttl; _save_draft(d)
     await state.clear()
-    ok_txt = t(lang, "alerts.sent") or "تم الإرسال ✅"
-    await msg.reply(f"{ok_txt}\nsent={sent}, skipped={skipped}, failed={failed}")
+    await msg.reply(f"{t(lang, 'alerts.sent') or 'تم الإرسال ✅'}\nsent={sent}, skipped={skipped}, failed={failed}")
 
-# =============== جدولة بوقت محدد ===============
+# =============== جدولة ===============
 @router.callback_query(F.data == "al:sch")
 async def al_sch(cb: CallbackQuery, state: FSMContext):
     if not _is_admin(cb.from_user.id):
@@ -198,7 +234,6 @@ async def handle_schedule(msg: Message):
     enqueue_job(ts, d.get("kind", "app_update"), en, ar)
     await msg.reply(t(lang, "alerts.scheduled") or "تمت الجدولة ✅")
 
-# =============== جدولة سريعة ===============
 @router.callback_query(F.data == "al:schq")
 async def al_schq(cb: CallbackQuery, state: FSMContext):
     if not _is_admin(cb.from_user.id):
@@ -252,21 +287,21 @@ async def al_jobs(cb: CallbackQuery, state: FSMContext):
     await _safe_edit(cb, "\n".join(lines), kb); await cb.answer()
 
 @router.callback_query(F.data.regexp(r"^al:cancel:.+"))
-async def al_jobs_cancel(cb: CallbackQuery):
+async def al_jobs_cancel(cb: CallbackQuery, state: FSMContext):
     if not _is_admin(cb.from_user.id):
         return await cb.answer("no", show_alert=True)
     jid = cb.data.split(":", 2)[-1]
     ok = cancel_job(jid)
     await cb.answer("تم الإلغاء" if ok else "غير موجود", show_alert=True)
-    await al_jobs(cb)
+    await al_jobs(cb, state)
 
 @router.callback_query(F.data == "al:cancel_all")
-async def al_jobs_cancel_all(cb: CallbackQuery):
+async def al_jobs_cancel_all(cb: CallbackQuery, state: FSMContext):
     if not _is_admin(cb.from_user.id):
         return await cb.answer("no", show_alert=True)
     n = cancel_all_jobs()
     await cb.answer(f"تم إلغاء {n}", show_alert=True)
-    await al_jobs(cb)
+    await al_jobs(cb, state)
 
 # =============== النوع واللغة ===============
 @router.callback_query(F.data == "al:kind")
@@ -284,11 +319,12 @@ async def al_kind(cb: CallbackQuery, state: FSMContext):
     await cb.answer()
 
 @router.callback_query(F.data.regexp(r"^al:k:(app_update|maintenance)$"))
-async def al_kind_set(cb: CallbackQuery):
+async def al_kind_set(cb: CallbackQuery, state: FSMContext):
     if not _is_admin(cb.from_user.id):
         return await cb.answer("no", show_alert=True)
     d = _load_draft(); d["kind"] = cb.data.split(":")[-1]; _save_draft(d)
-    await cb.answer("OK"); await al_kind(cb)
+    await cb.answer("OK")
+    await al_kind(cb, state)
 
 @router.callback_query(F.data == "al:lang")
 async def al_lang(cb: CallbackQuery, state: FSMContext):
@@ -306,7 +342,7 @@ async def al_lang(cb: CallbackQuery, state: FSMContext):
     await cb.answer()
 
 @router.callback_query(F.data.regexp(r"^al:l:(auto|en|ar)$"))
-async def al_lang_set(cb: CallbackQuery):
+async def al_lang_set(cb: CallbackQuery, state: FSMContext):
     if not _is_admin(cb.from_user.id):
         return await cb.answer("no", show_alert=True)
     d = _load_draft()
@@ -314,7 +350,8 @@ async def al_lang_set(cb: CallbackQuery):
     if new_mode == d.get("lang_mode"):
         return await cb.answer("نفس الإعداد ✅", show_alert=False)
     d["lang_mode"] = new_mode; _save_draft(d)
-    await cb.answer("OK"); await al_lang(cb)
+    await cb.answer("OK")
+    await al_lang(cb, state)
 
 # =============== الإعدادات ===============
 @router.callback_query(F.data == "al:cfg")
@@ -343,13 +380,12 @@ async def al_cfg(cb: CallbackQuery, state: FSMContext):
     await _safe_edit(cb, "\n".join(body), kb); await cb.answer()
 
 @router.callback_query(F.data == "al:cfg:toggle")
-async def al_cfg_toggle(cb: CallbackQuery):
+async def al_cfg_toggle(cb: CallbackQuery, state: FSMContext):
     if not _is_admin(cb.from_user.id):
         return await cb.answer("no", show_alert=True)
     cfg = get_config(); set_config({"enabled": not bool(cfg.get("enabled"))})
-    await cb.answer("OK"); await al_cfg(cb)
-
-# ⬇️ الحالات الجديدة المقيّدة — تمنع تعارض الرسائل الرقمية مع VIP
+    await cb.answer("OK")
+    await al_cfg(cb, state)
 
 @router.callback_query(F.data == "al:cfg:rate")
 async def al_cfg_rate(cb: CallbackQuery, state: FSMContext):
@@ -432,10 +468,11 @@ async def al_stats(cb: CallbackQuery):
     await _safe_edit(cb, "\n".join(txt)); await cb.answer()
 
 @router.callback_query(F.data == "al:del")
-async def al_del(cb: CallbackQuery):
+async def al_del(cb: CallbackQuery, state: FSMContext):
     if not _is_admin(cb.from_user.id):
         return await cb.answer("no", show_alert=True)
     _save_draft({"en": "", "ar": "", "lang_mode": DEFAULT_LANG_MODE, "kind": DEFAULT_KIND, "await": "", "ttl": 0})
+    await state.clear()
     await cb.answer("OK", show_alert=True)
 
 @router.callback_query(F.data == "al:back")

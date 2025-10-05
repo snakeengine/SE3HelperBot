@@ -1,10 +1,14 @@
-# config.py
-
-# توكن البوت من BotFather
-BOT_TOKEN = "8400071388:AAEogF1cXnr4rHNXUDkNALUhvbPAp1eCB-4"
-
-# أيديات الأدمن الذين يستقبلون الطلبات (ممكن أكثر من واحد)
-ADMIN_IDS = [7360982123]  # أضف IDs أخرى لو في أكثر من أدمن
-
-# قناة أو جروب للتسجيل (اختياري)
-AUDIT_CHAT_ID = None  # مثال: -1001234567890
+{
+  "BOT_TOKEN": "8344237891:AAGnLzBgtH0RNKmnhD_quTxKoc8CcMgnUVw",
+  "ADMIN_IDS": "7360982123",
+  "PRODUCT_KEY": "8bp",
+  "SHOP_PRODUCTS": "8bp,carrom,soccer",
+  "ENABLE_STARS": "1",
+  "STARS_PER_USD": "50",
+  "CRYPTOPAY_TOKEN": "461599:AAI9u208rxV1kmwH0J7fBOQLuTMGq5wThRB",
+  "CRYPTO_ASSETS": "USDT,TON",
+  "CRYPTO_ONLY": "1",
+  "INVOICE_TTL_MIN": "15",
+  "SHOP_WATCH_INTERVAL": "12",
+  "DATA_DIR": "/data"
+}

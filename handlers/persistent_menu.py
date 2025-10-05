@@ -1,11 +1,14 @@
 # handlers/persistent_menu.py
 from __future__ import annotations
 
-import re, json, time, logging, unicodedata
-from pathlib import Path
+import logging, re, unicodedata
+from typing import Optional
+
 from aiogram import Router, F
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.filters import Command, StateFilter
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from aiogram.enums import ParseMode
+from aiogram.fsm.context import FSMContext
 
 from lang import t, get_user_lang
 from handlers.home_menu import section_text
@@ -14,47 +17,48 @@ try:
 except Exception:
     _section_render = None
 
+# الحماية من التعارض مع الدردشة الحية
+try:
+    from handlers.live_chat import LiveChat
+except Exception:
+    class LiveChat:
+        active = None
+
+# لوحة مؤقتة تُغلق تلقائياً عبر الميدلوير EphemeralKBGuard
+from utils.ephemeral_kb import open_panel, close_panel, is_active as _kb_active
+
 logger = logging.getLogger(__name__)
 router = Router(name="persistent_menu")
 
-# ===== تذكّر آخر مرة أظهرنا فيها الكيبورد =====
-SHOWN_PATH = Path("data/kb_shown.json")
-SHOWN_TTL = 60 * 30  # 30 دقيقة
+# نعمل بالخاص فقط وبلا FSM نشطة، ونتجنب اعتراض الأوامر
+router.message.filter(F.chat.type == "private", StateFilter(None))
+router.callback_query.filter(F.message.chat.type == "private", StateFilter(None))
 
-def _load_shown() -> dict[str, float]:
+# ======================= مساعدات لغة ونصوص =======================
+
+def _ui_lang(user_id: int, fallback: str = "en") -> str:
+    lang = (get_user_lang(user_id) or "").lower() or fallback
+    return "ar" if lang.startswith("ar") else "en"
+
+def _tt(lang: str, key: str, fallback: str) -> str:
     try:
-        if SHOWN_PATH.exists():
-            return json.loads(SHOWN_PATH.read_text(encoding="utf-8")) or {}
-    except Exception as e:
-        logger.warning("kb_shown load failed: %s", e)
-    return {}
-
-def _save_shown(d: dict[str, float]) -> None:
-    try:
-        SHOWN_PATH.parent.mkdir(parents=True, exist_ok=True)
-        SHOWN_PATH.write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8")
-    except Exception as e:
-        logger.warning("kb_shown save failed: %s", e)
-
-_SHOWN = _load_shown()
-
-# ===== نصوص الأزرار =====
-def _L(uid: int) -> str:
-    try:
-        return get_user_lang(uid) or "ar"
+        val = t(lang, key)
+        if isinstance(val, str) and val and val != key:
+            return val
     except Exception:
-        return "ar"
+        pass
+    return fallback
 
 def _labels(lang: str) -> dict[str, str]:
-    # ✅ أزلنا مفاتيح: my_group / my_channel / my_forum
-    if (lang or "ar").startswith("ar"):
+    if lang == "ar":
         return {
-            "user":    "👤 المستخدم",
+            "user":    "المستخدم 👤",
             "premium": "🌟 VIP",
             "bot":     "🤖 البوت",
             "group":   "👥 المجموعات",
             "channel": "📣 القنوات",
             "forum":   "💬 المنتديات",
+            "hide":    "إخفاء اللوحة ✖️",
         }
     else:
         return {
@@ -64,57 +68,54 @@ def _labels(lang: str) -> dict[str, str]:
             "group":   "Groups 👥",
             "channel": "Channels 📣",
             "forum":   "Forums 💬",
+            "hide":    "Hide panel ✖️",
         }
-
-def _tt(lang: str, key: str, fallback: str) -> str:
-    try:
-        val = t(lang, key)
-        return fallback if (not val or val == key) else val
-    except Exception:
-        return fallback
 
 def make_bottom_kb(lang: str) -> ReplyKeyboardMarkup:
     L = _labels(lang)
-    # ✅ صفّان فقط
     return ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text=L["user"]),  KeyboardButton(text=L["premium"]), KeyboardButton(text=L["bot"])],
-            [KeyboardButton(text=L["group"]), KeyboardButton(text=L["channel"]), KeyboardButton(text=L["forum"])],
-        ],
         resize_keyboard=True,
         is_persistent=True,
         one_time_keyboard=False,
-        input_field_placeholder=_tt(lang, "menu.choose", "اختر من القائمة…"),
-        selective=False,
+        input_field_placeholder=_tt(lang, "menu.choose",
+                                    "اختر القسم:" if lang == "ar" else "Choose a section:"),
+        keyboard=[
+            [KeyboardButton(text=L["user"]),  KeyboardButton(text=L["premium"]), KeyboardButton(text=L["bot"])],
+            [KeyboardButton(text=L["group"]), KeyboardButton(text=L["channel"]), KeyboardButton(text=L["forum"])],
+            [KeyboardButton(text=L["hide"])],
+        ],
     )
 
-# ===== تطبيع نص زر ReplyKeyboard =====
+# ======================= تطبيع نصوص للتعرّف =======================
+
 _AR_MAP = str.maketrans({
-    "أ":"ا", "إ":"ا", "آ":"ا",
-    "ى":"ي", "ئ":"ي", "ؤ":"و",
-    "ة":"ه", "ٔ":"",  "ٰ":"", "ـ":"",  # همزات/مدّة/تطويل
+    "أ": "ا", "إ": "ا", "آ": "ا",
+    "ى": "ي", "ئ": "ي", "ؤ": "و",
+    "ة": "ه", "ٔ": "", "ٰ": "", "ـ": "",
 })
 
 def _strip_controls(s: str) -> str:
-    return "".join(ch for ch in s if unicodedata.category(ch) not in ("Cf", "Mn"))
+    import unicodedata as _u
+    return "".join(ch for ch in s if _u.category(ch) not in ("Cf", "Mn"))
 
 def _normalize_ar(s: str) -> str:
-    s = _strip_controls(s)
+    s = _strip_controls(s or "")
     s = s.translate(_AR_MAP)
     s = re.sub(r"[^A-Za-z\u0600-\u06FF]+", " ", s).strip().lower()
     s = re.sub(r"\s+", " ", s)
     return s
 
-def _pick_key(raw_text: str) -> str | None:
+def _pick_key(raw_text: str) -> Optional[str]:
     s = _normalize_ar(raw_text)
-    # ✅ لا يوجد أي مطابقة للأزرار الملغاة
     pairs = [
         ("user",    ("المستخدم", "user")),
-        ("premium", ("بريميوم", "premium", "vip")),
+        ("premium", ("بريميوم", "vip", "premium")),
         ("bot",     ("البوت", "bot")),
         ("group",   ("المجموعات", "المجاميع", "group", "groups")),
         ("channel", ("القنوات", "channel", "channels")),
         ("forum",   ("المنتديات", "forum", "forums")),
+        ("hide",    ("اخفاء", "اخفاء اللوحه", "اخفاء اللوحة", "اغلاق اللوحه", "اغلاق اللوحة",
+                     "hide", "hide panel", "close panel", "close keyboard")),
     ]
     for key, needles in pairs:
         for n in needles:
@@ -122,57 +123,60 @@ def _pick_key(raw_text: str) -> str | None:
                 return key
     return None
 
-# ===== اظهار الكيبورد ومعالجة الضغط =====
-@router.message(F.chat.type == "private", F.text)
-async def ensure_bottom_keyboard(m: Message):
-    uid = int(m.from_user.id)
-    lang = _L(uid)
-    now = time.time()
-    last = float(_SHOWN.get(str(uid), 0))
+# ========= فلتر دقيق لتجنّب التعارض مع باقي الهاندلرات =========
 
-    if (now - last) > SHOWN_TTL or (m.text or "").strip() == "/start":
-        try:
-            await m.answer(
-                _tt(lang, "menu.keyboard_ready", "تم تجهيز القائمة بالأسفل ⬇️"),
-                reply_markup=make_bottom_kb(lang),
-                parse_mode=ParseMode.HTML
-            )
-            _SHOWN[str(uid)] = now
-            _save_shown(_SHOWN)
-        except Exception as e:
-            logger.debug("show kb failed: %s", e)
+def _is_menu_button_message(m: Message) -> bool:
+    """
+    يقيد الالتقاط عندما:
+    1) لوحة /menu مفعّلة للمستخدم، و
+    2) النص يطابق أحد أزرارنا أو مرادفاتها، و
+    3) ليس أمراً يبدأ بـ '/'.
+    """
+    if not m or not m.from_user or not (m.text or "").strip():
+        return False
+    txt = (m.text or "").strip()
+    if txt.startswith("/"):
+        return False
+    if not _kb_active(m.from_user.id, owner="menu"):
+        return False
+    lang = _ui_lang(m.from_user.id)
+    if txt in _labels(lang).values():
+        return True
+    return _pick_key(txt) is not None
 
-    await _maybe_handle_pressed_button(m, lang)
+# ======================= منطق المعالجة =======================
 
-@router.message(F.chat.type == "private", F.text.casefold() == "/menu")
-async def force_menu(m: Message):
-    lang = _L(m.from_user.id)
-    await m.answer(
-        _tt(lang, "menu.keyboard_ready", "تم تجهيز القائمة بالأسفل ⬇️"),
-        reply_markup=make_bottom_kb(lang),
-        parse_mode=ParseMode.HTML
-    )
-    _SHOWN[str(m.from_user.id)] = time.time()
-    _save_shown(_SHOWN)
-
-async def _maybe_handle_pressed_button(m: Message, lang: str):
+async def _handle_pressed_button(m: Message, lang: str | None = None):
+    _lang = (lang or _ui_lang(m.from_user.id)).lower()
     text = (m.text or "").strip()
     if not text:
         return
 
-    labels = _labels(lang)
+    labels = _labels(_lang)
     direct_map = {v: k for k, v in labels.items()}
-    key = direct_map.get(text)
-
-    if not key:
-        key = _pick_key(text)
+    key = direct_map.get(text) or _pick_key(text)
 
     logger.info("[MENU] raw=%r norm=%r -> key=%r lang=%s",
-                text, _normalize_ar(text), key, lang)
+                text, _normalize_ar(text), key, _lang)
 
     if not key:
         return
 
+    # زر الإخفاء
+    if key == "hide":
+        msg = _tt(_lang, "menu.hidden",
+                  "تم إخفاء اللوحة." if _lang == "ar" else "Panel hidden.")
+        try:
+            await m.answer(msg, reply_markup=ReplyKeyboardRemove())
+        except Exception:
+            try:
+                await m.answer("\u2060", reply_markup=ReplyKeyboardRemove())
+            except Exception:
+                pass
+        close_panel(m.from_user.id)
+        return
+
+    # بقية الأقسام
     body = ""
     kb = None
     try:
@@ -182,12 +186,47 @@ async def _maybe_handle_pressed_button(m: Message, lang: str):
             body = section_text(key, m.from_user) or ""
     except Exception as e:
         logger.exception("section_text/section_render failed: %s", e)
-        body = "❕ حدث خطأ مؤقت أثناء تجهيز المحتوى."
+        body = _tt(_lang, "menu.err",
+                   "❕ حدث خطأ مؤقت أثناء تجهيز المحتوى."
+                   if _lang == "ar" else
+                   "❕ A temporary error occurred while preparing the content.")
+
+    if not body:
+        body = _tt(_lang, f"menu.section.{key}",
+                   "هذا القسم غير متاح حاليًا."
+                   if _lang == "ar" else
+                   "This section is currently unavailable.")
 
     try:
-        await m.answer(body or "…", parse_mode=ParseMode.HTML,
+        await m.answer(body, parse_mode=ParseMode.HTML,
                        disable_web_page_preview=False, reply_markup=kb)
-    except Exception as e:
-        logger.exception("send answer failed: %s", e)
+    except Exception:
         plain = re.sub(r"<[^>]+>", "", body)
-        await m.answer(plain or "…", reply_markup=kb)
+        await m.answer(plain or ("…" if _lang != "ar" else "…"), reply_markup=kb)
+
+# ======================= الأوامر =======================
+
+@router.message(Command("menu"))
+@router.message(Command("sections"))
+async def open_menu_cmd(message: Message, state: FSMContext):
+    # لا تظهر أثناء الدردشة الحية
+    if LiveChat.active and await state.get_state() == LiveChat.active.state:
+        return
+
+    lang = _ui_lang(message.from_user.id)
+    # تفعيل لوحة مؤقتة تُغلق تلقائياً عند أي تفاعل آخر
+    open_panel(message.from_user.id, owner="menu", ttl_sec=3600, allow_prefixes=())
+
+    await message.answer(
+        _tt(lang, "menu.keyboard_ready",
+            "تم تجهيز القائمة بالأسفل ⬇️" if lang == "ar" else "Menu is ready below ⬇️"),
+        reply_markup=make_bottom_kb(lang),
+        parse_mode=ParseMode.HTML
+    )
+
+# هذا الهاندلر لن يُستدعى إلا إذا تحقق الفلتر الخاص بنا
+@router.message(_is_menu_button_message, StateFilter(None))
+async def on_reply_button(msg: Message, state: FSMContext):
+    if LiveChat.active and await state.get_state() == LiveChat.active.state:
+        return
+    await _handle_pressed_button(msg, _ui_lang(msg.from_user.id))

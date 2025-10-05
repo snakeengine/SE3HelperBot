@@ -1,27 +1,27 @@
 # bot.py
-import asyncio
-import os
-import logging
-from dotenv import load_dotenv
+# =========================================
+# S.E Support Bot (Aiogram v3) — Clean & Ready (Merged)
+# =========================================
+# bot.py (أول سطرين في الملف)
+from utils.secrets import preload_env
+preload_env()
 
-# ⬅️ حمّل متغيرات البيئة أولاً
+from dotenv import load_dotenv, find_dotenv
+load_dotenv(find_dotenv(filename=".env"), override=True)
+
+import os, sys, asyncio, logging, importlib, pathlib
+from dotenv import load_dotenv
+from aiogram import BaseMiddleware
+from services import orders as ords
+from services.payments import check_and_deliver_one
+# ============ Maintenance switch ============
+if os.getenv("MAINTENANCE") == "1":
+    print("Maintenance mode: exiting.")
+    sys.exit(0)
+
 load_dotenv()
 
-# --- FORCE LOCAL PROJECT ON SYS.PATH (fix for "handlers" name collision) ---
-import sys, pathlib
-ROOT = pathlib.Path(__file__).parent.resolve()
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-# تشخيص اختياري: اطبع مصدر باكج handlers
-try:
-    import handlers as _handlers_pkg
-    import logging as _hlog
-    _hlog.info(f"[IMPORT] handlers package path -> {_handlers_pkg.__file__}")
-except Exception:
-    pass
-# ---------------------------------------------------------------------------
-
-# ✅ تطبيع (توافق) لدالة الترجمة t() لتقبل (lang,key) أو (lang,key,fallback)
+# ============ i18n safe t() shim ============
 import lang as _lang_mod
 try:
     _orig_t = _lang_mod.t
@@ -29,20 +29,10 @@ except Exception:
     _orig_t = None
 
 def _t_compat(*args, **kwargs):
-    """
-    يدعم:
-      - t(lang, key)
-      - t(lang, key, fallback)
-    ويمنع الأخطاء ويرجع fallback/نصًا فارغًا عند عدم توفر الترجمة.
-    """
     if _orig_t is None:
         if len(args) >= 3:
-            return args[2]
-        if len(args) >= 2:
-            return args[1]
+            return args[2] or ""
         return ""
-
-    # ✅ صيغة بثلاثة وسائط: (lang, key, fallback)
     if len(args) >= 3:
         lang_code, key, fallback = args[0], args[1], args[2]
         try:
@@ -51,9 +41,7 @@ def _t_compat(*args, **kwargs):
             val = None
         if isinstance(val, str) and val.strip() and val != key:
             return val
-        return fallback or key or ""
-
-    # ✅ صيغة بوسيطين: (lang, key)
+        return fallback or ""
     try:
         val = _orig_t(*args, **kwargs)
     except Exception:
@@ -64,89 +52,210 @@ def _t_compat(*args, **kwargs):
     return ""
 
 _lang_mod.t = _t_compat
-t = _lang_mod.t  # لاستخدامه محليًا
+t = _lang_mod.t
 
+# ============ Logging ============
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    force=True,
+)
+log = logging.getLogger(__name__)
+
+# ============ Prefer local modules ============
+import pathlib as _pl
+ROOT = _pl.Path(__file__).parent.resolve()
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+try:
+    import handlers as _handlers_pkg
+    logging.info(f"[IMPORT] handlers package path -> {_handlers_pkg.__file__}")
+except Exception:
+    pass
+
+# ============ Alerts (optional) ============
+alerts_admin_router = None
+alerts_user_router = None
+init_alerts_scheduler = None
+try:
+    from admin.alerts_admin import router as alerts_admin_router
+    from handlers.alerts_user import router as alerts_user_router
+    from utils.alerts_scheduler import init_alerts_scheduler
+    logging.info("Alerts modules loaded (admin+user+scheduler).")
+except Exception as e:
+    logging.warning("FAILED to load alerts modules: %s", e)
+
+if alerts_admin_router or alerts_user_router or init_alerts_scheduler:
+    logging.info("Alerts modules available.")
+else:
+    logging.warning("Alerts modules not available (continuing without alerts).")
+
+# ============ Storage backend ============
+# ============ Storage backend ============
+PRODUCT = os.getenv("PRODUCT_KEY", "8bp")
+
+BACKEND = (os.getenv("INVENTORY_BACKEND", os.getenv("STORAGE_BACKEND", "")) or "").lower()
+USE_DB  = bool(os.getenv("DATABASE_URL")) if not BACKEND.startswith("keys") else False
+
+try:
+    if BACKEND.startswith(("keys", "legacy")):
+        import sys
+        from services import inventory_keys_adapter as _inv_mod
+        # نلبّس اسم الحزمة حتى أي import لاحق لـ services.inventory يقرأ المحوّل
+        sys.modules['services.inventory'] = _inv_mod
+        inv = _inv_mod
+        logging.info("Storage backend: KEYS (adapter mounted as services.inventory)")
+    elif USE_DB or BACKEND in ("db", "postgres", "postgresql"):
+        from services import inventory_db as inv
+        logging.info("Storage backend: DB (PostgreSQL)")
+    else:
+        from services import inventory as inv
+        logging.info("Storage backend: FILES (txt)")
+except Exception as e:
+    logging.exception("Failed to init chosen storage, falling back to FILES: %s", e)
+    from services import inventory as inv
+    logging.info("Storage backend: FILES (fallback)")
+
+# ============ Aiogram & utils ============
 from utils.ensure_files import ensure_required_files
 from importlib import import_module
 from aiogram import Bot, Dispatcher, F, Router
 from aiogram.filters import Command
-from handlers import start as h_start
-from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import BotCommand, BotCommandScopeDefault, BotCommandScopeChat
-from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import (
+    BotCommand, BotCommandScopeDefault, BotCommandScopeChat,
+    InlineKeyboardMarkup, InlineKeyboardButton, Message
+)
+from aiogram.fsm.context import FSMContext
 
-# ✅ راووترات إجبارية (forced include) - ملاحظة: أبقيناه لأنه ليس متجر المستخدم
+# ===== Core handlers =====
+from handlers import start as h_start
 import handlers.supplier_payment as _supplier_payment
 from handlers.human_check import router as human_router
+from handlers.inventory_admin import router as inventory_admin_router
+from handlers.help import help_handler_target as _help_target
+from handlers import shop as _shop
+from handlers.report import report_cmd, router as report_router
+from handlers.home_hero import router as home_hero_router
+from handlers.compat_shims import router as compat_router
+from handlers.reseller_apply import router as reseller_apply_router
+from handlers.supplier_directory import router as supplier_directory_router
+from handlers.admin_manage import router as admin_manage
+from admin.admin_access import router as admin_access
+from admin import admin_roles_panel
 
-# ✅ نظام الجوائز
+from handlers.promoter import router as promoter_router
+from handlers.promoter_panel import router as promoter_panel_router
+from handlers.anti_groups import router as anti_groups_router
+from handlers.bot_panel import router as bot_panel_router
+#from handlers.quick_sections import router as quick_sections_router
+from handlers.home_menu import router as home_menu_router
+from handlers.persistent_menu import router as persistent_menu_router
+from handlers.menu_buttons import router as menu_buttons_router
+from utils.vip_cron import run_vip_cron
+from lang import t as _t_passthrough  # noqa
+from handlers.live_chat import router as live_chat_router
+from admin import shop_admin as _shop_admin
+from middlewares.ephemeral_kb import EphemeralKBGuard
+from handlers.support_inbox_admin import router as support_inbox_router
+from admin.admin_features import router as features_router
+from admin import admin_roles_panel as _admin_roles_panel
+from middlewares.force_join import ForceJoinMiddleware
+from handlers.force_join_check import router as fj_router
+from handlers.rewards_profile_pro import router as rewards_profile_router
+from handlers.debug_storage import router as debug_storage_router
+
+
+# ===== Rewards (optional) =====
 import handlers.rewards_gate as _rewards_gate
 import handlers.rewards_hub as _rewards_hub
 import handlers.rewards_market as _rewards_market
 import handlers.rewards_wallet as _rewards_wallet
 import handlers.rewards_compat as _rewards_compat
-
-# ✅ (اختياري) بروفايل الجوائز الاحترافي — استيراد مرن
 try:
     from handlers import rewards_profile_pro as _rewards_profile_pro
 except Exception:
     _rewards_profile_pro = None
 
-# ✅ لوحات أدمن (اختياري) — استيراد ديناميكي مع لوج للأخطاء
-import logging
-from importlib import import_module
-
 def _opt_import(mod_path: str):
     try:
         return import_module(mod_path)
     except Exception as e:
-        logging.getLogger(__name__).info(
-            f"[IMPORT] optional module skipped: {mod_path} ({e})"
-        )
+        logging.getLogger(__name__).info(f"[IMPORT] optional module skipped: {mod_path} ({e})")
         return None
 
 _rewards_market_admin = _opt_import("admin.rewards_market_admin")
 _rewards_admin        = _opt_import("admin.rewards_admin")
+from admin import admin_hub as _admin_hub
 
-# middlewares
+# ====== (NEW) Rewards mounting helpers to avoid callback conflicts ======
+REWARDS_PREFIXES = ("rewards:", "rwd:", "wallet:", "rwm:", "store:", "rwh:", "rw:", "rwp:")
+
+_REWARDS_MOUNTED = False
+def _mount_rewards_routers(dp: Dispatcher):
+    """ثبت راوترات الجوائز مبكراً + فلترة على الخاص وبادئات معيّنة لمنع التضارب."""
+    global _REWARDS_MOUNTED
+    if _REWARDS_MOUNTED:
+        logging.info("Rewards routers already mounted; skipping.")
+        return
+
+    def _pin(router_obj: Router):
+        try:
+            router_obj.message.filter(F.chat.type == "private")
+        except Exception:
+            pass
+        try:
+            router_obj.callback_query.filter(F.message.chat.type == "private")
+            router_obj.callback_query.filter(F.data.startswith(REWARDS_PREFIXES))
+        except Exception:
+            pass
+
+    for _r in (_rewards_gate.router, _rewards_hub.router, _rewards_market.router,
+               _rewards_wallet.router, _rewards_compat.router):
+        _pin(_r)
+
+    if _rewards_profile_pro and hasattr(_rewards_profile_pro, "router"):
+        _pin(_rewards_profile_pro.router)
+        dp.include_router(_rewards_profile_pro.router)
+
+    # أولوية عالية
+    dp.include_router(_rewards_gate.router)
+    dp.include_router(_rewards_hub.router)
+    dp.include_router(_rewards_wallet.router)
+    dp.include_router(_rewards_market.router)
+    dp.include_router(_rewards_compat.router)
+
+    # الشِم يبقى بدون فلتر البادئات لأنه يستخدم قيم بسيطة مثل "rewards"/"wallet"/"store"
+    dp.include_router(rewards_shim)
+
+    _REWARDS_MOUNTED = True
+    logging.info("Rewards routers mounted (priority + prefix filters applied).")
+
+# ===== Middlewares =====
 from middlewares.force_start import ForceStartMiddleware
 from middlewares.user_tracker import UserTrackerMiddleware
 from middlewares.maintenance import MaintenanceMiddleware
 from middlewares.vip_rate_limit import VipRateLimitMiddleware
-from middlewares.unknown_gate import UnknownGateMiddleware
 from middlewares.auto_subscribe import AutoSubscribeMiddleware
-from handlers.home_hero import router as home_hero_router
-
-# (اختياري) Tracer
 try:
     from middlewares.tracer import TracerMiddleware
 except Exception:
-    TracerMiddleware = None  # fallback
+    TracerMiddleware = None
 
-# utils
-from utils.vip_cron import run_vip_cron
+# ============ Payments watcher ============
+from services.payments import start_auto_watcher  # returns a ready Task
 
-# ================= [ALERTS] Imports =================
-try:
-    from admin.alerts_admin import router as alerts_admin_router
-    from handlers.alerts_user import router as alerts_user_router
-    from utils.alerts_scheduler import init_alerts_scheduler
-    _ALERTS_AVAILABLE = True
-    logging.info("Alerts modules loaded (admin+user+scheduler).")
-except Exception:
-    _ALERTS_AVAILABLE = False
-    alerts_admin_router = None
-    alerts_user_router = None
-    init_alerts_scheduler = None
-    logging.exception("FAILED to load alerts modules")
-
-# ================= إعدادات عامة =================
+# ============ General env ============
 TOKEN = os.getenv("BOT_TOKEN")
 FORCE_START_ON_MSG = int(os.getenv("FORCE_START_ON_MSG", "0"))
-UGATE_ON_MSG = int(os.getenv("UGATE_ON_MSG", "0"))
+UGATE_ON_MSG       = int(os.getenv("UGATE_ON_MSG", "0"))  # (موجود للتماشي فقط)
+WATCHER_SEC        = int(os.getenv("WATCHER_SEC", "12"))
+ONLY_REPORT        = os.getenv("ONLY_REPORT", "0") == "1"
 
+# ============ Admin IDs ============
 _admin_ids_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
 ADMIN_IDS: list[int] = []
 for part in _admin_ids_env.split(","):
@@ -156,29 +265,17 @@ for part in _admin_ids_env.split(","):
 if not ADMIN_IDS:
     ADMIN_IDS = [7360982123]
 
-# === logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-    force=True,
-)
-
-if _ALERTS_AVAILABLE:
-    logging.info("Alerts modules loaded (admin+user+scheduler).")
-else:
-    logging.warning("Alerts modules not available (continuing without alerts).")
-
-# ================= أوامر البوت =================
+# ============ Commands ============
 def _public_cmds(lang: str = "en") -> list[BotCommand]:
     return [
-        BotCommand(command="start",        description=t(lang, "cmd_start")    or "Start"),
-        # تمت إزالة /shop نهائياً في نسخة التنظيف
-        BotCommand(command="sections",     description=t(lang, "cmd_sections") or ("Quick sections" if lang == "en" else "الأقسام السريعة")),
-        BotCommand(command="help",         description=t(lang, "cmd_help")     or "Help"),
-        BotCommand(command="about",        description=t(lang, "cmd_about")    or "About"),
-        BotCommand(command="report",       description=t(lang, "cmd_report")   or "Report a problem"),
-        BotCommand(command="language",     description=t(lang, "cmd_language") or "Language"),
-        BotCommand(command="rewards",      description=t(lang, "cmd_rewards")  or ("Rewards hub" if lang == "en" else "الجوائز")),
+        BotCommand(command="start",    description=t(lang, "cmd_start")    or "Start"),
+        BotCommand(command="shop",     description=t(lang, "cmd_shop")     or ("Buy keys" if lang=="en" else "شراء مفاتيح")),
+        BotCommand(command="sections", description=t(lang, "cmd_sections") or ("Quick sections" if lang=="en" else "الأقسام السريعة")),
+        BotCommand(command="rewards",  description=t(lang, "cmd_rewards")  or ("Rewards hub" if lang=="en" else "الجوائز")),
+        BotCommand(command="help",     description=t(lang, "cmd_help")     or "Help"),
+        BotCommand(command="about",    description=t(lang, "cmd_about")    or "About"),
+        BotCommand(command="report",   description=t(lang, "cmd_report")   or "Report a problem"),
+        BotCommand(command="language", description=t(lang, "cmd_language") or "Language"),
     ]
 
 def _admin_cmds(lang: str = "en") -> list[BotCommand]:
@@ -192,7 +289,6 @@ async def set_bot_commands(bot: Bot):
         await bot.set_my_commands(_public_cmds("ar"), scope=BotCommandScopeDefault(), language_code="ar")
     except Exception as e:
         logging.warning(f"Failed set default AR commands: {e}")
-
     for admin_id in ADMIN_IDS:
         try:
             await bot.set_my_commands(_admin_cmds("en"), scope=BotCommandScopeChat(chat_id=admin_id), language_code="en")
@@ -203,7 +299,7 @@ async def set_bot_commands(bot: Bot):
         except Exception as e:
             logging.warning(f"Failed set commands (AR) for admin {admin_id}: {e}")
 
-# ================= أدوات استيراد مرنة =================
+# ============ Flexible imports groups ============
 def _try_import_router(mod_path: str):
     try:
         mod = import_module(mod_path)
@@ -227,60 +323,40 @@ def _import_tools_router():
             return r
     logging.warning("No tools handler found. Skipping tools router.")
     return None
-
 TOOLS_ROUTER = _import_tools_router()
 
 def _import_admin_routers():
-    routers = []
-    for path in (
-        "admin.server_admin",
-        "admin.stats",
-        "admin.update_editor",
-        "admin.ratings_stats",
-        "admin.maintenance_control",
-        "admin.view_reports",
-        "admin.admin_hub",
-        "admin.report_inbox",
+    paths = (
         "admin.report_admin",
+        "admin.report_inbox",
         "admin.vip_manager",
         "admin.promoter_admin",
         "admin.promoters_panel",
         "admin.promoter_actions",
         "admin.live_support_admin",
         "admin.home_ui_admin",
-        "admin.quest_admin",
-    ):
-        r = _try_import_router(path)
+    )
+    routers = []
+    for p in paths:
+        r = _try_import_router(p)
         if r:
             routers.append(r)
-    if not routers:
-        logging.warning("Admin modules not found. Skipping admin routers.")
     return routers
 
-ADMIN_ROUTERS = _import_admin_routers()
-
-# ================= قائمة الهاندلرز العامة =================
+# ============ Public handlers list ============
 _HANDLER_MODULES = [
     "handlers.help",
     "handlers.about",
     "handlers.supplier_vault",
-    "handlers.supplier_directory",
+    #"handlers.supplier_directory",
     "handlers.download",
     "handlers.language_handlers",
     "handlers.language",
-    "handlers.home_menu",
-    "handlers.reseller_apply",
-    "handlers.promoter",
-    "handlers.promoter_panel",
-    "handlers.menu_buttons",
-    "handlers.report",
-    "handlers.vip",
-    "handlers.vip_features",
-    "handlers.quick_sections",
+    #"handlers.vip",
+    #"handlers.vip_features",
     "handlers.app_download",
     "handlers.reseller",
-    "handlers.live_chat",
-    "handlers.bot_panel",
+    #"handlers.live_chat",
     "handlers.basic_cmds",
     "handlers.contact",
     "handlers.deviceinfo",
@@ -292,19 +368,13 @@ _HANDLER_MODULES = [
     "handlers.deviceinfo_check",
     "handlers.server_status",
     "handlers.debug_callbacks",
-    "handlers.persistent_menu",
-    "handlers.admin_entry",
-    "handlers.whoami",
 ]
 
-# (اختياري) تشخيص
 try:
     import handlers.app_download as _appdl_chk
-    import logging as _lg
-    _lg.info(f"[CHECK] imported handlers.app_download OK, has router={hasattr(_appdl_chk, 'router')}")
+    logging.info(f"[CHECK] imported handlers.app_download OK, has router={hasattr(_appdl_chk, 'router')}")
 except Exception:
-    import logging as _lg
-    _lg.exception("[CHECK] FAILED to import handlers.app_download")
+    logging.exception("[CHECK] FAILED to import handlers.app_download")
 
 def _load_public_routers():
     routers = []
@@ -317,14 +387,11 @@ def _load_public_routers():
 
 PUBLIC_ROUTERS = _load_public_routers()
 
-# ======== Shims ========
+# ===== Shims (Rewards) =====
 rewards_shim = Router(name="rewards_shim")
 
 @rewards_shim.callback_query(F.data == "rewards")
 async def _shim_rewards(cb):
-    """
-    افتح البروفايل مباشرة إن توفر، وإلا افتح الهَب كفولباك.
-    """
     try:
         from handlers.rewards_profile_pro import open_profile
         await open_profile(cb, edit=True)
@@ -339,176 +406,254 @@ async def _shim_wallet(cb):
 async def _shim_store(cb):
     await _rewards_market.open_market(cb)
 
-# ➕ Fallback لزرار rwdadm عند غياب لوحة الجوائز
 rwdadm_shim = Router(name="rwdadm_shim")
-
 @rwdadm_shim.callback_query(F.data.startswith("rwdadm:"))
 async def _shim_rwdadm(cb):
     if cb.from_user.id in ADMIN_IDS:
-        await cb.answer("❗ وحدة إدارة الجوائز غير محمّلة. تحقّق من لوج التشغيل (import admin.rewards_admin).", show_alert=True)
+        await cb.answer("❗ وحدة إدارة الجوائز غير محمّلة.", show_alert=True)
     else:
         await cb.answer("Admins only.", show_alert=True)
 
-# ================= تسجيل الـ Routers & Middlewares =================
+# ===== Diagnostics =====
+diag_router = Router(name="diag")
+from lang import get_user_lang, set_user_lang  # noqa
+
+@diag_router.message(Command("language", "lang"))
+async def _first_lang(m: Message):
+    from handlers.language import language_command
+    await language_command(m)
+
+@diag_router.message(Command("report"))
+async def _diag_report_entry(m: Message, state: FSMContext):
+    return await report_cmd(m, state)
+
+@diag_router.message(Command("help", "faq"))
+async def _first_help(m: Message):
+    await _help_target(m.from_user.id, m.answer)
+
+@diag_router.message(Command("about"))
+async def _about(m: Message):
+    try:
+        lang = get_user_lang(m.from_user.id) or "en"
+    except Exception:
+        lang = "en"
+    text = t(lang, "about_text") or "ℹ️ <b>S.E Support</b>\nAssistant for services & support.\nUse /help for FAQ."
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=t(lang, "back_to_menu") or "⬅️ Back to menu", callback_data="back_to_menu")]
+    ])
+    await m.answer(text, reply_markup=kb, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
+
+@diag_router.message(Command("whoami"))
+async def whoami_cmd(m: Message):
+    uid = m.from_user.id
+    uname = f"@{m.from_user.username}" if m.from_user.username else "—"
+    await m.answer(f"👤 Your ID: <code>{uid}</code>\n🔹 Username: {uname}")
+
+# ===== Register routers =====
 def register_routers(dp: Dispatcher):
+    # ONLY_REPORT mode
+    if ONLY_REPORT:
+        dp.include_router(report_router)
+        logging.warning("🚧 ONLY_REPORT=1 — Report router only (no middlewares).")
+        return
+
+    # Middlewares
     if TracerMiddleware:
         dp.update.middleware(TracerMiddleware())
-
     mmw = MaintenanceMiddleware()
     utm = UserTrackerMiddleware()
     fs  = ForceStartMiddleware()
     vrl = VipRateLimitMiddleware()
+    dp.update.outer_middleware(EphemeralKBGuard())
 
-    # 1) الصيانة + تتبع المستخدمين
+    # Early routers
+    dp.include_router(compat_router)
+    dp.include_router(diag_router)
+    logging.info("Loaded diag_router (debug_storage/migrate/inv_diag/inv_repair)")
+
     dp.message.middleware(mmw); dp.callback_query.middleware(mmw)
     dp.message.middleware(utm); dp.callback_query.middleware(utm)
 
-    # اجعل الاشتراك تلقائيًا لكل من يتفاعل
     autosub = AutoSubscribeMiddleware()
     dp.message.middleware(autosub); dp.callback_query.middleware(autosub)
 
-    # العمل في الخاص فقط
+    # Private only
     dp.message.filter(F.chat.type == "private")
     dp.callback_query.filter(F.message.chat.type == "private")
 
-    # 2) فرض /start
+    # --- (NEW) خطاف مبكر يضمن /sections دائماً ---
+    sections_fast = Router(name="sections_fast")
+    sections_fast.message.filter(F.chat.type == "private")
+    dp.include_router(sections_fast)
+    # ------------------------------------------------
+
     if FORCE_START_ON_MSG:
         dp.message.middleware(fs)
     dp.callback_query.middleware(fs)
 
-    # 3) بوابة المنع
-    ugm = UnknownGateMiddleware(
-        block_unknown_messages=False,
-        allow_commands=(
-            "menu", "home", "sections",
-            "start","help","about","report","language","admin","support","livechat",
-            "set_app","get_app","app_info","remove_app",
-            # ===== Alerts
-            "alerts_on","alerts_off","alerts_status",
-            "push_update","push_preview","push_schedule","push_stats",
-            # ===== Rewards
-            "rewards","wallet","store","send_points",
-            # (تمت إزالة أوامر متجر الشراء: shop, orders, sendcode, inv_add, inv_stats)
-            # اختصارات إضافية
-            "profile","my_rewards","rprofile",
-            "revenue",
-        ),
-        allowed_content_types=("text","photo","video","document","voice","audio","video_note"),
-        allow_free_text=True,
-        enforce_known_users=False,
-        admin_ids=ADMIN_IDS,
-        fsm_bypass=True,
-        fsm_whitelist=(
-            "ApplyStates:name","ApplyStates:country","ApplyStates:channel",
-            "ApplyStates:exp","ApplyStates:vol","ApplyStates:pref","ApplyStates:confirm",
-            "AdminAsk:waiting_question",
-            "PubStates:name","PubStates:country","PubStates:languages",
-            "PubStates:contact","PubStates:whatsapp","PubStates:channel","PubStates:bio",
-            "report:collect","LiveChat:active","live_chat:active",
-            "AppUpload:wait_apk",
-            "AlStates:wait_ttl","AlStates:wait_rate","AlStates:wait_quiet",
-            "AlStates:wait_maxw","AlStates:wait_actd",
-            "VipCustom:wait_days",
-        ),
-    )
-    if UGATE_ON_MSG:
-        dp.message.middleware(ugm)
-    dp.callback_query.middleware(ugm)
+    # ثبّت t داخل start (لو احتج)
+    try:
+        h_start.t = t
+    except Exception:
+        pass
 
-    # 4) قيود VIP
-    dp.message.middleware(vrl); dp.callback_query.middleware(vrl)
+    # ===== (NEW) امنع الراوترات النصية من ابتلاع الأوامر =====
+    home_menu_router.message.filter(~F.text.startswith("/"))
+    bot_panel_router.message.filter(~F.text.startswith("/"))
+    menu_buttons_router.message.filter(~F.text.startswith("/"))
 
-    # ✅ /start الأساسي
-    dp.include_router(h_start.router)
-    logging.info("Loaded handlers.start (forced include)")
-
-    # ✅ بطاقة Hero Pro
-    dp.include_router(home_hero_router)
-    logging.info("Loaded handlers.home_hero")
-
-    # ✅ راووتر الدفع الخاص بالمورد (ليس متجر المستخدم) — أبقيناه
-    dp.include_router(_supplier_payment.router)
-    logging.info("Loaded handlers.supplier_payment (forced include)")
-
-    dp.include_router(human_router)
-    logging.info("Loaded handlers.human_check")
-
-    # ====== نظام الجوائز (الترتيب مهم)
-    dp.include_router(_rewards_gate.router)     # بوابة الاشتراك + chat_member
-    dp.include_router(_rewards_hub.router)      # الهَب (واجهة)
-    dp.include_router(_rewards_market.router)   # المتجر الداخلي للجوائز (لا علاقة له بشراء SEVIP)
-    dp.include_router(_rewards_wallet.router)   # المحفظة
-    dp.include_router(_rewards_compat.router)   # توافق /rewards
-    dp.include_router(rewards_shim)             # يمسك callbacks: rewards/wallet/store
-
-    # ✅ NEW: بروفايل الجوائز الاحترافية (إن وُجد)
-    if _rewards_profile_pro and hasattr(_rewards_profile_pro, "router"):
-        dp.include_router(_rewards_profile_pro.router)
-        logging.info("Loaded handlers.rewards_profile_pro")
-
-    # ✅ لوحة أدمن الجوائز (إن وُجدت) وإلا فعّل الشِم
-    if _rewards_admin and hasattr(_rewards_admin, "router"):
-        dp.include_router(_rewards_admin.router)
-        logging.info("Loaded admin.rewards_admin")
-    else:
-        dp.include_router(rwdadm_shim)
-        logging.warning("admin.rewards_admin not available -> rwdadm_shim enabled")
-
-    # ✅ لوحة أدمن المتجر (اختياري)
-    if _rewards_market_admin and hasattr(_rewards_market_admin, "router"):
-        dp.include_router(_rewards_market_admin.router)
-        logging.info("Loaded admin.rewards_market_admin")
-
-    # ===== [ALERTS]
-    if alerts_user_router:
-        dp.include_router(alerts_user_router)
-        logging.info("Loaded handlers.alerts_user")
+    # Alerts (if available)
     if alerts_admin_router:
-        dp.include_router(alerts_admin_router)
-        logging.info("Loaded admin.alerts_admin")
+        dp.include_router(alerts_admin_router); logging.info("Loaded admin.alerts_admin")
+    if alerts_user_router:
+        dp.include_router(alerts_user_router);   logging.info("Loaded handlers.alerts_user")
 
-    # بقية الراوترات
-    for r in ADMIN_ROUTERS:
+    # === (NEW) ثبّت راوترات الجوائز مبكراً لتأخذ الأولوية ومنع التعارض ===
+    #dp.include_router(admin_roles_panel.router)##########################
+    dp.include_router(_admin_roles_panel.router)#########################
+
+    # Shop
+    dp.include_router(_shop.router);        logging.info("Loaded handlers.shop")
+    dp.include_router(home_menu_router);        logging.info("Loaded handlers.home_menu")
+    dp.include_router(supplier_directory_router);   logging.info("Loaded supplier_directory (PRIORITY)")
+
+    # Start & hero
+    dp.include_router(live_chat_router);        logging.info("Loaded handlers.live_chat (PRIORITY BEFORE MENUS)")
+    dp.include_router(h_start.router);          logging.info("Loaded handlers.start (forced include)")
+    dp.include_router(home_hero_router);        logging.info("Loaded handlers.home_hero")
+    dp.include_router(_admin_hub.router)
+    #dp.include_router(quick_sections_router);   logging.info("Loaded handlers.quick_sections")
+    _mount_rewards_routers(dp)
+
+    #persistent_menu_router.message.filter(~F.text.startswith("/"))
+    dp.include_router(report_router);           logging.info("Loaded handlers.report (PRIORITY)")
+
+    # Menus & panel
+    dp.include_router(reseller_apply_router);   logging.info("Loaded handlers.reseller_apply (PRIORITY)")
+    dp.include_router(promoter_router);         logging.info("Loaded handlers.promoter")
+    dp.include_router(promoter_panel_router);   logging.info("Loaded handlers.promoter_panel")
+
+    dp.include_router(bot_panel_router);        logging.info("Loaded handlers.bot_panel")
+    dp.include_router(menu_buttons_router);     logging.info("Loaded handlers.menu_buttons")
+    dp.include_router(persistent_menu_router);  logging.info("Loaded handlers.persistent_menu")
+    #dp.include_router(live_chat_router);        logging.info("Loaded handlers.live_chat (PRIVATE & SANDBOXED)")
+    dp.include_router(support_inbox_router);    logging.info("Loaded handlers.support_inbox_admin")
+    dp.include_router(_shop_admin.router);      logging.info("Loaded handlers.shop_admin")
+
+    # ===== (NEW) حصر live_chat في الخاص + لا يلتقط الأوامر أو نص أزرار الأقسام =====
+    live_chat_router.message.filter(F.chat.type == "private")
+    live_chat_router.callback_query.filter(F.message.chat.type == "private")
+    live_chat_router.message.filter((~F.text.startswith("/")) | F.text.in_({"/live_on", "/live_off"}))
+
+    # Anti-groups
+    dp.include_router(anti_groups_router);      logging.info("Loaded handlers.anti_groups")
+
+    # Core
+    dp.include_router(_supplier_payment.router); logging.info("Loaded handlers.supplier_payment")
+    from handlers import paydiag as _paydiag
+    dp.include_router(_paydiag.router)
+    dp.include_router(human_router);             logging.info("Loaded handlers.human_check")
+    dp.include_router(inventory_admin_router);   logging.info("Loaded handlers.inventory_admin")
+    dp.message.outer_middleware(StarsPayMiddleware())
+    dp.include_router(features_router)
+
+    dp.message.outer_middleware(ForceJoinMiddleware())
+    dp.callback_query.outer_middleware(ForceJoinMiddleware())
+    dp.include_router(fj_router)   # ← هذا الذي يجعل fj_check يعمل
+    dp.include_router(debug_storage_router)
+
+
+    # Rewards (fallback: لو لأي سبب ما رُكّبت مبكراً)
+    if not _REWARDS_MOUNTED:
+        _mount_rewards_routers(dp)
+
+    dp.include_router(admin_manage)
+    dp.include_router(admin_access)
+
+    if _rewards_profile_pro and hasattr(_rewards_profile_pro, "router"):
+        # سيكون مُضمَّن مسبقاً داخل _mount_rewards_routers؛ السطر التالي آمن لو لم يُضمَّن
+        try:
+            dp.include_router(_rewards_profile_pro.router); logging.info("Loaded handlers.rewards_profile_pro")
+        except Exception:
+            pass
+    if _rewards_admin and hasattr(_rewards_admin, "router"):
+        dp.include_router(_rewards_admin.router); logging.info("Loaded admin.rewards_admin")
+    else:
+        dp.include_router(rwdadm_shim); logging.warning("admin.rewards_admin not available -> rwdadm_shim enabled")
+
+    # Additional admin routers
+    for r in _import_admin_routers():
         dp.include_router(r)
+
+    # Tools router (optional)
     if TOOLS_ROUTER:
         dp.include_router(TOOLS_ROUTER)
-    for r in PUBLIC_ROUTERS:
+
+    # Public routers
+    for r in _load_public_routers():
         dp.include_router(r)
 
-    # ===== Fallback & Shortcuts
+    # Rate-Limit
+    dp.message.middleware(vrl); dp.callback_query.middleware(vrl)
+
+    # Fallbacks
     fallback = Router(name="fallback_public")
 
+    @fallback.message(Command("whoami"))
+    async def _fb_whoami(msg: Message):
+        uid = msg.from_user.id
+        un  = f"@{msg.from_user.username}" if msg.from_user.username else "—"
+        await msg.answer(f"👤 Your ID: <code>{uid}</code>\n🔹 Username: {un}")
+
+    @fallback.message(Command("debug_storage"))
+    async def _fb_debug(msg: Message):
+        mode = "DB" if USE_DB else "FILES"
+        snap = await inv.snapshot_msg(PRODUCT)
+        await msg.answer(f"[FB] Mode={mode}\nPRODUCT_KEY={PRODUCT}\nSnapshot={snap}", parse_mode=None)
+
     @fallback.message(Command("start"))
-    async def _fb_start(msg):
+    async def _fb_start(msg: Message):
         await msg.answer("👋 أهلاً بك! إذا لم تظهر القائمة، اضغط زر Menu بالأسفل، أو أرسل /sections.")
 
     @fallback.message(Command("help"))
-    async def _fb_help(msg):
+    async def _fb_help(msg: Message):
         await msg.answer("ℹ️ المساعدة: استخدم الأزرار بالأسفل للتنقل. إن لم تعمل الأوامر، أرسل /start مرة واحدة.")
 
     @fallback.message(Command("about"))
-    async def _fb_about(msg):
+    async def _fb_about(msg: Message):
         await msg.answer("ℹ️ حول البوت: S.E Support — مساعد الخدمات.\nللمزيد: /help")
 
     @fallback.message(Command("language"))
-    async def _fb_lang(msg):
+    async def _fb_lang(msg: Message):
         await msg.answer("🌐 تغيير اللغة: افتح القائمة السفليّة واختر Language.")
 
-    @fallback.message(Command("sections"))
-    async def _fb_sections(msg):
-        await msg.answer("📂 الأقسام السريعة: استخدم زر Menu السفلي لعرض الأقسام.")
-
-    # ✅ أمر /rewards يفتح البروفايل مباشرة مع فولباك للهَب
     @fallback.message(Command("rewards"))
-    async def _fb_rewards(msg):
+    async def _fb_rewards(msg: Message):
         try:
             from handlers.rewards_profile_pro import open_profile
             await open_profile(msg)
         except Exception:
             await _rewards_hub.open_hub(msg)
 
+    @fallback.message(Command("shop"))
+    async def _fb_shop(msg: Message):
+        try:
+            await _shop.open_shop(msg)
+        except Exception as e:
+            logging.exception("fallback /shop failed: %s", e)
+            await msg.answer("⚠️ حدث خلل مؤقت أثناء فتح المتجر. حاول مرة أخرى.")
+
+    @fallback.callback_query(F.data == "shop:sevip")
+    async def _fb_shop_legacy(cb):
+        try:
+            await _shop.open_shop(cb.message)
+            await cb.answer()
+        except Exception as e:
+            logging.exception("compat shop:sevip failed: %s", e)
+            await cb.answer("⚠️ حدث خلل أثناء فتح المتجر.", show_alert=True)
+
     @fallback.message(Command("admin"))
-    async def _fb_admin(msg):
+    async def _fb_admin(msg: Message):
         if msg.from_user.id in ADMIN_IDS:
             await msg.answer("👑 لوحة الأدمن: إذا لم تظهر الواجهة، جرّب /vipadm أو /admin مرة أخرى.")
         else:
@@ -517,43 +662,72 @@ def register_routers(dp: Dispatcher):
     dp.include_router(fallback)
     logging.info("Loaded fallback_public (safety commands).")
 
-# ================= [ALERTS] Startup hook =================
-async def _alerts_startup(bot: Bot):
-    if init_alerts_scheduler:
-        try:
-            await init_alerts_scheduler(bot)
-            logging.info("🔔 Alerts scheduler started.")
-        except Exception as e:
-            logging.warning(f"Alerts scheduler failed to start: {e}")
 
-# ================= تهيئة جلسة البوت =================
-def _make_bot() -> Bot:
+def _mount_rewards_routers(dp: Dispatcher) -> None:
+    # لا تضف الراوتر مرتين
+    if getattr(rewards_profile_router, "parent_router", None) is None:
+        dp.include_router(rewards_profile_router)
+        logging.info("Loaded handlers.rewards_profile_pro (callbacks active).")
+
+# ===== Alerts startup hook =====
+def _alerts_startup_factory(init_alerts_scheduler):
+    async def _alerts_startup(bot: Bot):
+        if init_alerts_scheduler:
+            try:
+                await init_alerts_scheduler(bot)
+                logging.info("🔔 Alerts scheduler started.")
+            except Exception as e:
+                logging.warning(f"Alerts scheduler failed to start: {e}")
+    return _alerts_startup
+
+# ===== Bot/session =====
+def _make_bot() -> "Bot":
     total = float(os.getenv("BOT_HTTP_TOTAL_TIMEOUT", "15"))
     session = AiohttpSession(timeout=total)
-    bot = Bot(
-        token=TOKEN,
-        session=session,
-        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
-    )
-    return bot
+    return Bot(token=TOKEN, session=session, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
-# ================= نقطة التشغيل =================
+def _make_storage():
+    REDIS_URL = (os.getenv("REDIS_URL") or "").strip()
+    if not REDIS_URL:
+        logging.info("FSM storage: MemoryStorage (no REDIS_URL)")
+        return MemoryStorage()
+    try:
+        RedisStorage = None
+        try:
+            from aiogram.fsm.storage.redis import RedisStorage as _RS
+            RedisStorage = _RS
+        except Exception:
+            pass
+        redis_async = importlib.import_module("redis.asyncio")
+        redis_from_url = getattr(redis_async, "from_url")
+        redis_cli = redis_from_url(REDIS_URL, encoding="utf-8", decode_responses=True)
+        if not RedisStorage:
+            logging.warning("aiogram RedisStorage not available; using MemoryStorage()")
+            return MemoryStorage()
+        logging.info(f"FSM storage: Redis ({REDIS_URL})")
+        return RedisStorage(redis_cli)
+    except Exception as e:
+        logging.warning(f"Redis init failed ({e}); using MemoryStorage()")
+        return MemoryStorage()
+
+# ===== Entry point =====
 ensure_required_files()
 
 async def main():
     if not TOKEN:
-        raise RuntimeError("❌ BOT_TOKEN غير موجود في ملف .env")
+        raise RuntimeError("❌ BOT_TOKEN غير موجود في متغيرات البيئة (.env)")
 
     bot = _make_bot()
-    dp = Dispatcher(storage=MemoryStorage())
+    dp  = Dispatcher(storage=_make_storage())
 
-    # تشخيص: اسم البوت
+    me = await bot.get_me()
+    logging.info(f"🤖 Logged in as @{me.username} (id={me.id})")
+
+    # CryptoPay watcher (ready task)
     try:
-        me = await bot.get_me()
-        logging.info(f"🤖 Logged in as @{me.username} (id={me.id})")
-    except Exception:
-        logging.exception("Failed to connect to Telegram (get_me). Check BOT_TOKEN / network.")
-        raise
+        start_auto_watcher(bot, interval_sec=WATCHER_SEC)
+    except Exception as e:
+        logging.warning(f"TON/USDT auto watcher failed to start: {e}")
 
     try:
         await bot.delete_webhook(drop_pending_updates=True)
@@ -563,8 +737,9 @@ async def main():
 
     await set_bot_commands(bot)
     register_routers(dp)
-    dp.startup.register(_alerts_startup)
+    dp.startup.register(_alerts_startup_factory(init_alerts_scheduler))
 
+    # VIP cron (best effort)
     try:
         asyncio.create_task(run_vip_cron(bot))
         logging.info("⏰ VIP reminder task started.")
@@ -572,15 +747,46 @@ async def main():
         logging.warning(f"VIP reminder task failed to start: {e}")
 
     logging.info("🚀 Bot is starting polling...")
-    try:
-        # ✅ تأكد من تضمين chat_member ضمن allowed_updates
-        updates = dp.resolve_used_update_types()
-        if "chat_member" not in updates:
-            updates.append("chat_member")
-        await dp.start_polling(bot, allowed_updates=updates)
-    except Exception:
-        logging.exception("Polling crashed with an exception.")
-        raise
+    updates = set(dp.resolve_used_update_types() or [])
+    updates.update({"message", "callback_query", "pre_checkout_query"})  # ⭐ مهم لنجوم تيليجرام
+    updates.update({"chat_member", "my_chat_member"})
+    logging.warning(f"[UPDATES] allowed_updates = {sorted(updates)}")
+    await dp.start_polling(bot, allowed_updates=list(updates))
+
+class StarsPayMiddleware(BaseMiddleware):
+    async def __call__(self, handler, event, data):
+        """
+        يمسك أي رسالة فيها successful_payment لعملة XTR (نجوم)،
+        يوسِم الطلب كمدفوع ثم يسلّم المفاتيح فوراً.
+        """
+        try:
+            msg = getattr(event, "message", None) or event
+            sp = getattr(msg, "successful_payment", None)
+            if sp:
+                payload = (sp.invoice_payload or "")
+                if payload.startswith("stars:"):
+                    oid = int(payload.split(":", 1)[1])
+                    logging.info("[PAY⭐][MW] caught successful_payment payload=%s", payload)
+
+                    # علّم الطلب مدفوع
+                    try:
+                        await ords.mark_paid(oid)
+                    except Exception as e:
+                        logging.exception("mark_paid failed: %r", e)
+
+                    # سلّم المفاتيح للمستخدم
+                    try:
+                        await check_and_deliver_one(data["bot"], oid, notify_user=True)
+                    except Exception as e:
+                        logging.exception("deliver failed: %r", e)
+
+                    # لا تمرر لل_handlers الأخرى (يكفي)
+                    return
+        except Exception as e:
+            logging.exception("StarsPayMiddleware error: %r", e)
+
+        # مرر للمعالجة المعتادة
+        return await handler(event, data)
 
 if __name__ == "__main__":
     try:

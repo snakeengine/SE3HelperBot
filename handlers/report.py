@@ -1,19 +1,29 @@
 # handlers/report.py
 from __future__ import annotations
 
-import os, json, logging, datetime
+import os, json, logging, datetime, re, time
 from pathlib import Path
+from typing import Optional
+
 from aiogram import Router, F
 from aiogram.filters import Command, StateFilter
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import (
+    Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
+)
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
+
 from lang import t, get_user_lang
+from services import admin_roles  # ← فصل صلاحيات الأدمن عبر roles
 
 router = Router(name="report_handler")
 log = logging.getLogger(__name__)
 
-# حصر هذا الراوتر بكولباكات الملف فقط
+# احصر الراوتر على الخاص لتفادي أي تضارب
+router.message.filter(F.chat.type == "private")
+router.callback_query.filter(F.message.chat.type == "private")
+
+# نحصر الكولباكات على نطاق الراوتر فقط لمنع التعارض
 router.callback_query.filter(
     lambda cq: ((cq.data or "").startswith("rchat:")
                 or (cq.data or "").startswith("rfb:")
@@ -27,17 +37,37 @@ STATE_FILE     = DATA_DIR / "report_users.json"
 LOG_FILE       = DATA_DIR / "reports_log.json"
 THREADS_FILE   = DATA_DIR / "support_threads.json"
 FEEDBACK_FILE  = DATA_DIR / "report_feedback.json"
-BLOCKLIST_FILE = DATA_DIR / "report_blocklist.json"   # للحظر المؤقت/الدائم
+BLOCKLIST_FILE = DATA_DIR / "report_blocklist.json"
 
-# ===== إعدادات الأدمن =====
-_admin_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
-ADMIN_IDS = [int(x) for x in str(_admin_env).split(",") if str(x).strip().isdigit()] or [7360982123]
+# ===== إشعار إضافي اختياري (قناة/شات) =====
 ADMIN_ALERT_CHAT_ID = int(os.getenv("ADMIN_ALERT_CHAT_ID", "0") or 0)
 
-def _is_admin(uid: int) -> bool:
-    return int(uid) in ADMIN_IDS
+# --- تطبيع نص عربي للتمييز على أزرار الكيبورد السفلية ---
+_AR_MAP = str.maketrans({"أ":"ا","إ":"ا","آ":"ا","ى":"ي","ئ":"ي","ؤ":"و","ة":"ه","ٔ":"", "ٰ":"", "ـ":""})
 
-# (اختياري) صندوق الوارد
+def _normalize_label(s: str) -> str:
+    s = s or ""
+    s = "".join(ch for ch in s if ch.isprintable())
+    s = s.translate(_AR_MAP)
+    s = re.sub(r"[^A-Za-z\u0600-\u06FF]+", " ", s).strip().lower()
+    s = re.sub(r"\s+", " ", s)
+    return s
+
+_MENU_KEYWORDS = {
+    "user","vip","bot","group","groups","channel","channels","forum","forums",
+    "المستخدم","بريميوم","vip","البوت","المجموعات","القنوات","المنتديات","اخفاء اللوحه","اخفاء اللوحة","hide panel"
+}
+
+def _looks_like_menu_button(text: str) -> bool:
+    n = _normalize_label(text)
+    return any(k in n for k in _MENU_KEYWORDS)
+
+# ===== تحقّق أدمن عبر دور reports/default =====
+async def _is_admin(uid: int) -> bool:
+    ids = set(await admin_roles.get_admins("reports")) | set(await admin_roles.get_admins("default"))
+    return int(uid) in ids
+
+# (اختياري) صندوق وارد الأدمن
 try:
     from admin.report_inbox import _touch_thread as rin_touch_thread
 except Exception:
@@ -50,6 +80,7 @@ def _rin_touch(uid: int, name: str, text: str | None = None):
     except Exception as e:
         log.warning(f"[report] rin_touch failed: {e}")
 
+# ===== ترجمات قصيرة =====
 def _tf(lang: str, key: str, fallback: str) -> str:
     try:
         s = t(lang, key)
@@ -57,6 +88,17 @@ def _tf(lang: str, key: str, fallback: str) -> str:
         s = None
     return fallback if not s or s == key else s
 
+def _tx(lang: str, key: str, ar_fallback: str, en_fallback: str) -> str:
+    """Fallback آمن عربي/إنجليزي."""
+    try:
+        s = t(lang, key)
+        if s and s != key:
+            return s
+    except Exception:
+        pass
+    return ar_fallback if str(lang).lower().startswith("ar") else en_fallback
+
+# ===== IO =====
 def _load_json(path: Path, default):
     try:
         if path.exists():
@@ -67,24 +109,19 @@ def _load_json(path: Path, default):
 
 def _save_json(path: Path, data):
     try:
-        path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        os.replace(tmp, path)
     except Exception as e:
         log.error(f"[report] save {path} error: {e}")
 
-def _human_hours_label(hours: int, lang: str) -> str:
-    if hours < 24:
-        return f"{hours} " + ("ساعة" if str(lang).startswith("ar") else "h")
-    days = hours // 24
-    if str(lang).startswith("ar"):
-        return f"{days} " + ("يوم" if days == 1 else "أيام")
-    return f"{days} d"
-
-
 # ===== إعدادات وجداول =====
 def load_settings() -> dict:
-    d = _load_json(SETTINGS_FILE, {"enabled": True, "cooldown_days": 3, "banned": []})
+    d = _load_json(SETTINGS_FILE, {"enabled": True, "cooldown_hours": 12, "banned": []})
     d.setdefault("enabled", True)
-    d.setdefault("cooldown_days", 3)
+    if "cooldown_hours" not in d:
+        days = int(d.get("cooldown_days", 0) or 0)
+        d["cooldown_hours"] = (days * 24) if days > 0 else 12
     if not isinstance(d.get("banned"), list):
         d["banned"] = []
     return d
@@ -118,6 +155,12 @@ def close_thread(user_id: int):
     if rec: rec["open"] = False
     else:   d["users"][str(user_id)] = {"open": False, "admin_id": None}
     save_threads(d)
+
+def delete_thread(user_id: int):
+    d = load_threads(); d.setdefault("users", {})
+    if str(user_id) in d["users"]:
+        d["users"].pop(str(user_id), None)
+        save_threads(d)
 
 # ===== Blocklist =====
 def _bl_read() -> dict:
@@ -199,21 +242,19 @@ def _msg_media_info(m: Message):
 
 # ===== لوحة تحكم الأدمن على البلاغ =====
 def _ban_btn_text(lang: str, hours: int) -> str:
-    # نص عربي/إنجليزي واضح لمدة الحظر
     if hours < 24:
-        return "🚫 " + _tf(lang, "rpadm.ban_hour", "حظر: {n} س").format(n=hours)
+        return "🚫 " + _tx(lang, "rpadm.ban_hour", "حظر: {n} س", "Ban: {n} h").format(n=hours)
     days = hours // 24
     if lang.startswith("ar"):
         unit = "يوم" if days == 1 else "أيام"
         return f"🚫 حظر: {days} {unit}"
-    return "🚫 " + _tf(lang, "rpadm.ban_days", "Ban: {n} d").format(n=days)
+    return "🚫 " + _tx(lang, "rpadm.ban_days", "Ban: {n} d", "Ban: {n} d").format(n=days)
 
 def _admin_controls_kb(user_id: int, lang: str) -> InlineKeyboardMarkup:
-    # تخطيط أوضح: ردّ (سطر كامل) -> إنهاء المحادثة (سطر كامل) -> أزرار الحظر بوضوح نصّي
     rows = [
-        [InlineKeyboardButton(text="💬 " + _tf(lang, "rchat.btn_reply", "ردّ"),
+        [InlineKeyboardButton(text="💬 " + _tx(lang, "rchat.btn_reply", "ردّ", "Reply"),
                               callback_data=f"rchat:reply:{user_id}")],
-        [InlineKeyboardButton(text="🔒 " + _tf(lang, "rchat.btn_close", "إنهاء المحادثة"),
+        [InlineKeyboardButton(text="🔒 " + _tx(lang, "rchat.btn_close", "إنهاء المحادثة", "Close chat"),
                               callback_data=f"rchat:close:{user_id}")],
         [
             InlineKeyboardButton(text=_ban_btn_text(lang, 1),           callback_data=f"rpadm:ban:{user_id}:1"),
@@ -224,20 +265,19 @@ def _admin_controls_kb(user_id: int, lang: str) -> InlineKeyboardMarkup:
             InlineKeyboardButton(text=_ban_btn_text(lang, 24*30),       callback_data=f"rpadm:ban:{user_id}:{24*30}"),
         ],
         [
-            InlineKeyboardButton(text="🚫 " + _tf(lang, "rpadm.ban_perm", "حظر دائم ∞"),
+            InlineKeyboardButton(text="🚫 " + _tx(lang, "rpadm.ban_perm", "حظر دائم ∞", "Permanent ban ∞"),
                                  callback_data=f"rpadm:ban:{user_id}:perm"),
-            InlineKeyboardButton(text="✅ " + _tf(lang, "rpadm.unban", "رفع الحظر"),
+            InlineKeyboardButton(text="✅ " + _tx(lang, "rpadm.unban", "رفع الحظر", "Unban"),
                                  callback_data=f"rpadm:unban:{user_id}"),
         ],
         [
-            InlineKeyboardButton(text="ℹ️ " + _tf(lang, "rpadm.btn_info", "معلومات المستخدم"),
+            InlineKeyboardButton(text="ℹ️ " + _tx(lang, "rpadm.btn_info", "معلومات المستخدم", "User info"),
                                  callback_data=f"rpadm:info:{user_id}"),
-            InlineKeyboardButton(text="🧹 " + _tf(lang, "rpadm.btn_clear_cd", "تصفير التبريد"),
+            InlineKeyboardButton(text="🧹 " + _tx(lang, "rpadm.btn_clear_cd", "تصفير التبريد", "Clear cooldown"),
                                  callback_data=f"rpadm:clearcd:{user_id}"),
         ],
     ]
     return InlineKeyboardMarkup(inline_keyboard=rows)
-
 
 # ===== إشعار الأدمن ببلاغ جديد =====
 async def _notify_admins_new_report(m: Message, user_id: int, text: str):
@@ -249,8 +289,9 @@ async def _notify_admins_new_report(m: Message, user_id: int, text: str):
         f"• Date: <code>{utcnow_iso()}</code>\n"
         "— — —\n" + text
     )
-    targets = list(set(ADMIN_IDS + ([ADMIN_ALERT_CHAT_ID] if ADMIN_ALERT_CHAT_ID else [])))
-    success = False
+    targets = set(await admin_roles.get_admins("reports"))
+    if ADMIN_ALERT_CHAT_ID:
+        targets.add(ADMIN_ALERT_CHAT_ID)
     for aid in targets:
         try:
             a_lang = get_user_lang(aid) or "en"
@@ -259,80 +300,128 @@ async def _notify_admins_new_report(m: Message, user_id: int, text: str):
                 await m.bot.copy_message(chat_id=aid, from_chat_id=m.chat.id, message_id=m.message_id)
             except Exception as e:
                 log.warning(f"[report] copy_message -> {aid} failed: {e}")
-            success = True
         except Exception as e:
             log.warning(f"[report] notify -> {aid} failed: {e}")
-    if not success and (m.from_user.id in ADMIN_IDS):
-        lang = get_user_lang(m.from_user.id) or "en"
-        try:
-            await m.answer("🔔 <b>Admin Copy</b>\n" + admin_msg, reply_markup=_admin_controls_kb(user_id, lang))
-        except Exception as e:
-            log.error(f"[report] local admin fallback failed: {e}")
 
 # ===== /report =====
-@router.message(
-    StateFilter(None),
-    F.text.func(lambda s: isinstance(s, str) and s.lstrip().lower().startswith("/report"))
-)
+def _cooldown_hours() -> int:
+    st = load_settings()
+    try:
+        return max(0, int(st.get("cooldown_hours", 12)))
+    except Exception:
+        return 12
+
+def _next_allowed_dt(user_id: int) -> Optional[datetime.datetime]:
+    last_iso = load_state().get("last", {}).get(str(user_id))
+    if not last_iso:
+        return None
+    last_dt = parse_iso_z(last_iso)
+    if not last_dt:
+        return None
+    return last_dt + datetime.timedelta(hours=_cooldown_hours())
+
+def _has_active_cooldown(user_id: int) -> bool:
+    nxt = _next_allowed_dt(user_id)
+    if not nxt:
+        return False
+    now = datetime.datetime.now(datetime.timezone.utc)
+    return now < nxt
+
+@router.message(StateFilter(None), F.text.func(lambda s: isinstance(s, str) and s.lstrip().lower().startswith("/report")))
 async def report_cmd_fallback(m: Message, state: FSMContext):
     return await report_cmd(m, state)
 
 @router.message(Command("report"))
 async def report_cmd(m: Message, state: FSMContext):
     user_id = m.from_user.id
-    lang = get_user_lang(user_id) or "en"
-    is_admin = _is_admin(user_id)
+    lang = (get_user_lang(user_id) or "en").lower()
+    is_admin = await _is_admin(user_id)
 
     st = load_settings()
     if not st.get("enabled", True) and not is_admin:
-        return await m.reply(_tf(lang, "report.disabled", "خدمة البلاغات متوقفة مؤقتاً."))
+        return await m.reply(_tx(
+            lang, "report.disabled",
+            "خدمة البلاغات متوقفة مؤقتاً.",
+            "Reporting is temporarily disabled."
+        ))
 
     # blocklist / banned / cooldown — الأدمن مُعفى
     if not is_admin:
         blocked, remain = _bl_is_blocked(user_id)
         if blocked:
-            return await m.reply(_tf(lang, "report.blocked", f"⛔ تم تقييد ميزة البلاغات لديك ({remain})."))
-
+            return await m.reply(_tx(
+                lang, "report.blocked",
+                f"⛔ تم تقييد ميزة البلاغات لديك ({remain}).",
+                f"⛔ Reporting is restricted for you ({remain})."
+            ))
         if user_id in st.get("banned", []):
-            return await m.reply(_tf(lang, "report.banned", "عذراً، لا يمكنك إرسال بلاغ."))
-
-        cd_days = int(st.get("cooldown_days", 0) or 0)
-        if cd_days > 0:
-            last_iso = load_state().get("last", {}).get(str(user_id))
-            if last_iso:
-                last_dt = parse_iso_z(last_iso)
-                if last_dt:
-                    now = datetime.datetime.now(datetime.timezone.utc)
-                    next_allowed = last_dt + datetime.timedelta(days=cd_days)
-                    if now < next_allowed:
-                        remain = human_remaining(next_allowed - now)
-                        return await m.reply(
-                            _tf(lang, "report.cooldown_wait", "يرجى الانتظار {remaining} قبل إرسال بلاغ آخر.")
-                            .format(remaining=remain)
-                        )
+            return await m.reply(_tx(
+                lang, "report.banned",
+                "عذراً، لا يمكنك إرسال بلاغ.",
+                "Sorry, you cannot send a report."
+            ))
+        nxt = _next_allowed_dt(user_id)
+        if nxt:
+            now = datetime.datetime.now(datetime.timezone.utc)
+            if now < nxt:
+                remain = human_remaining(nxt - now)
+                return await m.reply(_tx(
+                    lang, "report.cooldown_wait",
+                    "لديك بلاغ سابق. يرجى الانتظار {remaining} قبل إرسال بلاغ جديد."
+                    .format(remaining=remain),
+                    "You already have a report. Please wait {remaining} before sending another."
+                    .format(remaining=remain)
+                ))
 
     await state.set_state(ReportState.waiting_text)
-    await m.reply(_tf(lang, "report.prompt", "أرسل وصف مشكلتك بالتفصيل (صور/فيديو إن لزم)."))
+    await m.reply(_tx(
+        lang, "report.prompt",
+        "✍️ أرسل وصف مشكلتك بالتفصيل. يمكنك أيضًا إرسال صورة/فيديو مع تعليق.",
+        "✍️ Describe your issue in detail. You may also send a photo/video with a caption."
+    ))
+
+# ===== أثناء كتابة البلاغ: /cancel فقط =====
+@router.message(StateFilter(ReportState.waiting_text), Command("cancel"))
+async def report_cancel_cmd(m: Message, state: FSMContext):
+    lang = (get_user_lang(m.from_user.id) or "ar").lower()
+    await state.clear()
+    await m.reply(_tx(lang, "report.cancelled",
+                      "تم إلغاء البلاغ. يمكنك استخدام /report مجددًا عند الحاجة.",
+                      "Report canceled. You can use /report again when needed."))
+
+@router.message(StateFilter(ReportState.waiting_text),
+                F.text.func(lambda s: isinstance(s, str) and s.startswith("/") and not s.lower().startswith("/cancel")))
+async def report_block_commands(m: Message, state: FSMContext):
+    lang = (get_user_lang(m.from_user.id) or "ar").lower()
+    await m.reply(_tx(lang, "report.no_cmd_in_state",
+                      "أنت الآن تكتب بلاغًا. أرسل التفاصيل أو استخدم /cancel.",
+                      "You're currently writing a report. Send the details or use /cancel."))
 
 # ===== استلام رسالة البلاغ =====
 @router.message(ReportState.waiting_text)
 async def report_receive_any(m: Message, state: FSMContext):
     user_id = m.from_user.id
-    lang = get_user_lang(user_id) or "en"
+    lang = (get_user_lang(user_id) or "en").lower()
 
-    # blocklist قبل الحفظ
+    # محظور؟
     blocked, remain = _bl_is_blocked(user_id)
     if blocked:
         await state.clear()
-        return await m.reply(_tf(lang, "report.blocked", f"⛔ تم تقييد ميزة البلاغات لديك ({remain})."))
+        return await m.reply(_tx(lang, "report.blocked",
+                                 f"⛔ تم تقييد ميزة البلاغات لديك ({remain}).",
+                                 f"⛔ Reporting is restricted for you ({remain})."))
 
+    # نص/ميديا
     media_type, media_file_id = _msg_media_info(m)
     is_media = media_type is not None
     text = ((m.caption or "") if is_media else (m.text or "")).strip()
 
     if not is_media and len(text) < 10:
-        return await m.reply(_tf(lang, "report.too_short", "الرسالة قصيرة جدًا. أرسل تفاصيل أكثر."))
+        return await m.reply(_tx(lang, "report.too_short",
+                                 "الرسالة قصيرة جدًا. أرسل تفاصيل أكثر.",
+                                 "The message is too short. Please provide more details."))
 
+    # سجّل البلاغ في اللوج
     append_log({
         "user_id": user_id,
         "username": m.from_user.username,
@@ -346,21 +435,152 @@ async def report_receive_any(m: Message, state: FSMContext):
         "media_file_id": media_file_id,
     })
 
-    set_thread(user_id, open=True, admin_id=None)
+    # أنشئ جلسة معلّقة بانتظار رد الأدمن (الجسر يُفتح بعد أول رد)
+    set_thread(user_id, open=False, admin_id=None)
+
+    # صندوق وارد موحّد (اختياري)
+    try:
+        from utils.support_inbox import enqueue
+        preview = (text if text else "(media)")[:200]
+        enqueue("report", user_id, preview)
+    except Exception:
+        pass
+
+    # لمس صندوق وارد إضافي (إن وُجد)
     display_text = text if text else "(media)"
     _rin_touch(user_id, m.from_user.full_name or m.from_user.username or str(user_id), display_text)
+
+    # إشعار الأدمنين
     await _notify_admins_new_report(m, user_id, display_text)
 
+    # حدّث آخر إرسال وانهِ الحالة
     st = load_state(); st.setdefault("last", {})[str(user_id)] = utcnow_iso(); save_state(st)
     await state.clear()
-    await m.reply(_tf(lang, "report.saved", "تم استلام بلاغك ✅"))
+
+    # رسالة تأكيد + الكول داون
+    cd_hours = _cooldown_hours()
+    ar_fallback = f"تم استلام بلاغك ✅ سنراجعه قريبًا.\nيمكنك إرسال بلاغ جديد بعد: {cd_hours} ساعة."
+    en_fallback = f"Your report was received ✅ We'll review it soon.\nYou can send a new report after: {cd_hours}h."
+    confirmation = _tx(lang, "report.saved_full", ar_fallback, en_fallback)
+
+    await m.reply(confirmation, reply_markup=ReplyKeyboardRemove())
+
+# ===== حارس: pending =====
+# منع سبام التذكير
+_last_pending_notice: dict[int, float] = {}
+_PENDING_COOLDOWN_SEC = 600  # 10 دقائق
+
+def _has_pending_report(m: Message) -> bool:
+    if not m.from_user:
+        return False
+
+    # لا نتعامل إلا مع نص أو كابشن لميديا
+    text_like = (m.text or m.caption or "")
+    if not text_like.strip():
+        return False
+
+    # تجاهل الأوامر
+    if m.text and m.text.startswith("/"):
+        return False
+
+    # تجاهل أزرار/كلمات القائمة
+    if m.text and _looks_like_menu_button(m.text):
+        return False
+
+    th = get_thread(m.from_user.id)
+
+    # 🔧 تنظيف تلقائي: إن كان لا يوجد تبريد فعّال، احذف أي سجل جلسة قديم
+    if th and not th.get("open") and not _has_active_cooldown(m.from_user.id):
+        delete_thread(m.from_user.id)
+        return False
+
+    # اعتبره "قيد المراجعة" فقط مع تبريد فعّال
+    return bool(th and not th.get("open") and _has_active_cooldown(m.from_user.id))
+
+@router.message(StateFilter(None), F.func(_has_pending_report))
+async def pending_guard(m: Message):
+    if await _is_admin(m.from_user.id):
+        return
+
+    now = time.time()
+    last = _last_pending_notice.get(m.from_user.id, 0.0)
+    if now - last < _PENDING_COOLDOWN_SEC:
+        return  # لا نكرر التنبيه كثيرًا
+    _last_pending_notice[m.from_user.id] = now
+
+    lang = get_user_lang(m.from_user.id) or "en"
+    nxt = _next_allowed_dt(m.from_user.id)
+    if nxt:
+        now_dt = datetime.datetime.now(datetime.timezone.utc)
+        if now_dt < nxt:
+            remain = human_remaining(nxt - now_dt)
+            return await m.reply(_tx(
+                lang, "report.wait_processing",
+                "لديك بلاغ قيد المراجعة. يرجى الانتظار {remaining}.",
+                "You already have a report under review. Please wait {remaining}."
+            ).format(remaining=remain))
+
+    await m.reply(_tx(
+        lang, "report.wait_short",
+        "تم استلام بلاغك، يرجى الانتظار إلى حين ردّ الدعم.",
+        "We received your report; please wait for support to reply."
+    ))
+
+# ===== جسر رسائل المستخدم (بعد فتح الجسر) =====
+def _should_bridge(m: Message) -> bool:
+    """فلتر دقيق يمنع الإمساك العام لرسائل الخاص."""
+    if not m or not m.from_user: return False
+    if getattr(m, "chat", None) and getattr(m.chat, "type", "") != "private": return False
+    if m.text and m.text.startswith("/"): return False
+    if m.text and _looks_like_menu_button(m.text): return False
+    blocked, _ = _bl_is_blocked(m.from_user.id)
+    if blocked: return False
+    th = get_thread(m.from_user.id)
+    return bool(th and th.get("open"))
+
+@router.message(StateFilter(None), F.func(_should_bridge))
+async def user_chat_bridge(m: Message, state: FSMContext):
+    if await _is_admin(m.from_user.id):
+        return
+    th = get_thread(m.from_user.id)
+    if not (th and th.get("open")):
+        return
+
+    # اختيار الأدمن المسؤول
+    role_admins = await admin_roles.get_admins("reports")
+    admin_id = (th or {}).get("admin_id") or (role_admins[0] if role_admins else None)
+    if not admin_id or admin_id == m.from_user.id:
+        return
+
+    # توصيل الرسالة
+    try:
+        await m.copy_to(chat_id=admin_id)
+    except Exception as e:
+        log.warning(f"[report] forward to admin failed: {e}")
+        try:
+            await m.bot.send_message(admin_id, f"👤 <b>User</b> <code>{m.from_user.id}</code>:\n{m.text or '-'}")
+        except Exception as e2:
+            log.error(f"[report] send text to admin failed: {e2}")
+
+    a_lang = get_user_lang(admin_id) or "en"
+    try:
+        await m.bot.send_message(
+            admin_id,
+            _tx(a_lang, "rchat.user_reply_header", "ردّ على المستخدم:", "Reply to the user:"),
+            reply_markup=_admin_controls_kb(m.from_user.id, a_lang)
+        )
+    except Exception:
+        pass
+
+    content = (m.caption if getattr(m, "caption", None) else m.text) or "(media)"
+    _rin_touch(m.from_user.id, m.from_user.full_name or m.from_user.username or str(m.from_user.id), content)
 
 # ===== ردّ/إغلاق من الأدمن =====
 @router.callback_query(F.data.startswith("rchat:reply:"))
 async def rchat_reply_start(cb: CallbackQuery, state: FSMContext):
-    if not _is_admin(cb.from_user.id):
+    if not (await _is_admin(cb.from_user.id)):
         l = get_user_lang(cb.from_user.id) or "en"
-        return await cb.answer(_tf(l, "admins_only", "هذه الأداة للأدمن فقط."), show_alert=True)
+        return await cb.answer(_tx(l, "admins_only", "هذه الأداة للأدمن فقط.", "Admins only."), show_alert=True)
     try:
         target = int(cb.data.split(":")[-1])
     except Exception:
@@ -368,14 +588,16 @@ async def rchat_reply_start(cb: CallbackQuery, state: FSMContext):
     await state.set_state(ChatReplyState.waiting_text)
     await state.update_data(target_user_id=target)
     lang = get_user_lang(cb.from_user.id) or "en"
-    await cb.message.answer(_tf(lang, "rchat.reply_prompt", "أرسل الرد الذي تريد إرساله للمستخدم (يمكنك إرسال نص/صورة/فيديو):"))
+    await cb.message.answer(_tx(lang, "rchat.reply_prompt",
+                                "أرسل الرد الذي تريد إرساله للمستخدم (يمكنك إرسال نص/صورة/فيديو):",
+                                "Send the reply to the user (you can send text/photo/video):"))
     await cb.answer()
 
 @router.message(ChatReplyState.waiting_text)
 async def rchat_reply_send(m: Message, state: FSMContext):
-    if not _is_admin(m.from_user.id):
+    if not (await _is_admin(m.from_user.id)):
         l = get_user_lang(m.from_user.id) or "en"
-        return await m.reply(_tf(l, "admins_only", "هذه الأداة للأدمن فقط."))
+        return await m.reply(_tx(l, "admins_only", "هذه الأداة للأدمن فقط.", "Admins only."))
     data = await state.get_data()
     uid = int(data.get("target_user_id"))
     await state.clear()
@@ -383,31 +605,35 @@ async def rchat_reply_send(m: Message, state: FSMContext):
         await m.copy_to(chat_id=uid)
     except Exception:
         u_lang = get_user_lang(uid) or "en"
-        await m.bot.send_message(uid, _tf(u_lang, "rchat.dev_reply", "تم استلام ردّ الدعم."))
+        await m.bot.send_message(uid, _tx(u_lang, "rchat.dev_reply",
+                                          "تم استلام ردّ الدعم.", "Support reply received."))
+    # فتح الجسر بعد أول رد من الأدمن
     set_thread(uid, open=True, admin_id=m.from_user.id)
-    await m.reply(_tf(get_user_lang(m.from_user.id) or "en", "rchat.sent_ok", "تم الإرسال ✅"))
+    await m.reply(_tx(get_user_lang(m.from_user.id) or "en", "rchat.sent_ok", "تم الإرسال ✅", "Sent ✅"))
 
 @router.callback_query(F.data.startswith("rchat:close:"))
 async def rchat_close(cb: CallbackQuery):
-    if not _is_admin(cb.from_user.id):
+    if not (await _is_admin(cb.from_user.id)):
         l = get_user_lang(cb.from_user.id) or "en"
-        return await cb.answer(_tf(l, "admins_only", "هذه الأداة للأدمن فقط."), show_alert=True)
+        return await cb.answer(_tx(l, "admins_only", "هذه الأداة للأدمن فقط.", "Admins only."), show_alert=True)
     try:
         uid = int(cb.data.split(":")[-1])
     except Exception:
         return await cb.answer()
-    close_thread(uid)
+    close_thread(uid)  # إغلاق الجسر
+
     u_lang = get_user_lang(uid) or "ar"
     try:
         kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=_tf(u_lang, "rfb.yes", "نعم ✅"), callback_data="rfb:yes"),
-             InlineKeyboardButton(text=_tf(u_lang, "rfb.no", "لا ❌"), callback_data="rfb:no")],
-            [InlineKeyboardButton(text=_tf(u_lang, "rfb.skip", "إغلاق بدون تقييم"), callback_data="rfb:skip")]
+            [InlineKeyboardButton(text=_tx(u_lang, "rfb.yes", "نعم ✅", "Yes ✅"), callback_data="rfb:yes"),
+             InlineKeyboardButton(text=_tx(u_lang, "rfb.no", "لا ❌", "No ❌"), callback_data="rfb:no")],
+            [InlineKeyboardButton(text=_tx(u_lang, "rfb.skip", "إغلاق بدون تقييم", "Close without rating"), callback_data="rfb:skip")]
         ])
-        await cb.bot.send_message(uid, _tf(u_lang, "rfb.q", "هل تم حل مشكلتك؟"), reply_markup=kb)
+        await cb.bot.send_message(uid, _tx(u_lang, "rfb.q", "هل تم حل مشكلتك؟", "Was your issue resolved?"), reply_markup=kb)
     except Exception as e:
         log.warning(f"[report] send feedback to {uid} failed: {e}")
-    await cb.answer(_tf(get_user_lang(cb.from_user.id) or "en", "rchat.closed", "تم إغلاق المحادثة."), show_alert=True)
+    await cb.answer(_tx(get_user_lang(cb.from_user.id) or "en", "rchat.closed",
+                        "تم إغلاق المحادثة.", "Conversation closed."), show_alert=True)
 
 # ===== التقييم =====
 def _save_feedback(rec: dict):
@@ -419,7 +645,9 @@ async def _notify_admins_feedback(bot, rec: dict):
            f"• Result: <b>{rec['result']}</b>\n"
            f"• Time: <code>{rec['time']}</code>\n")
     if rec.get("reason"): msg += f"• Reason: {rec['reason']}\n"
-    targets = list(set(ADMIN_IDS + ([ADMIN_ALERT_CHAT_ID] if ADMIN_ALERT_CHAT_ID else [])))
+    targets = set(await admin_roles.get_admins("reports"))
+    if ADMIN_ALERT_CHAT_ID:
+        targets.add(ADMIN_ALERT_CHAT_ID)
     for aid in targets:
         try: await bot.send_message(aid, msg)
         except Exception: pass
@@ -432,13 +660,15 @@ async def rfb_choice(cb: CallbackQuery, state: FSMContext):
     if choice == "yes":
         rec = {"user_id": uid, "result": "solved", "reason": "", "time": utcnow_iso()}
         _save_feedback(rec); await _notify_admins_feedback(cb.bot, rec)
-        await cb.message.edit_text(_tf(lang, "rfb.thx_yes", "سعدنا بحل مشكلتك ✅"));  return await cb.answer("✅")
+        await cb.message.edit_text(_tx(lang, "rfb.thx_yes", "سعدنا بحل مشكلتك ✅", "Glad it's solved ✅"));  return await cb.answer("✅")
     if choice == "skip":
         rec = {"user_id": uid, "result": "skipped", "reason": "", "time": utcnow_iso()}
         _save_feedback(rec); await _notify_admins_feedback(cb.bot, rec)
-        await cb.message.edit_text(_tf(lang, "rfb.closed", "تم إغلاق البلاغ."));  return await cb.answer("✅")
+        await cb.message.edit_text(_tx(lang, "rfb.closed", "تم إغلاق البلاغ.", "Ticket closed."));  return await cb.answer("✅")
     await state.set_state(FeedbackState.waiting_reason)
-    await cb.message.edit_text(_tf(lang, "rfb.ask_reason", "لم تُحل المشكلة؟ أخبرنا بالمشكلة بإيجاز:"))
+    await cb.message.edit_text(_tx(lang, "rfb.ask_reason",
+                                   "لم تُحل المشكلة؟ أخبرنا بالمشكلة بإيجاز:",
+                                   "Not solved? Tell us briefly what went wrong:"))
     await cb.answer()
 
 @router.message(FeedbackState.waiting_reason)
@@ -449,88 +679,39 @@ async def rfb_reason(m: Message, state: FSMContext):
     await state.clear()
     rec = {"user_id": uid, "result": "not_solved", "reason": reason, "time": utcnow_iso()}
     _save_feedback(rec); await _notify_admins_feedback(m.bot, rec)
-    await m.reply(_tf(lang, "rfb.thx_no", "شكرًا، تم تسجيل السبب وسنراجعه."))
-
-# ===== فلتر الجسر (من المستخدم للأدمن) =====
-def _bridge_filter(m: Message) -> bool:
-    try:
-        if m.from_user and int(m.from_user.id) in ADMIN_IDS:
-            return False  # لا نعكس رسائل الأدمن
-    except Exception:
-        pass
-    if m.text and m.text.startswith("/"):
-        return False  # لا نعترض الأوامر
-    # محظور؟
-    blocked, _ = _bl_is_blocked(m.from_user.id)
-    if blocked:
-        return False
-    th = get_thread(m.from_user.id)
-    return bool(th and th.get("open"))
-
-@router.message(StateFilter(None), F.chat.type == "private", F.func(_bridge_filter))
-async def user_chat_bridge(m: Message, state: FSMContext):
-    # لا تعمل إن كان للمستخدم حالة FSM نشطة (مثلاً VIP/لغة/الخ…)
-    try:
-        if await state.get_state():
-            return
-    except Exception:
-        pass
-    admin_id = (get_thread(m.from_user.id) or {}).get("admin_id") or (ADMIN_IDS[0] if ADMIN_IDS else None)
-    if not admin_id or admin_id == m.from_user.id:
-        return
-    try:
-        await m.copy_to(chat_id=admin_id)
-    except Exception as e:
-        log.warning(f"[report] forward to admin failed: {e}")
-        try:
-            await m.bot.send_message(admin_id, f"👤 <b>User</b> <code>{m.from_user.id}</code>:\n{m.text or '-'}")
-        except Exception as e2:
-            log.error(f"[report] send text to admin failed: {e2}")
-    a_lang = get_user_lang(admin_id) or "en"
-    try:
-        await m.bot.send_message(
-            admin_id,
-            _tf(a_lang, "rchat.user_reply_header", "Reply to the user:"),
-            reply_markup=_admin_controls_kb(m.from_user.id, a_lang)
-        )
-    except Exception:
-        pass
-    # لمس صندوق الوارد
-    content = (m.caption if getattr(m, "caption", None) else m.text) or "(media)"
-    _rin_touch(m.from_user.id, m.from_user.full_name or m.from_user.username or str(m.from_user.id), content)
+    await m.reply(_tx(lang, "rfb.thx_no", "شكرًا، تم تسجيل السبب وسنراجعه.", "Thanks, your reason was recorded and will be reviewed."))
 
 # ===== كولباكات أدوات الأدمن: حظر/إلغاء/معلومات =====
 @router.callback_query(F.data.startswith("rpadm:ban:"))
 async def rpadm_ban(cb: CallbackQuery):
-    if cb.from_user.id not in ADMIN_IDS:
+    if not (await _is_admin(cb.from_user.id)):
         l = get_user_lang(cb.from_user.id) or "en"
-        return await cb.answer(_tf(l,"admins_only","هذه الأداة للأدمن فقط."), show_alert=True)
+        return await cb.answer(_tx(l,"admins_only","هذه الأداة للأدمن فقط.","Admins only."), show_alert=True)
 
     _, _, uid_s, dur_s = cb.data.split(":")  # rpadm:ban:<uid>:<hours|perm>
     uid = int(uid_s)
 
     u_lang = get_user_lang(uid) or "ar"
-    a_lang = get_user_lang(cb.from_user.id) or "en"
 
     if dur_s == "perm":
         _bl_ban(uid, None)
-        # إشعار المستخدم
         try:
-            await cb.bot.send_message(uid, _tf(u_lang, "notify.banned_perm",
-                                               "⛔ تم تقييد ميزة البلاغات لديك بشكل دائم. إن كان ذلك خطأً، تواصل مع الدعم."))
+            await cb.bot.send_message(uid, _tx(u_lang, "notify.banned_perm",
+                                               "⛔ تم تقييد ميزة البلاغات لديك بشكل دائم. إن كان ذلك خطأً، تواصل مع الدعم.",
+                                               "⛔ Reporting feature has been permanently restricted. If this is a mistake, contact support."))
         except Exception:
             pass
         txt = f"🚫 تم حظر {uid} دائمًا."
     else:
         hours = max(1, int(dur_s))
         _bl_ban(uid, hours)
-        # إشعار المستخدم
         try:
             await cb.bot.send_message(
                 uid,
-                _tf(u_lang, "notify.banned_temp",
-                    "⛔ تم تقييد ميزة البلاغات لديك لمدة {time}.").format(
-                    time=_human_hours_label(hours, u_lang))
+                _tx(u_lang, "notify.banned_temp",
+                    "⛔ تم تقييد ميزة البلاغات لديك لمدة {time}.",
+                    "⛔ Reporting feature restricted for {time}.").format(
+                    time=(f"{hours}h" if not u_lang.startswith("ar") else f"{hours} ساعة"))
             )
         except Exception:
             pass
@@ -538,12 +719,11 @@ async def rpadm_ban(cb: CallbackQuery):
 
     await cb.answer(txt, show_alert=True)
 
-
 @router.callback_query(F.data.startswith("rpadm:clearcd:"))
 async def rpadm_clearcd(cb: CallbackQuery):
-    if cb.from_user.id not in ADMIN_IDS:
+    if not (await _is_admin(cb.from_user.id)):
         l = get_user_lang(cb.from_user.id) or "en"
-        return await cb.answer(_tf(l,"admins_only","هذه الأداة للأدمن فقط."), show_alert=True)
+        return await cb.answer(_tx(l,"admins_only","هذه الأداة للأدمن فقط.","Admins only."), show_alert=True)
 
     uid = int(cb.data.split(":")[2])
     st = load_state()
@@ -552,39 +732,39 @@ async def rpadm_clearcd(cb: CallbackQuery):
 
     u_lang = get_user_lang(uid) or "ar"
     try:
-        await cb.bot.send_message(uid, _tf(u_lang, "notify.cooldown_cleared",
-                                           "🧹 تم تصفير مدة التبريد لحسابك. يمكنك فتح بلاغ جديد الآن."))
+        await cb.bot.send_message(uid, _tx(u_lang, "notify.cooldown_cleared",
+                                           "🧹 تم تصفير مدة التبريد لحسابك. يمكنك فتح بلاغ جديد الآن.",
+                                           "🧹 Your cooldown has been cleared. You can open a new ticket now."))
     except Exception:
         pass
 
     a_lang = get_user_lang(cb.from_user.id) or "en"
-    await cb.answer(_tf(a_lang, "rpadm.cleared", "تم تصفير التبريد"), show_alert=True)
-
+    await cb.answer(_tx(a_lang, "rpadm.cleared", "تم تصفير التبريد", "Cooldown cleared"), show_alert=True)
 
 @router.callback_query(F.data.startswith("rpadm:unban:"))
 async def rpadm_unban(cb: CallbackQuery):
-    if cb.from_user.id not in ADMIN_IDS:
+    if not (await _is_admin(cb.from_user.id)):
         l = get_user_lang(cb.from_user.id) or "en"
-        return await cb.answer(_tf(l,"admins_only","هذه الأداة للأدمن فقط."), show_alert=True)
+        return await cb.answer(_tx(l,"admins_only","هذه الأداة للأدمن فقط.","Admins only."), show_alert=True)
 
     uid = int(cb.data.split(":")[2])
     _bl_unban(uid)
 
     u_lang = get_user_lang(uid) or "ar"
     try:
-        await cb.bot.send_message(uid, _tf(u_lang, "notify.unbanned",
-                                           "✅ تم رفع التقييد عن ميزة البلاغات لديك. يمكنك استخدام /report الآن."))
+        await cb.bot.send_message(uid, _tx(u_lang, "notify.unbanned",
+                                           "✅ تم رفع التقييد عن ميزة البلاغات لديك. يمكنك استخدام /report الآن.",
+                                           "✅ Reporting restriction lifted. You can use /report now."))
     except Exception:
         pass
 
     await cb.answer(f"✅ تم إلغاء الحظر عن {uid}.", show_alert=True)
 
-
 @router.callback_query(F.data.startswith("rpadm:info:"))
 async def rpadm_info(cb: CallbackQuery):
-    if not _is_admin(cb.from_user.id):
+    if not (await _is_admin(cb.from_user.id)):
         l = get_user_lang(cb.from_user.id) or "en"
-        return await cb.answer(_tf(l, "admins_only", "هذه الأداة للأدمن فقط."), show_alert=True)
+        return await cb.answer(_tx(l, "admins_only", "هذه الأداة للأدمن فقط.", "Admins only."), show_alert=True)
     uid = int(cb.data.split(":")[2])
     blocked, remain = _bl_is_blocked(uid)
     bl_line = f"{'Blocked' if blocked else 'Not blocked'}" + (f" — {remain}" if blocked and remain else "")
@@ -603,13 +783,13 @@ async def rpadm_info(cb: CallbackQuery):
         pass
     await cb.answer()
 
-# ===== أوامر سلاش للأدمن =====
-def _only_admin(m: Message) -> bool:
-    return bool(m.from_user and (m.from_user.id in ADMIN_IDS))
+# ===== أوامر سلاش مختصرة للأدمن =====
+async def _only_admin(m: Message) -> bool:
+    return bool(m.from_user and (await _is_admin(m.from_user.id)))
 
 @router.message(Command("rinfo"))
 async def cmd_rinfo(m: Message):
-    if not _only_admin(m): return
+    if not (await _only_admin(m)): return
     parts = (m.text or "").split()
     if len(parts) < 2: return await m.reply("Usage: /rinfo <uid>")
     uid = int(parts[1])
@@ -624,7 +804,7 @@ async def cmd_rinfo(m: Message):
 
 @router.message(Command("rban"))
 async def cmd_rban(m: Message):
-    if not _only_admin(m): return
+    if not (await _only_admin(m)): return
     parts = (m.text or "").split()
     if len(parts) < 3: return await m.reply("Usage: /rban <uid> <hours|perm>")
     uid = int(parts[1]); dur = parts[2].lower()
@@ -638,7 +818,7 @@ async def cmd_rban(m: Message):
 
 @router.message(Command("runban"))
 async def cmd_runban(m: Message):
-    if not _only_admin(m): return
+    if not (await _only_admin(m)): return
     parts = (m.text or "").split()
     if len(parts) < 2: return await m.reply("Usage: /runban <uid>")
     uid = int(parts[1]); _bl_unban(uid); await m.reply(f"✅ تم إلغاء الحظر عن {uid}.")

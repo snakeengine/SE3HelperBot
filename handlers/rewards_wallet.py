@@ -12,7 +12,7 @@ from aiogram.types import (
     ReplyKeyboardRemove
 )
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from aiogram.filters import Command
+from aiogram.filters import Command, StateFilter
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.exceptions import TelegramBadRequest
@@ -25,6 +25,9 @@ from utils.rewards_store import ensure_user, add_points, is_blocked, can_do
 
 # ✅ بوابة الاشتراك الإلزامي
 from .rewards_gate import require_membership
+
+# ✅ منع التضارب مع الدردشة الحيّة
+from handlers.live_chat import LiveChat
 
 # --- settings ---
 import os
@@ -42,7 +45,12 @@ except Exception:
             return True
         return False
 
+# ===== Router (تعريف واحد فقط) =====
 router = Router(name="rewards_wallet")
+# اشتغل بالخاص فقط + لا تعمل أثناء LiveChat.active
+router.message.filter(F.chat.type == "private", ~StateFilter(LiveChat.active))
+router.callback_query.filter(F.message.chat.type == "private", ~StateFilter(LiveChat.active))
+
 log = logging.getLogger(__name__)
 
 # ===================== Helpers =====================
@@ -111,7 +119,6 @@ def _tx_amount_text(lang: str, display: str) -> str:
         "wallet.tx_amount_username",
         "أدخل المبلغ (عدد صحيح أكبر من 0) لإرساله إلى {who}."
     ).format(who=display)
-    # تلميح الحد الأدنى
     hint = t(lang, "wallet.min_hint", "(الحد الأدنى {n} نقطة)").format(n=MIN_TRANSFER_POINTS)
     return f"{base}\n{hint}"
 
@@ -132,7 +139,6 @@ def _normalize_username(raw: str) -> Optional[str]:
     if "t.me/" in raw:
         try:
             after = raw.split("t.me/", 1)[1]
-            # احذف أي مسار/استعلام/هاش لاحق
             after = after.split("/", 1)[0]
             after = after.split("?", 1)[0]
             after = after.split("#", 1)[0]
@@ -149,34 +155,27 @@ def _normalize_username(raw: str) -> Optional[str]:
 
 async def _resolve_user_identifier(bot, raw: str) -> Tuple[int, str]:
     """
-    يحاول إرجاع (user_id, display) من:
-      - @username / t.me/username  → get_chat('@username') يعمل فقط إن كان المستخدم بدأ محادثة مع البوت
-      - رقم User ID               → يقبل مباشرة (display = ID#)
-    إن فشل حل @username سنرمي خطأ ليظهر للمستخدم اقتراحات بديلة (اختيار مستلم / إعادة توجيه).
+    يرجع (user_id, display) من:
+    - @username / t.me/username → يعمل فقط إن كان المستخدم بدأ محادثة مع البوت
+    - رقم User ID               → يقبل مباشرة (display = ID#)
     """
     raw = (raw or "").strip()
 
-    # 1) حاول كـ username
     uname = _normalize_username(raw)
     if uname:
         try:
             chat = await bot.get_chat(f"@{uname}")
-            # سيعمل فقط إذا المستخدم بدأ محادثة مع البوت – وإلا سيفشل
             if chat.type == ChatType.PRIVATE:
                 display = f"@{uname}"
                 return int(chat.id), display
             else:
-                # هذا username لمجموعة/قناة
                 raise ValueError("username_is_not_user")
         except Exception as e:
-            # غير قابل للحل للمستخدمين الذين لم يبدؤوا محادثة مع البوت
             raise ValueError("username_not_resolvable") from e
 
-    # 2) fallback: رقم User ID
     if raw.isdigit():
         return int(raw), f"ID#{raw}"
 
-    # لا صالح
     raise ValueError("target_invalid")
 
 # ============ Reply Keyboard (Request User) ============
@@ -185,7 +184,10 @@ def _pick_user_rk(lang: str) -> ReplyKeyboardMarkup:
         keyboard=[[
             KeyboardButton(
                 text=t(lang, "wallet.pick_user", "📇 اختيار مستلم"),
-                request_user=KeyboardButtonRequestUser(request_id=1)
+                request_user=KeyboardButtonRequestUser(
+                    request_id=1,
+                    user_is_bot=False  # 👈 لا تسمح باختيار بوت
+                )
             )
         ], [
             KeyboardButton(text=t(lang, "wallet.cancel_rk", "إلغاء"))
@@ -284,7 +286,7 @@ async def cb_tx_start(cb: CallbackQuery, state: FSMContext):
         await state.set_state(TxStates.wait_target)
         await state.update_data(msg_owner_id=uid)
 
-        # 1) نحرر رسالة المراحل
+        # 1) شاشة التعليمات
         await _safe_edit(
             cb,
             text=_tx_intro_text(lang),
@@ -292,7 +294,7 @@ async def cb_tx_start(cb: CallbackQuery, state: FSMContext):
                 InlineKeyboardButton(text=t(lang, "wallet.back", "⬅️ رجوع"), callback_data="rwd:wal:back")
             )
         )
-        # 2) نرسل ReplyKeyboard لطلب مستخدم مضمون
+        # 2) ReplyKeyboard لطلب مستخدم مضمون
         await cb.message.answer(
             t(lang, "wallet.pick_user_tip", "أو اضغط «📇 اختيار مستلم» لمشاركة الحساب مباشرةً."),
             reply_markup=_pick_user_rk(lang)
@@ -301,109 +303,85 @@ async def cb_tx_start(cb: CallbackQuery, state: FSMContext):
     # ✅ كابتشا خفيفة قبل البدء + استئناف تلقائي
     await ensure_human_then(cb, level="normal", resume=_start_flow)
 
-# ---- Collect target by username / ID (text)
-@router.message(TxStates.wait_target, F.text)
-async def tx_get_target_text(msg: Message, state: FSMContext):
+# ---- Collect target (user_shared / forward / text)
+@router.message(StateFilter(TxStates.wait_target))
+async def tx_get_target_any(msg: Message, state: FSMContext):
     uid = msg.from_user.id
     lang = _L(uid)
 
-    txt = (msg.text or "").strip()
-
-    # زر "إلغاء" في الكيبورد
+    # إلغاء
+    txt = (msg.text or "").strip() if msg.text else ""
     if txt in {"إلغاء", "الغاء", "Cancel", "cancel"}:
         await state.clear()
         await msg.answer(t(lang, "common.cancelled", "تم الإلغاء."), reply_markup=ReplyKeyboardRemove())
-        await open_wallet(msg, edit=False)
-        return
+        return await open_wallet(msg, edit=False)
 
-    try:
-        target_id, display = await _resolve_user_identifier(msg.bot, txt)
-    except ValueError as e:
-        code = str(e)
-        if code == "username_is_not_user":
-            await msg.reply(
-                t(lang, "wallet.target_is_not_user",
-                  "المعرف يعود لقناة/مجموعة وليس لحساب شخصي. رجاءً أرسل @username لشخص."),
-                reply_markup=_pick_user_rk(lang)
-            )
-        elif code in {"username_not_resolvable", "target_invalid"}:
-            await msg.reply(
-                t(lang, "wallet.target_username_not_found",
-                  "لم أتمكّن من العثور على مستخدم بهذا المعرف. "
-                  "إذا كان @username صحيحًا لكنه لم يبدَأ محادثة مع البوت، "
-                  "اضغط «📇 اختيار مستلم» أو أعد توجيه رسالة من ذلك المستخدم هنا."),
-                reply_markup=_pick_user_rk(lang)
-            )
-        else:
-            await msg.reply(
-                t(lang, "wallet.target_invalid_username",
-                  "أرسل @username صحيحًا أو رابط t.me/username (ويمكن إدخال ID رقمي عند الحاجة)."),
-                reply_markup=_pick_user_rk(lang)
-            )
-        return
-
-    if target_id == uid:
-        await msg.reply(t(lang, "wallet.target_self", "لا يمكنك تحويل النقاط لنفسك."))
-        return
-
-    await state.update_data(target_id=target_id, target_display=display)
-    await state.set_state(TxStates.wait_amount)
-    await msg.answer(_tx_amount_text(lang, display), reply_markup=ReplyKeyboardRemove())
-
-# ---- Collect target by "Request User" button (user_shared)
-@router.message(TxStates.wait_target, F.user_shared)
-async def tx_get_target_user_shared(msg: Message, state: FSMContext):
-    uid = msg.from_user.id
-    lang = _L(uid)
-
-    shared = msg.user_shared
-    target_id = int(shared.user_id)
-    if target_id == uid:
-        await msg.reply(t(lang, "wallet.target_self", "لا يمكنك تحويل النقاط لنفسك."), reply_markup=ReplyKeyboardRemove())
-        return
-
-    display = f"ID#{target_id}"  # قد لا نعرف username هنا لكن الـ id مضمون
-    await state.update_data(target_id=target_id, target_display=display)
-    await state.set_state(TxStates.wait_amount)
-    await msg.answer(_tx_amount_text(lang, display), reply_markup=ReplyKeyboardRemove())
-
-# ---- Collect target by forwarding a message from the user
-@router.message(TxStates.wait_target, F.forward_from | F.forward_origin)
-async def tx_get_target_forward(msg: Message, state: FSMContext):
-    uid = msg.from_user.id
-    lang = _L(uid)
-
+    # 1) مشاركة مستخدم (UserShared أو UsersShared)
     target_id: Optional[int] = None
+    try:
+        if getattr(msg, "user_shared", None):
+            target_id = int(msg.user_shared.user_id)
+        elif getattr(msg, "users_shared", None) and msg.users_shared.users:
+            target_id = int(msg.users_shared.users[0].user_id)
+    except Exception:
+        target_id = None
 
-    # قد تتوفر خاصية forward_from في بعض الحالات
-    if getattr(msg, "forward_from", None):
-        target_id = int(msg.forward_from.id)
-    else:
-        # Aiogram v3: forward_origin قد يكون MessageOriginUser
-        origin = getattr(msg, "forward_origin", None)
-        if isinstance(origin, MessageOriginUser) and getattr(origin, "sender_user", None):
-            target_id = int(origin.sender_user.id)
-
+    # 2) إعادة توجيه
     if not target_id:
-        await msg.reply(
-            t(lang, "wallet.forward_hidden",
-              "لا يمكن قراءة هوية صاحب الرسالة بسبب إعدادات الخصوصية. "
-              "استخدم زر «📇 اختيار مستلم» أو اطلب من المستلم بدء محادثة مع البوت."),
-            reply_markup=_pick_user_rk(lang)
-        )
-        return
+        if getattr(msg, "forward_from", None):
+            target_id = int(msg.forward_from.id)
+        else:
+            origin = getattr(msg, "forward_origin", None)
+            if isinstance(origin, MessageOriginUser) and getattr(origin, "sender_user", None):
+                target_id = int(origin.sender_user.id)
 
-    if target_id == uid:
-        await msg.reply(t(lang, "wallet.target_self", "لا يمكنك تحويل النقاط لنفسك."), reply_markup=ReplyKeyboardRemove())
-        return
+    # 3) نص: @username / t.me/username / ID
+    display: Optional[str] = None
+    if not target_id and txt:
+        try:
+            target_id, display = await _resolve_user_identifier(msg.bot, txt)
+        except ValueError as e:
+            code = str(e)
+            if code == "username_is_not_user":
+                return await msg.reply(
+                    t(lang, "wallet.target_is_not_user",
+                      "المعرف يعود لقناة/مجموعة وليس لحساب شخصي. رجاءً أرسل @username لشخص."),
+                    reply_markup=_pick_user_rk(lang)
+                )
+            elif code in {"username_not_resolvable", "target_invalid"}:
+                return await msg.reply(
+                    t(lang, "wallet.target_username_not_found",
+                      "لم أتمكّن من العثور على مستخدم بهذا المعرف. "
+                      "إذا كان @username صحيحًا لكنه لم يبدَأ محادثة مع البوت، "
+                      "اضغط «📇 اختيار مستلم» أو أعد توجيه رسالة من ذلك المستخدم هنا."),
+                    reply_markup=_pick_user_rk(lang)
+                )
+            else:
+                return await msg.reply(
+                    t(lang, "wallet.target_invalid_username",
+                      "أرسل @username صحيحًا أو رابط t.me/username (ويمكن إدخال ID رقمي عند الحاجة)."),
+                    reply_markup=_pick_user_rk(lang)
+                )
 
-    display = f"ID#{target_id}"
-    await state.update_data(target_id=target_id, target_display=display)
-    await state.set_state(TxStates.wait_amount)
-    await msg.answer(_tx_amount_text(lang, display), reply_markup=ReplyKeyboardRemove())
+    if target_id:
+        if target_id == uid:
+            return await msg.reply(t(lang, "wallet.target_self", "لا يمكنك تحويل النقاط لنفسك."),
+                                   reply_markup=ReplyKeyboardRemove())
+        if not display:
+            display = f"ID#{target_id}"
+        await state.update_data(target_id=target_id, target_display=display)
+        await state.set_state(TxStates.wait_amount)
+        return await msg.answer(_tx_amount_text(lang, display), reply_markup=ReplyKeyboardRemove())
+
+    # لم نتمكن من التعرف على المستلم
+    await msg.reply(
+        t(lang, "wallet.target_username_not_found",
+          "لم أتمكّن من التعرّف على المستلم. استخدم «📇 اختيار مستلم» أو أعد توجيه رسالة من ذلك المستخدم."),
+        reply_markup=_pick_user_rk(lang)
+    )
 
 # ---- Collect amount
-@router.message(TxStates.wait_amount)
+@router.message(StateFilter(TxStates.wait_amount))
 async def tx_get_amount(msg: Message, state: FSMContext):
     uid = msg.from_user.id
     lang = _L(uid)

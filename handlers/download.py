@@ -7,7 +7,7 @@ from lang import t, get_user_lang
 
 router = Router()
 
-DEFAULT_APK_URL = "https://example.com/app-latest.apk"
+DEFAULT_APK_URL = "https://www.mediafire.com/file/gjd3dx7ztdlbtdl/SE_2.0.6.apk/file"
 
 def _get_download_url(lang: str) -> str:
     # يحاول من الترجمة، ثم من ENV، ثم الافتراضي

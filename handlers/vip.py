@@ -13,6 +13,7 @@ from aiogram.types import (
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest
+from aiogram.filters import StateFilter  # إضافة الاستيراد
 
 from lang import t, get_user_lang
 from utils.vip_store import (
@@ -190,6 +191,18 @@ def _admin_review_kb(user_id: int, app_id: str, lang: str) -> InlineKeyboardMark
     return kb.as_markup()
 
 # ===== نقاط الدخول =====
+
+# نص حر لا يبدأ بشرطة مائلة (ليس أمراً)
+CMD_FREE_TEXT = F.text.func(lambda s: isinstance(s, str) and not s.lstrip().startswith("/"))
+
+# أمر إلغاء عام لأي حالة VIP
+@router.message(Command("cancel"))
+async def vip_cancel_cmd(m: Message, state: FSMContext):
+    if await state.get_state():
+        await state.clear()
+        lang = get_user_lang(m.from_user.id) or "ar"
+        await m.reply(t(lang, "vip.cancelled") or "تم إلغاء العملية. يمكنك استخدام /start أو /help.")
+
 @router.message(Command("vip"))
 async def vip_cmd(msg: Message, state: FSMContext):
     await state.clear()
@@ -281,7 +294,7 @@ async def vip_apply(cb: CallbackQuery, state: FSMContext):
 async def vip_retry(cb: CallbackQuery, state: FSMContext):
     return await vip_apply(cb, state)
 
-@router.message(VipApplyFSM.waiting_app_id)
+@router.message(StateFilter(VipApplyFSM.waiting_app_id), CMD_FREE_TEXT)
 async def vip_receive_appid(msg: Message, state: FSMContext):
     lang = get_user_lang(msg.from_user.id) or "en"
     app_id_raw = (msg.text or "").strip()
@@ -396,7 +409,7 @@ async def vip_apply_confirm(cb: CallbackQuery, state: FSMContext):
     await cb.answer()
 
 # ===== استلام معلومات البائع =====
-@router.message(VipApplyFSM.waiting_seller)
+@router.message(StateFilter(VipApplyFSM.waiting_seller), CMD_FREE_TEXT)
 async def vip_apply_seller(msg: Message, state: FSMContext):
     lang = get_user_lang(msg.from_user.id) or "en"
     raw = (msg.text or "").strip()
@@ -696,7 +709,7 @@ async def vip_approve_secs_start(cb: CallbackQuery, state: FSMContext):
                             parse_mode=ParseMode.MARKDOWN)
     await cb.answer()
 
-@router.message(AdminCustomSecsFSM.waiting_secs)
+@router.message(StateFilter(AdminCustomSecsFSM.waiting_secs), CMD_FREE_TEXT)
 async def vip_approve_secs_recv(msg: Message, state: FSMContext):
     lang = get_user_lang(msg.from_user.id) or "en"
     raw = (msg.text or "").strip()

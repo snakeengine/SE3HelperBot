@@ -1,0 +1,15 @@
+.venv/
+venv/
+__pycache__/
+*.log
+*.sqlite
+*.db
+.env
+.DS_Store
+.git/
+*.apk
+*.aab
+downloads/
+tmp/
+build/
+dist/

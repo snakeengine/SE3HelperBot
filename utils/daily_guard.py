@@ -6,11 +6,14 @@ import time
 from typing import Tuple
 
 from lang import t, get_user_lang
-from utils.rewards_store import ensure_user, add_points
+from utils.rewards_store import ensure_user, add_points, mark_action
 
 # إعدادات قابلة للضبط من البيئة
 DEFAULT_DAILY_REWARD = int(os.getenv("DAILY_REWARD", "10"))
 DEFAULT_INTERVAL_HOURS = int(os.getenv("DAILY_INTERVAL_HOURS", "24"))
+
+# المفتاح الذي سنحفظ تحته ختم آخر مطالبة داخل last_actions
+_DAILY_ACTION_KEY = "daily24"  # اسم واضح يخص نظام الـ 24 ساعة
 
 def _L(uid: int) -> str:
     return get_user_lang(uid) or "ar"
@@ -33,16 +36,37 @@ def _fmt_remaining(sec: int, lang: str) -> str:
         return f"{h:02d}:{m:02d}:{s:02d}"
     return f"{m:02d}:{s:02d}"
 
-def can_claim_daily(uid: int, interval_hours: int = DEFAULT_INTERVAL_HOURS) -> Tuple[bool, int]:
-    """يرجع (مسموح؟, الثواني المتبقية)."""
+def _get_last_claim_ts(uid: int) -> int:
+    """
+    نقرأ ختم آخر مطالبة من:
+      1) last_actions[daily24] (الجديد)
+      2) last_actions[daily]   (لو كان موجودًا قديمًا)
+      3) last_claim            (توافقًا إن كانت موجودة من أنظمة أخرى)
+    """
     u = ensure_user(uid)
-    last = int(u.get("last_claim") or 0)
+    la = (u or {}).get("last_actions") or {}
+    for k in (_DAILY_ACTION_KEY, "daily"):
+        try:
+            v = int(la.get(k) or 0)
+            if v > 0:
+                return v
+        except Exception:
+            pass
+    try:
+        return int((u or {}).get("last_claim") or 0)
+    except Exception:
+        return 0
+
+def can_claim_daily(uid: int, interval_hours: int = DEFAULT_INTERVAL_HOURS) -> Tuple[bool, int]:
+    """
+    يرجع (مسموح؟, الثواني المتبقية) بناءً على ختم *فعلي* محفوظ في التخزين.
+    """
+    last = _get_last_claim_ts(uid)
     now = int(time.time())
-    gap = now - last
     need = int(interval_hours * 3600)
-    if last == 0 or gap >= need:
+    if last == 0 or (now - last) >= need:
         return True, 0
-    return False, need - gap
+    return False, need - (now - last)
 
 def try_claim_daily(
     uid: int,
@@ -68,12 +92,12 @@ def try_claim_daily(
 
     # أضف النقاط وسجّل العملية
     add_points(uid, amount, typ="daily", reason="daily")
-    # ثبّت التوقيت الأخير — (حتى لو كانت add_points لا تحدّثه)
-    try:
-        ensure_user(uid)["last_claim"] = int(time.time())
-    except Exception:
-        pass
 
+    # ✅ احفظ توقيت آخر مطالبة بشكل دائم داخل last_actions
+    now_ts = int(time.time())
+    mark_action(uid, _DAILY_ACTION_KEY, when=now_ts)
+
+    # ملاحظة: لا حاجة لتغيير حقول أخرى مثل streak هنا، لأننا نستهدف فقط 24 ساعة حقيقية.
     msg = _tt(
         lang, "rewards.daily.ok",
         "أُضيفت {amount} نقطة ✅"

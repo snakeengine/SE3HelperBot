@@ -5,6 +5,7 @@ import re, logging, unicodedata
 from aiogram import Router, F
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.enums import ParseMode
+from aiogram.filters import StateFilter
 
 from lang import t, get_user_lang
 from handlers.home_menu import section_text
@@ -13,8 +14,14 @@ try:
 except Exception:
     _section_render = None
 
+# منع التعارض مع الدردشة الحيّة
+from handlers.live_chat import LiveChat
+
 log = logging.getLogger(__name__)
 router = Router(name="menu_buttons")
+
+# عطّل هذا الروتر أثناء الدردشة الحيّة
+router.message.filter(~StateFilter(LiveChat.active))
 
 # ---------- تطبيع عربي/إنجليزي قوي ----------
 _AR_MAP = str.maketrans({
@@ -35,7 +42,7 @@ def _normalize(s: str) -> str:
     s = re.sub(r"\s+", " ", s)
     return s
 
-# ---------- مفاتيح الأزرار المدعومة (بدون صف "مجموعاتي") ----------
+# ---------- مفاتيح الأزرار المدعومة ----------
 _PAIRS = [
     ("user",    ("المستخدم", "user")),
     ("premium", ("بريميوم", "premium", "vip")),
@@ -70,7 +77,7 @@ def _kb_for_section(key: str, lang: str) -> InlineKeyboardMarkup | None:
         ])
     return None
 
-# ---------- الهاندلر المباشر لأزرار الريـپلاي ----------
+# ---------- الهاندلر المباشر لأزرار الريـبلاي ----------
 @router.message(F.chat.type == "private", F.text.func(lambda s: bool(_detect_key(s))))
 async def on_menu_button(m: Message):
     lang = get_user_lang(m.from_user.id) or "ar"
@@ -97,3 +104,4 @@ async def on_menu_button(m: Message):
         parse_mode=ParseMode.HTML,
         disable_web_page_preview=False
     )
+    return

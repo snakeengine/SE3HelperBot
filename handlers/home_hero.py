@@ -10,9 +10,48 @@ from aiogram.types import Message, InlineKeyboardButton, CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from lang import t, get_user_lang
-from utils.home_card_cfg import get_cfg
+from aiogram.filters import StateFilter
+from handlers.report import report_cmd  # لفتح فلو البلاغ مباشرة
+from aiogram.fsm.context import FSMContext
+from aiogram.exceptions import TelegramBadRequest
 
+# نستخدم الدوال من report.py بدل استدعاء report_cmd
+from handlers.report import (
+    _is_admin, load_settings, _bl_is_blocked, _next_allowed_dt,
+    human_remaining, ReportState
+)
+from lang import t, get_user_lang
+import datetime
+
+
+try:
+    from utils.home_card_cfg import get_cfg
+except Exception:
+    def get_cfg() -> dict:
+        return {}
+
+# --- Feature flags guard (with safe fallback)
+try:
+    from utils.feature_flags import is_enabled
+except Exception:
+    def is_enabled(_name: str, *, user_id: int | None = None) -> bool:
+        # لو ما فيه ملف الأعلام، اعتبر كل شيء مفعّل
+        return True
+
+ 
+    
 router = Router(name="home_hero")
+
+# امنع التفاعل أثناء الدردشة الحيّة + واحد-لواحد (خاص فقط)
+try:
+    from handlers.live_chat import LiveChat
+except Exception:
+    class LiveChat:
+        active = None
+
+router.message.filter(F.chat.type == "private", ~StateFilter(getattr(LiveChat, "active", None)))
+router.callback_query.filter(F.message.chat.type == "private", ~StateFilter(getattr(LiveChat, "active", None)))
+
 
 # --------- أدوار واقعية (مع fallbacks آمنة) ---------
 try:
@@ -141,28 +180,19 @@ CB = {
 
 # --------- أزرار القائمة الرئيسية (2×2 دائماً) ---------
 def _build_main_kb(lang: str, *, is_vip: bool, is_promoter: bool, is_supplier: bool):
-    """
-    ترتيب 2×2 بالكامل، مع رفع VIP والمورّد للأعلى، وإظهار زر البث لجميع المستخدمين.
-    """
     kb = InlineKeyboardBuilder(); row = kb.row
 
+    # السطر 1 — شراء/تنشيط (منفرد)
     row(
         InlineKeyboardButton(
             text="🛒 " + _k(lang, "btn_sevip_buy",
                        "شراء/تنشيط اشتراك SEVIP" if lang == "ar" else "Buy/Activate SEVIP"),
-            callback_data="shop:sevip"  # سنربطه بالدفع لاحقًا
+            callback_data="shop:sevip"
         )
     )
-    # الصف 1 — أعلى أولوية
+
+    # السطر 2
     row(
-        InlineKeyboardButton(
-            text="👑 " + (
-                _k(lang, "btn_vip_panel", "لوحة VIP" if lang == "ar" else "VIP Panel")
-                if is_vip else
-                _k(lang, "btn_vip_subscribe", "الاشتراك VIP" if lang == "ar" else "Subscribe VIP")
-            ),
-            callback_data=(CB["VIP_PANEL"] if is_vip else CB["VIP_OPEN"])
-        ),
         InlineKeyboardButton(
             text="🛍️ " + (
                 _k(lang, "btn_supplier_panel", "لوحة المورّد" if lang == "ar" else "Supplier Panel")
@@ -171,25 +201,17 @@ def _build_main_kb(lang: str, *, is_vip: bool, is_promoter: bool, is_supplier: b
             ),
             callback_data=(CB["SUPPLIER_PUBLIC"] if is_supplier else CB["RESELLER_INFO"])
         ),
-    )
-
-    # الصف 2 — إشعارات + تنزيل
-    row(
         InlineKeyboardButton(
-            text="📬 " + _k(lang, "btn_alerts_inbox", "صندوق الإشعارات" if lang == "ar" else "Alerts Inbox"),
-            callback_data="inb:back"
-        ),
-        InlineKeyboardButton(
-            text="📥 " + _k(lang, "btn_download", "تحميل تطبيق الثعبان" if lang == "ar" else "Download App"),
+            text="📥 " + _k(lang, "btn_download", "تثبيت تطبيق ثعبان" if lang == "ar" else "Download App"),
             callback_data=CB["APP_DOWNLOAD"]
         ),
     )
 
-    # الصف 3 — أدوات + جوائز
+    # السطر 3
     row(
         InlineKeyboardButton(
-            text="🎛️ " + _k(lang, "btn_game_tools", "أدوات وتعديلات الألعاب" if lang == "ar" else "Game Mods & Tools"),
-            callback_data=CB["TOOLS"]
+            text="📬 " + _k(lang, "btn_alerts_inbox", "صندوق الإشعارات" if lang == "ar" else "Alerts Inbox"),
+            callback_data="inb:back"
         ),
         InlineKeyboardButton(
             text="🎁 " + _k(lang, "btn_rewards", "الجوائز" if lang == "ar" else "Rewards"),
@@ -197,11 +219,11 @@ def _build_main_kb(lang: str, *, is_vip: bool, is_promoter: bool, is_supplier: b
         ),
     )
 
-    # الصف 4 — موردون موثوقون + تحقق من الجهاز
+    # السطر 4
     row(
         InlineKeyboardButton(
-            text="🏷️ " + _k(lang, "btn_trusted_suppliers", "المورّدون الموثوقون" if lang == "ar" else "Official suppliers"),
-            callback_data=CB["TRUSTED_SUPPLIERS"]
+            text="🎛️ " + _k(lang, "btn_game_tools", " أدوات الألعاب" if lang == "ar" else "Game Tools"),
+            callback_data=CB["TOOLS"]
         ),
         InlineKeyboardButton(
             text="📱 " + _k(lang, "btn_check_device", "تحقق من جهازك" if lang == "ar" else "Check your device"),
@@ -209,53 +231,51 @@ def _build_main_kb(lang: str, *, is_vip: bool, is_promoter: bool, is_supplier: b
         ),
     )
 
-    # الصف 5 — أمان الاستخدام
+    # السطر 5
     row(
+        InlineKeyboardButton(
+            text="🏷️ " + _k(lang, "btn_trusted_suppliers", "المورّدون الموثوقون" if lang == "ar" else "Official suppliers"),
+            callback_data=CB["TRUSTED_SUPPLIERS"]
+        ),
         InlineKeyboardButton(
             text="🧠 " + _k(lang, "btn_safe_usage", "دليل الاستخدام الآمن" if lang == "ar" else "Safe Usage Guide"),
             callback_data=CB["SAFE_USAGE"]
         ),
-        InlineKeyboardButton(
-            text="🛡️ " + _k(lang, "btn_security", "حالة الأمان" if lang == "ar" else "Security Status"),
-            callback_data=CB["SECURITY_STATUS"]
-        ),
     )
 
-    # الصف 6 — الحالة + اللغة
+    # السطر 6
     row(
         InlineKeyboardButton(
-            text="📊 " + _k(lang, "btn_server_status", "حالة السيرفرات" if lang == "ar" else "Server Status"),
-            callback_data=CB["SERVER_STATUS"]
+            text="🌐 " + _k(lang, "btn_lang", "اللغة" if lang == "ar" else "Change Language"),
+            callback_data=CB["LANG"]
         ),
         InlineKeyboardButton(
-            text="🌐 " + _k(lang, "btn_lang", "تغيير اللغة" if lang == "ar" else "Change Language"),
-            callback_data=CB["LANG"]
+            text="📞 " + _k(lang, "btn_contact", "الدعم" if lang == "ar" else "Support"),
+            callback_data=CB["REPORT"]
         ),
     )
 
-    # الصف 7 — زر البث للجميع + أزرار خاصة حسب الدور
+    # السطر 7 — بث + (لوحة المروّجين أو كيف تصبح مروّجًا)
     live_n = _count_live()
     live_label = _k(lang, "btn_promoter_live", "بث مباشر للمروّجين" if lang == "ar" else "Promoters Live")
     if live_n > 0:
         live_label = f"{live_label} ({live_n})"
 
     if is_promoter:
-        # مروّج: زر البث + لوحة المروّجين
         row(
             InlineKeyboardButton(text="🎥 " + live_label, callback_data=CB["PROMO_LIVE"]),
-            InlineKeyboardButton(text="📣 " + _k(lang, "btn_promoter_panel", "لوحة المروّجين" if lang == "ar" else "Promoter Panel"), callback_data=CB["PROMO_PANEL"]),
+            InlineKeyboardButton(text="📣 " + _k(lang, "btn_promoter_panel", "لوحة المروّجين" if lang == "ar" else "Promoter Panel"),
+                                 callback_data=CB["PROMO_PANEL"]),
         )
     else:
-        # مستخدم غير مروّج: زر البث + دعم، ثم صف "كيف تصبح مروّجًا؟"
         row(
             InlineKeyboardButton(text="🎥 " + live_label, callback_data=CB["PROMO_LIVE"]),
-            InlineKeyboardButton(text="📞 " + _k(lang, "btn_contact", "الدعم" if lang == "ar" else "Support"), callback_data=CB["REPORT"]),
-        )
-        row(
-            InlineKeyboardButton(text="📣 " + _k(lang, "btn_be_promoter", "كيف تصبح مُروّجًا؟" if lang == "ar" else "Become a promoter?"), callback_data=CB["PROMO_INFO"]),
+            InlineKeyboardButton(text="📣 " + _k(lang, "btn_be_promoter", "كيف تصبح مُروّجًا؟" if lang == "ar" else "Become a promoter?"),
+                                 callback_data=CB["PROMO_INFO"]),
         )
 
     return kb.as_markup()
+
 
 # ===== (الإعدادات الحالية كقيم أولية – سنقوم بتطبيق override ديناميكي لاحقًا) =====
 cfg = get_cfg()
@@ -401,9 +421,6 @@ def _hero_html(
 
 # --------- العرض ---------
 async def render_home_card(message: Message, *, lang: str | None = None):
-    """
-    يرسل بطاقة ترحيب HTML مع أزرار 2×2 وتحوّل ديناميكي للأزرار (VIP/مروّج/مورّد).
-    """
     _lang = (lang or get_user_lang(message.from_user.id) or "en").strip().lower()
     if _lang not in {"ar", "en"}:
         _lang = "en"
@@ -464,23 +481,206 @@ async def _alias_supplier_panel(cb: CallbackQuery):
     except Exception:
         pass
 
+# ======== دعم: نص + أزرار (الدردشة الحيّة + فتح بلاغ) ========
+def _support_text(lang: str) -> str:
+    if str(lang).lower().startswith("ar"):
+        return (
+            "🆘 لفتح قناة الدعم اضغط على الأمر التالي ثم اتبع التعليمات:\n"
+            "/report\n\n"
+            "أو اختر <b>الدردشة الحيّة الآن</b> للتحدث فورًا مع أحد المشرفين .\n\n"
+            "📎 أرفق لقطة شاشة لعملية الدفع + اسم البائع الخاص بك."
+        )
+    return (
+        "🆘 To contact support, tap this command and follow the steps:\n"
+        "/report\n\n"
+        "Or choose <b>Live chat now</b> to talk directly with an admin .\n\n"
+        "📎 Please attach a payment screenshot + your seller’s name."
+    )
+
+
+def _support_kb(lang: str):
+    kb = InlineKeyboardBuilder()
+    kb.row(
+        InlineKeyboardButton(
+            text=("💬 الدردشة الحيّة الآن" if lang=="ar" else "💬 Live chat now"),
+            callback_data="bot:live"  # يتوافق مع live_chat.py
+        )
+    )
+    kb.row(
+        InlineKeyboardButton(
+            text=("🆘 فتح بلاغ" if lang=="ar" else "🆘 Open report"),
+            callback_data="support:report"
+        )
+    )
+    kb.row(
+        InlineKeyboardButton(
+            text=("⬅️ رجوع للقائمة" if lang=="ar" else "⬅️ Back to menu"),
+            callback_data="back_to_menu"
+        )
+    )
+    return kb.as_markup()
+
+
+def _feature_disabled_msg(lang: str) -> str:
+    return (t(lang, "feature.disabled")
+            or ("❌ هذا القسم غير متاح حالياً." if lang == "ar" else "❌ This section is currently unavailable."))
+
 @router.callback_query(F.data.in_({"report", "report:open"}))
 async def _alias_open_report(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
-    if lang == "ar":
-        text = (
-            "🆘 لفتح قناة الدعم اضغط على الأمر التالي ثم اتبع التعليمات:\n"
-            "/report\n\n"
-            "📎 أرفق لقطة شاشة لعملية الدفع + اسم البائع الخاص بك."
-        )
-    else:
-        text = (
-            "🆘 To contact support, tap this command and follow the steps:\n"
-            "/report\n\n"
-            "📎 Please attach a payment screenshot + your seller’s name."
-        )
+    if not is_enabled("support", user_id=cb.from_user.id):
+        return await cb.answer(_feature_disabled_msg(lang), show_alert=True)
+
     try:
-        await cb.message.answer(text, disable_web_page_preview=True)
+        await cb.message.answer(
+            _support_text(lang),
+            reply_markup=_support_kb(lang),
+            disable_web_page_preview=True,
+            parse_mode="HTML",
+        )
     except Exception:
         pass
     await cb.answer()
+
+@router.callback_query(F.data == "support:report")
+async def _support_do_report(cb: CallbackQuery, state: FSMContext):
+    """
+    يفتح قناة البلاغ مباشرة (تفعيل حالة FSM) ويحوّل بطاقة الدعم نفسها
+    إلى نص "أرسل وصف مشكلتك..." باللغة الصحيحة — بدون رسائل إضافية.
+    """
+    lang = (get_user_lang(cb.from_user.id) or "en").lower()
+    ar = lang.startswith("ar")
+
+    # === نفس فحوص report_cmd ولكن دون إرسال رسالة جديدة ===
+    is_admin = await _is_admin(cb.from_user.id)
+    st = load_settings()
+
+    if not st.get("enabled", True) and not is_admin:
+        msg = t(lang, "report.disabled") or ("خدمة البلاغات متوقفة مؤقتاً." if ar else "Reporting is temporarily disabled.")
+        return await cb.answer(msg, show_alert=True)
+
+    if not is_admin:
+        blocked, remain = _bl_is_blocked(cb.from_user.id)
+        if blocked:
+            msg = t(lang, "report.blocked") or (f"⛔ تم تقييد ميزة البلاغات لديك ({remain})." if ar else f"⛔ Reporting is restricted for you ({remain}).")
+            return await cb.answer(msg, show_alert=True)
+
+        nxt = _next_allowed_dt(cb.from_user.id)
+        if nxt:
+            now = datetime.datetime.now(datetime.timezone.utc)
+            if now < nxt:
+                remain = human_remaining(nxt - now)
+                msg = (t(lang, "report.cooldown_wait") or
+                      ("لديك بلاغ سابق. يرجى الانتظار {remaining} قبل إرسال بلاغ جديد."
+                       if ar else
+                       "You already have a report. Please wait {remaining} before sending another.")
+                      ).format(remaining=remain)
+                return await cb.answer(msg, show_alert=True)
+
+    # فعّل حالة انتظار نص البلاغ
+    await state.set_state(ReportState.waiting_text)
+
+    # نص المطالبة حسب اللغة (مع دعم الترجمة من lang.t)
+    prompt_ar = "✍️ أرسل وصف مشكلتك بالتفصيل. يمكنك أيضًا إرسال صورة/فيديو مع تعليق."
+    prompt_en = "✍️ Describe your issue in detail. You may also send a photo/video with a caption."
+    prompt = t(lang, "report.prompt") or (prompt_ar if ar else prompt_en)
+
+    # حوّل بطاقة الدعم الحالية إلى نص المطالبة (بدون كيبورد)
+    try:
+        await cb.message.edit_text(prompt, reply_markup=None)
+    except TelegramBadRequest:
+        # لو ما ينفع التعديل (مثلاً كانت وسائط)، احذف الكيبورد وأرسل النص مرّة واحدة
+        try:
+            await cb.message.edit_reply_markup(None)
+        except Exception:
+            pass
+        await cb.message.answer(prompt)
+
+    await cb.answer()
+
+
+# ======== Feature-gates: نمنع قبل التنفيذ عندما يكون التبويب مقفول ========
+# ملاحظة: هذه الهاندلرات تُطابق فقط عند التعطيل؛ عند التفعيل لا تُطابق ويكمل للملفات الأصلية.
+
+# شراء/تنشيط VIP من زر القائمة
+@router.callback_query(lambda q: q.data == "shop:sevip" and not is_enabled("vip", user_id=q.from_user.id))
+async def _gate_vip(cb: CallbackQuery):
+    lang = get_user_lang(cb.from_user.id) or "en"
+    await cb.answer(_feature_disabled_msg(lang), show_alert=True)
+
+# تحميل التطبيق
+@router.callback_query(lambda q: q.data == CB["APP_DOWNLOAD"] and not is_enabled("download", user_id=q.from_user.id))
+async def _gate_download(cb: CallbackQuery):
+    lang = get_user_lang(cb.from_user.id) or "en"
+    await cb.answer(_feature_disabled_msg(lang), show_alert=True)
+
+# الجوائز
+@router.callback_query(lambda q: q.data == CB["REWARDS"] and not is_enabled("rewards", user_id=q.from_user.id))
+async def _gate_rewards(cb: CallbackQuery):
+    lang = get_user_lang(cb.from_user.id) or "en"
+    await cb.answer(_feature_disabled_msg(lang), show_alert=True)
+
+# أدوات الألعاب
+@router.callback_query(lambda q: q.data == CB["TOOLS"] and not is_enabled("tools", user_id=q.from_user.id))
+async def _gate_tools(cb: CallbackQuery):
+    lang = get_user_lang(cb.from_user.id) or "en"
+    await cb.answer(_feature_disabled_msg(lang), show_alert=True)
+
+# تحقّق من جهازك
+@router.callback_query(lambda q: q.data == CB["CHECK_DEVICE"] and not is_enabled("check", user_id=q.from_user.id))
+async def _gate_check(cb: CallbackQuery):
+    lang = get_user_lang(cb.from_user.id) or "en"
+    await cb.answer(_feature_disabled_msg(lang), show_alert=True)
+
+# الموردون الموثوقون / دليل الموردين
+@router.callback_query(lambda q: q.data == CB["TRUSTED_SUPPLIERS"] and not is_enabled("suppliers", user_id=q.from_user.id))
+async def _gate_suppliers(cb: CallbackQuery):
+    lang = get_user_lang(cb.from_user.id) or "en"
+    await cb.answer(_feature_disabled_msg(lang), show_alert=True)
+
+# دليل الاستخدام الآمن
+@router.callback_query(lambda q: q.data == CB["SAFE_USAGE"] and not is_enabled("safe_usage", user_id=q.from_user.id))
+async def _gate_safe(cb: CallbackQuery):
+    lang = get_user_lang(cb.from_user.id) or "en"
+    await cb.answer(_feature_disabled_msg(lang), show_alert=True)
+
+# اللغة
+@router.callback_query(lambda q: q.data == CB["LANG"] and not is_enabled("language", user_id=q.from_user.id))
+async def _gate_lang(cb: CallbackQuery):
+    lang = get_user_lang(cb.from_user.id) or "en"
+    await cb.answer(_feature_disabled_msg(lang), show_alert=True)
+
+# الدعم / البلاغ
+@router.callback_query(lambda q: q.data in {"support:report", "report", "report:open"} and not is_enabled("support", user_id=q.from_user.id))
+async def _gate_support(cb: CallbackQuery):
+    lang = get_user_lang(cb.from_user.id) or "en"
+    await cb.answer(_feature_disabled_msg(lang), show_alert=True)
+
+# الدردشة الحيّة (زر "bot:live" إن وجد)
+@router.callback_query(lambda q: q.data == "bot:live" and not is_enabled("live", user_id=q.from_user.id))
+async def _gate_live(cb: CallbackQuery):
+    lang = get_user_lang(cb.from_user.id) or "en"
+    await cb.answer(_feature_disabled_msg(lang), show_alert=True)
+
+# المروّجون (لوحة/معلومات/بث مباشر)
+@router.callback_query(lambda q: q.data in {CB["PROMO_PANEL"], CB["PROMO_INFO"], CB["PROMO_LIVE"]} and not is_enabled("promoters", user_id=q.from_user.id))
+async def _gate_promoters(cb: CallbackQuery):
+    lang = get_user_lang(cb.from_user.id) or "en"
+    await cb.answer(_feature_disabled_msg(lang), show_alert=True)
+
+@router.callback_query(F.data == "back_to_menu")
+async def _back_to_menu(cb: CallbackQuery):
+    await render_home_card(cb.message)
+    await cb.answer()
+
+# حالة السيرفرات
+@router.callback_query(lambda q: q.data == CB["SERVER_STATUS"] and not is_enabled("server_status", user_id=q.from_user.id))
+async def _gate_server_status(cb: CallbackQuery):
+    lang = get_user_lang(cb.from_user.id) or "en"
+    await cb.answer(_feature_disabled_msg(lang), show_alert=True)
+
+# صندوق الإشعارات (زر inb:back)
+@router.callback_query(lambda q: q.data == "inb:back" and not is_enabled("alerts", user_id=q.from_user.id))
+async def _gate_alerts(cb: CallbackQuery):
+    lang = get_user_lang(cb.from_user.id) or "en"
+    await cb.answer(_feature_disabled_msg(lang), show_alert=True)

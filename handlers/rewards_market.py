@@ -18,7 +18,7 @@ from aiogram.fsm.context import FSMContext
 
 from lang import t, get_user_lang
 from utils.rewards_store import (
-    ensure_user, get_points, add_points, is_blocked, can_do
+    get_points, add_points, is_blocked, can_do
 )
 from .rewards_gate import require_membership  # احترام الاشتراك الإلزامي
 
@@ -29,6 +29,25 @@ from utils.rewards_notify import (
     notify_user_vip_submitted,
     notify_user_vip_approved,
     notify_user_vip_rejected,
+)
+from aiogram.filters import StateFilter
+from handlers.live_chat import LiveChat  # حالة الدردشة الحيّة
+
+router = Router(name="rewards_market")
+# امنع التنفيذ أثناء جلسة الدردشة الحيّة، واشتغل بالخاص فقط
+router.message.filter(F.chat.type == "private", ~StateFilter(LiveChat.active))
+router.callback_query.filter(F.message.chat.type == "private", ~StateFilter(LiveChat.active))
+log = logging.getLogger(__name__)
+
+# امنع أي تداخل مع الدردشة الحيّة + قَيِّد نطاق الكولباكات لهذا الراوتر فقط
+router.message.filter(
+    F.chat.type == "private",
+    ~StateFilter(LiveChat.active)
+)
+router.callback_query.filter(
+    F.message.chat.type == "private",
+    ~StateFilter(LiveChat.active),
+    F.data.func(lambda s: isinstance(s, str) and (s.startswith("rwd:") or s.startswith("rwdadm:")))
 )
 
 # ✅ كابتشا بشرية + استئناف تلقائي بعد النجاح (مع fallback آمن)
@@ -70,38 +89,13 @@ def _fmt_hours_ar(hours: int) -> str:
 COST_1H  = int(os.getenv("SHOP_VIP1H_COST",  "100"))
 COST_1D  = int(os.getenv("SHOP_VIP1D_COST",  "500"))
 COST_3D  = int(os.getenv("SHOP_VIP3D_COST",  "1000"))
-COST_30D = int(os.getenv("SHOP_VIP30D_COST", "8000"))  # جديد: 30 يوم
+COST_30D = int(os.getenv("SHOP_VIP30D_COST", "8000"))  # 30 يوم
 
 SHOP_ITEMS: Dict[str, Dict[str, Any]] = {
-    "vip1h": {
-        "title_ar": f"اشتراك VIP • {_fmt_hours_ar(1)}",
-        "title_en": "VIP • 1 hour",
-        "cost": COST_1H,
-        "kind": "vip_hours",
-        "hours": 1,
-    },
-    "vip1d": {
-        "title_ar": f"اشتراك VIP • {_fmt_hours_ar(24)}",
-        "title_en": "VIP • 1 day",
-        "cost": COST_1D,
-        "kind": "vip_hours",
-        "hours": 24,
-    },
-    "vip3d": {
-        "title_ar": f"اشتراك VIP • {_fmt_hours_ar(72)}",
-        "title_en": "VIP • 3 days",
-        "cost": COST_3D,
-        "kind": "vip_hours",
-        "hours": 72,
-    },
-    # ✅ جديد: 30 يوم
-    "vip30d": {
-        "title_ar": f"اشتراك VIP • {_fmt_hours_ar(24 * 30)}",
-        "title_en": "VIP • 30 days",
-        "cost": COST_30D,
-        "kind": "vip_hours",
-        "hours": 24 * 30,
-    },
+    "vip1h":  {"title_ar": f"اشتراك VIP • {_fmt_hours_ar(1)}",       "title_en": "VIP • 1 hour",   "cost": COST_1H,  "kind": "vip_hours", "hours": 1},
+    "vip1d":  {"title_ar": f"اشتراك VIP • {_fmt_hours_ar(24)}",      "title_en": "VIP • 1 day",    "cost": COST_1D,  "kind": "vip_hours", "hours": 24},
+    "vip3d":  {"title_ar": f"اشتراك VIP • {_fmt_hours_ar(72)}",      "title_en": "VIP • 3 days",   "cost": COST_3D,  "kind": "vip_hours", "hours": 72},
+    "vip30d": {"title_ar": f"اشتراك VIP • {_fmt_hours_ar(24 * 30)}", "title_en": "VIP • 30 days",  "cost": COST_30D, "kind": "vip_hours", "hours": 24 * 30},
 }
 
 # ======== واجهة المتجر ========
@@ -195,8 +189,8 @@ async def cb_buy_item(cb: CallbackQuery):
 
 # ======== FSM: جمع بيانات الاشتراك بعد الخصم ========
 class BuyStates(StatesGroup):
-    wait_app = State()
-    wait_details = State()
+    wait_app = State()       # معرّف تطبيق الثعبان
+    wait_details = State()   # تفاصيل إضافية
 
 # --- اكتشاف الإلغاء بشكل مرن (AR/EN) ---
 _CANCEL_WORDS = {"إلغاء", "الغاء", "cancel", "رجوع"}  # الأساسية
@@ -270,7 +264,7 @@ async def cb_confirm_buy(cb: CallbackQuery, state: FSMContext):
     # اطلب معرّف التطبيق (صيغة مبسطة)
     tip = t(
         lang, "market.vip.ask_app",
-        "اذهب إلى تطبيق ثعبان، ومن أعلى الواجهة يسارًا ستجد <b>معرّف التطبيق</b> الخاص بك — انسخه وأرسله هنا."
+        "اذهب إلى تطبيق محرك الثعبان، في أعلى الواجهة (الزاوية اليسرى) ستجد <b>معرّف التطبيق</b> الخاص بك. انسخه وأرسله هنا."
     )
     try:
         await cb.message.edit_text(tip, disable_web_page_preview=True)
@@ -282,7 +276,7 @@ async def cb_confirm_buy(cb: CallbackQuery, state: FSMContext):
     )
     await cb.answer()
 
-# استلام معرّف التطبيق
+# استلام معرّف التطبيق → ثم التفاصيل
 @router.message(BuyStates.wait_app)
 async def buy_get_app(msg: Message, state: FSMContext):
     uid = msg.from_user.id
@@ -293,14 +287,8 @@ async def buy_get_app(msg: Message, state: FSMContext):
         data = await state.get_data()
         add_points(uid, +int(data.get("cost", 0)), reason="market_refund_cancel", typ="refund")
         await state.clear()
-        await msg.answer(t(lang, "market.vip.cancelled_refund", "تم الإلغاء واستُرجعت نقاطك."), reply_markup=ReplyKeyboardRemove())
-        # إشعار الأدمن
-        for aid in ADMIN_IDS:
-            try:
-                await msg.bot.send_message(aid, f"↩️ استرجاع: المستخدم <code>{uid}</code> ألغى العملية قبل إكمال البيانات.")
-            except Exception:
-                pass
-        return
+        return await msg.answer(t(lang, "market.vip.cancelled_refund", "تم الإلغاء واستُرجعت نقاطك."),
+                                reply_markup=ReplyKeyboardRemove())
 
     app_id = _normalize_app_id(txt)
     if not app_id:
@@ -313,8 +301,8 @@ async def buy_get_app(msg: Message, state: FSMContext):
     await state.set_state(BuyStates.wait_details)
 
     ask = t(lang, "market.vip.ask_details",
-            "أرسل تفاصيل الاشتراك المطلوبة (مثال: اسم اللعبة/الوضع، ملاحظات إضافية).")
-    tip = t(lang, "market.vip.details_tip", "يمكنك كتابة أي تفاصيل تساعدنا على تفعيل الاشتراك بشكل صحيح.")
+            "أرسل تفاصيل الاشتراك المطلوبة (مثال: اللعبة/الوضع، ملاحظات إضافية).")
+    tip = t(lang, "market.vip.details_tip", "يمكنك كتابة أي تفاصيل تساعدنا على التفعيل بشكل صحيح.")
     await msg.answer(ask)
     await msg.answer(tip, reply_markup=_cancel_rk(lang))
 
@@ -329,7 +317,8 @@ async def buy_get_details(msg: Message, state: FSMContext):
         data = await state.get_data()
         add_points(uid, +int(data.get("cost", 0)), reason="market_refund_cancel", typ="refund")
         await state.clear()
-        await msg.answer(t(lang, "market.vip.cancelled_refund", "تم الإلغاء واستُرجعت نقاطك."), reply_markup=ReplyKeyboardRemove())
+        await msg.answer(t(lang, "market.vip.cancelled_refund", "تم الإلغاء واستُرجعت نقاطك."),
+                         reply_markup=ReplyKeyboardRemove())
         for aid in ADMIN_IDS:
             try:
                 await msg.bot.send_message(aid, f"↩️ استرجاع: المستخدم <code>{uid}</code> ألغى العملية أثناء جمع التفاصيل.")
@@ -344,18 +333,28 @@ async def buy_get_details(msg: Message, state: FSMContext):
     cost = int(data.get("cost", 0))
     hours = int(data.get("hours", 0))
     app_id = data.get("app_id") or "-"
+    tg_username = (msg.from_user.username or "").lstrip("@")
 
-    # إنشاء طلب Pending
+    # إنشاء طلب Pending (يحتوي اسم المستخدم)
     oid = create_order(uid, kind="vip", payload={
         "hours": hours,
         "app": app_id,
         "details": txt,
+        "tg_username": tg_username,
         "cost": cost,
     })
 
-    # إشعار المستخدم + الأدمن ببيانات كاملة
+    # إشعار المستخدم + الأدمن
     await notify_user_vip_submitted(msg.bot, uid, oid, hours, cost)
     await notify_admins_new_vip_order(msg.bot, oid, uid, hours, app_id, txt, cost)
+
+    # رسالة إضافية للأدمن تتضمن Username بشكل واضح
+    extra = f"ℹ️ VIP order #{oid}\n• User: <code>{uid}</code>{(' — @' + tg_username) if tg_username else ''}\n• AppID: <code>{app_id}</code>"
+    for aid in ADMIN_IDS:
+        try:
+            await msg.bot.send_message(aid, extra, disable_web_page_preview=True)
+        except Exception:
+            pass
 
 # ======== (أدمن) قبول/رفض الطلب ========
 async def _grant_vip_hours_bridge(bot, uid: int, hours: int, reason: str = "rewards_approved") -> bool:

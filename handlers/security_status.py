@@ -4,7 +4,7 @@ from __future__ import annotations
 import os, json, datetime, logging
 from aiogram import Router, F
 from aiogram.filters import Command
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.enums import ParseMode
@@ -28,7 +28,7 @@ def is_admin(uid: int) -> bool:
     return uid in ADMIN_IDS
 
 def L(user_id: int) -> str:
-    return get_user_lang(user_id) or "ar"
+    return (get_user_lang(user_id) or "ar").lower()
 
 # إظهار زر "لوحة تحكم الأمان" داخل شاشة المستخدم؟ افتراضيًا: مخفي
 SHOW_INLINE_ADMIN = False
@@ -62,7 +62,7 @@ def _load() -> dict:
         return data
     except Exception as e:
         logging.error(f"[security_status] load error: {e}")
-        return DEFAULT_DATA.copy()
+        return json.loads(json.dumps(DEFAULT_DATA))  # deep copy
 
 def _save(data: dict) -> None:
     os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
@@ -183,32 +183,43 @@ def _kb_main(lang: str, as_admin: bool, *, src: str) -> InlineKeyboardBuilder:
     src ∈ {'main','vip'}
     - main → زر الرجوع back_to_menu
     - vip  → زر الرجوع vip:open_tools
-    كما نمرّر src في جميع أزرار التنقّل حتى يُحافظ عليها أثناء التبديل.
+    نحافظ على src في جميع الأزرار.
     """
     kb = InlineKeyboardBuilder()
     data = _load()
     games = data.get("games", {})
 
-    # قائمة الألعاب
+    # نبني الأزرار أولاً
+    game_buttons: list[InlineKeyboardButton] = []
     for code, g in games.items():
         name = g.get("name", {}).get(lang, g.get("name", {}).get("en", code))
         icon = STATUS_ICON.get(g.get("status", "safe"), "")
-        kb.button(text=f"{icon} {name}", callback_data=f"sec:game:{code}:{src}")
-    kb.adjust(1)
+        game_buttons.append(
+            InlineKeyboardButton(text=f"{icon} {name}", callback_data=f"sec:game:{code}:{src}")
+        )
 
-    # زر تحديث الحالة
-    kb.button(text="🔄 " + t(lang, "sec.btn_refresh"), callback_data=f"sec:refresh:{src}")
-    kb.adjust(1)
+    # نرتّب 2×2
+    i = 0
+    while i < len(game_buttons):
+        a = game_buttons[i]
+        b = game_buttons[i+1] if i+1 < len(game_buttons) else None
+        if b:
+            kb.row(a, b, width=2)
+            i += 2
+        else:
+            kb.row(a, width=1)
+            i += 1
+
+    # زر تحديث
+    kb.row(InlineKeyboardButton(text="🔄 " + t(lang, "sec.btn_refresh"), callback_data=f"sec:refresh:{src}"), width=1)
 
     # زر لوحة التحكم (للأدمن فقط إذا مُفعّل)
     if as_admin and SHOW_INLINE_ADMIN:
-        kb.button(text=t(lang, "sec.btn_admin_panel"), callback_data="sec:admin")
-        kb.adjust(1)
+        kb.row(InlineKeyboardButton(text=t(lang, "sec.btn_admin_panel"), callback_data="sec:admin"), width=1)
 
     # رجوع حسب المصدر
     back_cb = "vip:open_tools" if src == "vip" else "back_to_menu"
-    kb.button(text=t(lang, "sec.btn_back"), callback_data=back_cb)
-    kb.adjust(1)
+    kb.row(InlineKeyboardButton(text=t(lang, "sec.btn_back"), callback_data=back_cb), width=1)
     return kb
 
 def _kb_admin(lang: str) -> InlineKeyboardBuilder:
@@ -218,42 +229,45 @@ def _kb_admin(lang: str) -> InlineKeyboardBuilder:
     MARK_ON, MARK_OFF = "●", "○"
 
     # زر تحديث لوحة التحكم
-    kb.button(text="🔄 " + t(lang, "sec.btn_refresh"), callback_data="sec:adm_refresh")
-    kb.adjust(1)
+    kb.row(InlineKeyboardButton(text="🔄 " + t(lang, "sec.btn_refresh"), callback_data="sec:adm_refresh"), width=1)
 
     # === الحالة العامة ===
     g_status = data.get("global", {}).get("status", "safe")
-    kb.button(
-        text=f"{t(lang, 'sec.admin.global_now')}: {status_human(lang, g_status)}",
-        callback_data="sec:nop",
+    kb.row(
+        InlineKeyboardButton(
+            text=f"{t(lang, 'sec.admin.global_now')}: {status_human(lang, g_status)}",
+            callback_data="sec:nop"
+        ),
+        width=1
     )
-    kb.adjust(1)
 
-    # صف اختيار الحالة العامة
-    for st, emoji in (("safe", "✅"), ("warn", "⚠️"), ("down", "❌")):
-        mark = MARK_ON if g_status == st else MARK_OFF
-        kb.button(text=f"{mark} {emoji}", callback_data=f"sec:adm:glob:{st}")
-    kb.adjust(3)
+    # صف اختيار الحالة العامة (3 أزرار)
+    glob_row = [
+        InlineKeyboardButton(text=f"{MARK_ON if g_status=='safe' else MARK_OFF} ✅", callback_data="sec:adm:glob:safe"),
+        InlineKeyboardButton(text=f"{MARK_ON if g_status=='warn' else MARK_OFF} ⚠️", callback_data="sec:adm:glob:warn"),
+        InlineKeyboardButton(text=f"{MARK_ON if g_status=='down' else MARK_OFF} ❌", callback_data="sec:adm:glob:down"),
+    ]
+    kb.row(*glob_row, width=3)
 
     # فاصل
-    kb.button(text="— " + t(lang, "sec.admin.games") + " —", callback_data="sec:nop")
-    kb.adjust(1)
+    kb.row(InlineKeyboardButton(text="— " + t(lang, "sec.admin.games") + " —", callback_data="sec:nop"), width=1)
 
     # === الألعاب ===
     games = data.get("games", {})
     for code, g in games.items():
         name = g.get("name", {}).get(lang, g.get("name", {}).get("en", code))
         cur = g.get("status", "safe")
-        kb.button(text=f"🎮 {name} {STATUS_ICON.get(cur,'')}", callback_data="sec:nop")
-        kb.adjust(1)
-        for st, emoji in (("safe", "✅"), ("warn", "⚠️"), ("down", "❌")):
-            mark = MARK_ON if cur == st else MARK_OFF
-            kb.button(text=f"{mark} {emoji}", callback_data=f"sec:adm:{code}:{st}")
-        kb.adjust(3)
+        kb.row(InlineKeyboardButton(text=f"🎮 {name} {STATUS_ICON.get(cur,'')}", callback_data="sec:nop"), width=1)
+
+        row = [
+            InlineKeyboardButton(text=f"{MARK_ON if cur=='safe' else MARK_OFF} ✅", callback_data=f"sec:adm:{code}:safe"),
+            InlineKeyboardButton(text=f"{MARK_ON if cur=='warn' else MARK_OFF} ⚠️", callback_data=f"sec:adm:{code}:warn"),
+            InlineKeyboardButton(text=f"{MARK_ON if cur=='down' else MARK_OFF} ❌", callback_data=f"sec:adm:{code}:down"),
+        ]
+        kb.row(*row, width=3)
 
     # رجوع إلى القائمة (عامّة)
-    kb.button(text=t(lang, "sec.btn_back_list"), callback_data="sec:back_list:main")
-    kb.adjust(1)
+    kb.row(InlineKeyboardButton(text=t(lang, "sec.btn_back_list"), callback_data="sec:back_list:main"), width=1)
     return kb
 
 def _main_text(lang: str, *, ping_now: bool = False) -> str:
@@ -261,10 +275,10 @@ def _main_text(lang: str, *, ping_now: bool = False) -> str:
     g = d.get("global", {})
     st = g.get("status", "safe")
 
-    # تفعيل الملاحظة حتى لو فارغة
+    # ملاحظة افتراضية إذا فارغة
     note = g.get("note")
     if not note or str(note).strip() == "":
-        note = t(lang, "sec.no_note")  # نص افتراضي حسب اللغة
+        note = t(lang, "sec.no_note")
 
     updated_at = _format_updated_at(g.get("updated_at"))
     ping_line = f"\n⏱ {t(lang, 'sec.ping_now')}: <code>{_now_ping_str()}</code>" if ping_now else ""
@@ -285,7 +299,7 @@ def _game_text(lang: str, code: str) -> str:
     name = g.get("name", {}).get(lang, g.get("name", {}).get("en", code))
     st = g.get("status", "safe")
 
-    # تفعيل الملاحظة حتى لو فارغة
+    # ملاحظة افتراضية إذا فارغة
     note = g.get("note")
     if not note or str(note).strip() == "":
         note = t(lang, "sec.no_note")
@@ -330,9 +344,10 @@ async def security_game(cb: CallbackQuery):
     lang = L(cb.from_user.id)
     _, _, code, src = cb.data.split(":")
     text = _game_text(lang, code)
+
     kb = InlineKeyboardBuilder()
-    kb.button(text=f"{t(lang, 'sec.btn_back_list')}", callback_data=f"sec:back_list:{src}")
-    kb.adjust(1)
+    kb.row(InlineKeyboardButton(text=t(lang, "sec.btn_back_list"), callback_data=f"sec:back_list:{src}"), width=1)
+
     await _smart_edit_or_send(cb.message, text, kb.as_markup())
     await cb.answer()
 

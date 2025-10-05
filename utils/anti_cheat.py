@@ -3,8 +3,40 @@ from __future__ import annotations
 import time, random, string
 from typing import Tuple, Optional, Dict, Any
 
-# نستخدم تخزين المستخدمين الحالي
+# تخزين المستخدمين الحالي
 from utils.rewards_store import ensure_user, get_user as _get_user, _put_user as _set_user
+
+# دعم اللغة
+try:
+    from lang import t as _t, get_user_lang as _get_user_lang
+except Exception:
+    # fallbacks آمنة إن لم تتوفر وحدة الترجمة
+    def _t(_lang: str, _key: str) -> str:  # type: ignore
+        return ""
+    def _get_user_lang(_uid: int) -> str:  # type: ignore
+        return "ar"
+
+def _lang(uid: int) -> str:
+    lg = (_get_user_lang(uid) or "ar").strip().lower()
+    return "ar" if lg == "ar" else "en"
+
+def _tf(uid: int, key: str, ar_fallback: str, en_fallback: str, **fmt) -> str:
+    """يحاول قراءة النص من lang.t وإلا يرجع fallback مناسب للّغة، مع format للمتغيرات."""
+    lg = _lang(uid)
+    try:
+        s = _t(lg, key)
+        if isinstance(s, str) and s.strip():
+            try:
+                return s.format(**fmt) if fmt else s
+            except Exception:
+                return s
+    except Exception:
+        pass
+    base = ar_fallback if lg == "ar" else en_fallback
+    try:
+        return base.format(**fmt) if fmt else base
+    except Exception:
+        return base
 
 # إعدادات عامة
 CAPTCHA_TTL_OK_SEC = 7 * 24 * 3600        # مدة صلاحية التحقق (7 أيام)
@@ -67,7 +99,8 @@ def need_captcha(uid: int, level: str = "normal") -> bool:
     return True
 
 def build_captcha(uid: int) -> Tuple[str, list[str], int, str]:
-    """يرجع: (النص, الخيارات, index الصحيح, token) ويحفظها في المستخدم."""
+    """يرجع: (النص, الخيارات, index الصحيح, token) ويحفظها في المستخدم.
+       النص يُولَّد حسب لغة المستخدم (ar/en)."""
     u, abuse = _u(uid)
     target = random.choice(EMOJIS)
     opts = random.sample(EMOJIS, k=6)
@@ -86,7 +119,14 @@ def build_captcha(uid: int) -> Tuple[str, list[str], int, str]:
     abuse["last_captcha"] = _now()
     u["abuse"] = abuse
     _set_user(uid, u)
-    text = f"تحقق بسيط: اختر الإيموجي المطلوب للتأكيد أنك لست روبوت.\n\nالمطلوب: {target}"
+
+    text = _tf(
+        uid,
+        "anti.captcha.text",
+        "تحقق بسيط: اختر الإيموجي المطلوب للتأكيد أنك لست روبوت.\n\nالمطلوب: {target}",
+        "Quick check: pick the requested emoji to confirm you're not a bot.\n\nTarget: {target}",
+        target=target,
+    )
     return text, opts, answer_idx, token
 
 def try_captcha(uid: int, token: str, answer_idx: int) -> bool:

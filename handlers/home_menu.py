@@ -43,6 +43,20 @@ def _save_started(d: dict) -> None:
         pass
 
 
+# ===== خريطة CB موحّدة (مع فولباكات آمنة) =====
+try:
+    from handlers.start import CB as _CB
+except Exception:
+    _CB = None
+
+CB = {
+    "VIP_BUY_INTERNAL": "shop:sevip",
+    "TRUSTED_SUPPLIERS": "trusted_suppliers",
+    "BOT_OPEN": "bot:open",
+}
+if isinstance(_CB, dict):
+    CB.update({k: _CB.get(k, v) for k, v in CB.items()})
+
 # ===== لوحة إنلاين 3×3 (تُعرض فقط مع /start) =====
 def main_menu_kb(lang: str) -> InlineKeyboardMarkup:
     L = (lang or "ar").startswith("ar")
@@ -51,8 +65,8 @@ def main_menu_kb(lang: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text=LBL("👤 المستخدم", "User 👤"),   callback_data="noop"),
-            InlineKeyboardButton(text=LBL("🌟VIP", "VIP 🌟"),  callback_data="noop"),
-            InlineKeyboardButton(text=LBL("🤖 البوت", "Bot 🤖"),        callback_data="bot:open"),
+            InlineKeyboardButton(text=LBL("🌟VIP", "VIP 🌟"),            callback_data="noop"),
+            InlineKeyboardButton(text=LBL("🤖 البوت", "Bot 🤖"),         callback_data=CB["BOT_OPEN"]),
         ],
         [
             InlineKeyboardButton(text=LBL("👥 المجموعات", "Groups 👥"),  url="https://t.me/SnakeEngine2"),
@@ -62,10 +76,8 @@ def main_menu_kb(lang: str) -> InlineKeyboardMarkup:
     ])
 
 
-
 # ===== أدوات التاريخ/العرض =====
 def _fmt_dt(ts: float | int | str | None) -> str:
-    """تنسيق آمن يمنع ظهور 1970 ويعرض شرطة طويلة عند القيم غير المنطقية."""
     if ts in (None, "", 0, "0"):
         return "—"
     try:
@@ -73,7 +85,6 @@ def _fmt_dt(ts: float | int | str | None) -> str:
             s = ts.strip()
             if s in ("", "0"):
                 return "—"
-            # حاول ISO أولاً
             try:
                 return datetime.fromisoformat(s.replace("Z", "+00:00")).strftime("%Y-%m-%d %H:%M")
             except Exception:
@@ -81,10 +92,8 @@ def _fmt_dt(ts: float | int | str | None) -> str:
         ts = float(ts)
         if ts <= 0:
             return "—"
-        # ميلي ثانية؟
         if ts > 10**12:
             ts /= 1000.0
-        # أي شيء أقدم من 2006 نعتبره غير منطقي (يتفادى 1970)
         if ts < 1136073600:  # 2006-01-01
             return "—"
         return datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M")
@@ -93,7 +102,6 @@ def _fmt_dt(ts: float | int | str | None) -> str:
 
 
 def _read_first_seen(uid: int) -> tuple[str | None, dict | int | float | str | None]:
-    """يرجع (اسم_الملف, القيمة) إن وُجدت في started_users.json أو users.json."""
     for p in ("data/started_users.json", "data/users.json"):
         path = Path(p)
         try:
@@ -123,7 +131,6 @@ def _lang_name(uid: int) -> str:
 
 
 def _tr(lang: str, key: str, ar: str, en: str) -> str:
-    """ترجمة بمفتاح lang.json مع Fallback ثابت."""
     try:
         val = t(lang, key)
         if val and val != key:
@@ -145,7 +152,6 @@ def _pm() -> dict:
 
 
 def _normalize_first_seen(uid: int):
-    """يُصلّح القيم القديمة (0/غير صالحة) ويكتب شكلًا موحّدًا: {'ts': ..., 'iso': ...}."""
     try:
         data = _load_started()
         cur = data.get(str(uid))
@@ -154,11 +160,9 @@ def _normalize_first_seen(uid: int):
         if cur is None:
             need_fix = True
         elif isinstance(cur, (int, float, str)):
-            # 0 أو تاريخ قديم/نصي غير صالح → أصلحه
             if _fmt_dt(cur) == "—":
                 need_fix = True
             else:
-                # حتى لو صالح، حوّله إلى dict الموحّد
                 need_fix = True
         elif isinstance(cur, dict):
             disp = _fmt_dt(cur.get("ts") or cur.get("time") or cur.get("joined") or cur.get("iso"))
@@ -173,7 +177,7 @@ def _normalize_first_seen(uid: int):
         log.warning("normalize first_seen failed: %s", e)
 
 
-# ===== محتوى الأقسام (يستدعيه persistent_menu) =====
+# ===== محتوى الأقسام =====
 def section_text(key: str, user) -> str:
     uid = int(getattr(user, "id", 0) or 0)
     first = escape((getattr(user, "first_name", "") or "").strip())
@@ -204,20 +208,21 @@ def section_text(key: str, user) -> str:
             "• أولوية ردود الدعم.\n"
             "• حدود أعلى للطلبات.\n"
             "• مزايا إضافية عند توفرها.\n"
-            "للاشتراك اضغط «اشترِ الآن» أدناه.\n",
+            "اختر طريقة الشراء:\n"
+            "• «اشترِ الآن (USDT)» لتفعيل مباشر داخل النظام.\n"
+            "• «اشترِ من موردينا» للشراء عبر موردينا الموثوقين.\n",
             "🌟 <b>Premium</b>\n"
             "• Priority support replies.\n"
             "• Higher usage limits.\n"
             "• Extra perks when available.\n"
-            "To subscribe, tap “Buy now” below.\n",
+            "Choose how to buy:\n"
+            "• “Buy now (USDT)” for direct in-bot activation.\n"
+            "• “Buy from our suppliers” via trusted sellers.\n",
         )
 
-    # داخل section_text(...)
     if key == "user":
-        # ✅ صحّح/أنشئ أول دخول إن لم يكن محفوظًا
         _normalize_first_seen(uid)
         jid = _joined_at(uid)
-
         link = f"@{uname}" if uname else LBL("— لا يوجد اسم مستخدم —", "-- no username --")
         return LBL(
             f"👤 <b>معلومات المستخدم</b>\n"
@@ -233,7 +238,6 @@ def section_text(key: str, user) -> str:
             f"• Language: <code>{_lang_name(uid)}</code>\n"
             f"• First seen: <code>{jid}</code>\n",
         )
-
 
     if key == "group":
         return LBL(
@@ -253,19 +257,11 @@ def section_text(key: str, user) -> str:
             "💬 <b>Forums</b>\nOur forum:\n<a href='https://t.me/SnakeEngine1'>https://t.me/SnakeEngine1</a>\n",
         )
 
-    
-   
-   
-
     return LBL("❕ لا يوجد محتوى لهذا القسم.", "❕ No content for this section.")
 
 
 # ===== واجهة موحّدة: ترجع (النص + كيبورد) =====
 def section_render(key: str, user) -> tuple[str, InlineKeyboardMarkup | None]:
-    """
-    - 'bot'  → زر فتح لوحة البوت.
-    - 'premium' → زر «🛒 اشترِ الآن» (يفتح trusted_suppliers) + رابط المنتدى.
-    """
     uid = int(getattr(user, "id", 0) or 0)
     lang = get_user_lang(uid) or "ar"
     L = lang.startswith("ar")
@@ -279,25 +275,26 @@ def section_render(key: str, user) -> tuple[str, InlineKeyboardMarkup | None]:
     if key == "bot":
         kb = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text=LBL("فتح لوحة البوت", "Open bot panel"), callback_data="bot:open")]
+                [InlineKeyboardButton(text=LBL("فتح لوحة البوت", "Open bot panel"),
+                                      callback_data=CB.get("BOT_OPEN", "bot:open"))]
             ]
         )
 
     if key == "premium":
         forum = _pm().get("forum") or "https://t.me/SnakeEngine2/1"
         rows = [
-            [
-                InlineKeyboardButton(
-                    text=_tr(lang, "premium.btn.buy", "🛒 اشترِ الآن", "🛒 Buy now"),
-                    callback_data="trusted_suppliers",
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text=_tr(lang, "ui.forum", "💬 المنتدى", "💬 Forum"),
-                    url=forum,
-                )
-            ],
+            [InlineKeyboardButton(
+                text=_tr(lang, "premium.btn.buy_internal", "🛒 اشترِ الآن (USDT)", "🛒 Buy now (USDT)"),
+                callback_data=CB.get("VIP_BUY_INTERNAL", "shop:sevip"),
+            )],
+            [InlineKeyboardButton(
+                text=_tr(lang, "premium.btn.buy_suppliers", "🛒 اشترِ من موردينا", "🛒 Buy from suppliers"),
+                callback_data=CB.get("TRUSTED_SUPPLIERS", "trusted_suppliers"),
+            )],
+            [InlineKeyboardButton(
+                text=_tr(lang, "ui.forum", "💬 المنتدى", "💬 Forum"),
+                url=forum,
+            )],
         ]
         kb = InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -307,12 +304,10 @@ def section_render(key: str, user) -> tuple[str, InlineKeyboardMarkup | None]:
 # ===== /start =====
 @router.message(CommandStart())
 async def on_start(m: Message):
-    # صلّح/وحّد حفظ أول دخول (يمنع 1970 نهائيًا)
     _normalize_first_seen(m.from_user.id)
-
     lang = get_user_lang(m.from_user.id) or "ar"
     await m.answer(
-        t(lang, "start.hello") or "Hi Welcome To the bot 👋",
+        (t(lang, "start.hello") or "Hi Welcome To the bot 👋"),
         reply_markup=main_menu_kb(lang),
         disable_web_page_preview=True,
     )
@@ -322,3 +317,4 @@ async def on_start(m: Message):
 @router.callback_query(F.data.in_({"noop", "my_forum_info"}))
 async def cb_noop(c: CallbackQuery):
     await c.answer()
+    return
