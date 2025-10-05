@@ -1,0 +1,16 @@
+{
+  "users": {
+    "8371697148": {
+      "owner": "menu",
+      "opened_at": 1759688264,
+      "last_touch": 1759688264,
+      "expires_at": 1759691864,
+      "allow_prefixes": [],
+      "allow_texts": [],
+      "close_on_any_message": false,
+      "close_on_unmatched_callback": true,
+      "allow_any_callbacks": false,
+      "meta": {}
+    }
+  }
+}

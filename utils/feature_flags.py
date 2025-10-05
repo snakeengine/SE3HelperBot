@@ -5,8 +5,9 @@ import json
 import os
 import shutil
 import time
+import threading
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Any
 
 # استخدم نفس الأساس الموحّد في المشروع
 try:
@@ -23,8 +24,9 @@ BACKUPS_DIR = (BASE / "backups")
 BACKUPS_DIR.mkdir(parents=True, exist_ok=True)
 MAX_BACKUPS = int(os.getenv("JSON_BACKUPS_KEEP", "7") or "7")
 
-# ---------- قفل عبر العمليات ----------
+# ---------- قفل عبر العمليات (file lock) + قفل خيطي ----------
 _FILELOCK_PATH = (BASE / ".feature_flags.lock")
+_THREAD_LOCK = threading.Lock()
 
 def _file_lock_acquire():
     _FILELOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -79,8 +81,24 @@ def _atomic_write_json(path: Path, d: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     _snapshot(path)
     tmp = path.with_suffix(".tmp")
-    tmp.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+    payload = json.dumps(d, ensure_ascii=False, indent=2)
+    # كتابة ذرّية + fsync لتقليل تلف الملف عند انقطاع مفاجئ
+    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
+        f.write(payload)
+        try:
+            f.flush()
+            os.fsync(f.fileno())
+        except Exception:
+            pass
     os.replace(tmp, path)
+
+def _safe_read_json(path: Path, default: Any) -> Any:
+    try:
+        if path.exists():
+            return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return default
 
 # ---------- ترحيل مسارات قديمة (مرة واحدة) ----------
 def _maybe_migrate_legacy() -> None:
@@ -132,7 +150,14 @@ def _load() -> dict:
         return _ensure_defaults()
     tok = _file_lock_acquire()
     try:
-        return json.loads(FILE.read_text(encoding="utf-8"))
+        d = _safe_read_json(FILE, {})
+        if not isinstance(d, dict):
+            return _ensure_defaults()
+        # تأكيد وجود البنية الأساسية
+        d.setdefault("tabs", {})
+        for item in DEFAULT_TABS:
+            d["tabs"].setdefault(item["key"], {"enabled": True, "msg_ar": "", "msg_en": ""})
+        return d
     except Exception:
         return _ensure_defaults()
     finally:
@@ -141,7 +166,8 @@ def _load() -> dict:
 def _save(d: dict) -> None:
     tok = _file_lock_acquire()
     try:
-        _atomic_write_json(FILE, d)
+        with _THREAD_LOCK:
+            _atomic_write_json(FILE, d)
     finally:
         _file_lock_release(tok)
 
@@ -151,9 +177,13 @@ def _labels_map() -> Dict[str, Dict[str, str]]:
 def _ensure_tab(d: dict, name: str) -> dict:
     tabs = d.setdefault("tabs", {})
     row = tabs.get(name)
-    if row is None:
+    if row is None or not isinstance(row, dict):
         row = {"enabled": True, "msg_ar": "", "msg_en": ""}
         tabs[name] = row
+    # تنظيف الأنواع
+    row["enabled"] = bool(row.get("enabled", True))
+    row["msg_ar"] = str(row.get("msg_ar", "") or "")
+    row["msg_en"] = str(row.get("msg_en", "") or "")
     return row
 
 # ======================= Public API (tabs) =======================
@@ -228,14 +258,14 @@ def toggle_tab(name: str) -> bool:
 def get_message(name: str, lang: str = "ar") -> str:
     d = _load()
     row = d.get("tabs", {}).get(name, {})
-    if lang.lower().startswith("ar"):
+    if str(lang).lower().startswith("ar"):
         return str(row.get("msg_ar", "") or "")
     return str(row.get("msg_en", "") or "")
 
 def set_message(name: str, text: str, lang: str = "ar") -> None:
     d = _load()
     row = _ensure_tab(d, name)
-    if lang.lower().startswith("ar"):
+    if str(lang).lower().startswith("ar"):
         row["msg_ar"] = str(text or "")
     else:
         row["msg_en"] = str(text or "")
@@ -249,7 +279,7 @@ def clear_message(name: str, lang: str | None = None) -> None:
     if lang is None:
         row["msg_ar"] = ""
         row["msg_en"] = ""
-    elif lang.lower().startswith("ar"):
+    elif str(lang).lower().startswith("ar"):
         row["msg_ar"] = ""
     else:
         row["msg_en"] = ""
@@ -288,6 +318,28 @@ def set_tab(
         row["msg_en"] = str(msg_en or "")
     _save(d)
 
+# (اختياري) إدارة المفاتيح المخصصة
+def remove_tab(name: str) -> bool:
+    d = _load()
+    if name in (d.get("tabs") or {}):
+        d["tabs"].pop(name, None)
+        _save(d)
+        return True
+    return False
+
+def rename_tab(old: str, new: str) -> bool:
+    if not new or new == old:
+        return False
+    d = _load()
+    tabs = d.get("tabs") or {}
+    if old not in tabs:
+        return False
+    if new in tabs:
+        return False
+    tabs[new] = tabs.pop(old)
+    _save(d)
+    return True
+
 # ======================= Maintenance (separate file) =======================
 def _maint_load() -> dict:
     if not MAINT_FILE.exists():
@@ -296,7 +348,13 @@ def _maint_load() -> dict:
         return d
     tok = _file_lock_acquire()
     try:
-        return json.loads(MAINT_FILE.read_text(encoding="utf-8"))
+        d = _safe_read_json(MAINT_FILE, {"enabled": False, "msg_ar": "", "msg_en": ""})
+        if not isinstance(d, dict):
+            d = {"enabled": False, "msg_ar": "", "msg_en": ""}
+        d.setdefault("enabled", False)
+        d.setdefault("msg_ar", "")
+        d.setdefault("msg_en", "")
+        return d
     except Exception:
         d = {"enabled": False, "msg_ar": "", "msg_en": ""}
         _atomic_write_json(MAINT_FILE, d)
@@ -307,7 +365,8 @@ def _maint_load() -> dict:
 def _maint_save(d: dict) -> None:
     tok = _file_lock_acquire()
     try:
-        _atomic_write_json(MAINT_FILE, d)
+        with _THREAD_LOCK:
+            _atomic_write_json(MAINT_FILE, d)
     finally:
         _file_lock_release(tok)
 
@@ -327,13 +386,13 @@ def maint_toggle() -> bool:
 
 def maint_message(lang: str = "ar") -> str:
     d = _maint_load()
-    if lang.lower().startswith("ar"):
+    if str(lang).lower().startswith("ar"):
         return str(d.get("msg_ar", "") or "")
     return str(d.get("msg_en", "") or "")
 
 def maint_set_message(text: str, lang: str = "ar") -> None:
     d = _maint_load()
-    if lang.lower().startswith("ar"):
+    if str(lang).lower().startswith("ar"):
         d["msg_ar"] = str(text or "")
     else:
         d["msg_en"] = str(text or "")
@@ -344,7 +403,7 @@ def maint_clear_message(lang: str | None = None) -> None:
     if lang is None:
         d["msg_ar"] = ""
         d["msg_en"] = ""
-    elif lang.lower().startswith("ar"):
+    elif str(lang).lower().startswith("ar"):
         d["msg_ar"] = ""
     else:
         d["msg_en"] = ""
@@ -394,6 +453,7 @@ __all__ = [
     "is_enabled", "set_enabled", "enable", "disable", "toggle_tab",
     "get_message", "set_message", "clear_message",
     "get_tab", "set_tab",
+    "remove_tab", "rename_tab",
     "set_tab_enabled", "update_tab", "get_tab_msg", "set_tab_msg", "clear_tab_msg",
     "all_data",
     # maintenance callable + helpers

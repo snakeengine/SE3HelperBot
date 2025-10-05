@@ -2,8 +2,19 @@
 from __future__ import annotations
 import json, os
 from pathlib import Path
+from utils.paths import BASE  # ← المهم
 
-FLAGS_PATH = Path("data") / "rewards_flags.json"
+FLAGS_PATH = (Path(os.getenv("DATA_DIR")) if os.getenv("DATA_DIR") else BASE) / "rewards_flags.json"
+
+# ترحيل من القديم
+_OLD = Path("data") / "rewards_flags.json"
+try:
+    if _OLD.exists() and not FLAGS_PATH.exists():
+        FLAGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        FLAGS_PATH.write_text(_OLD.read_text(encoding="utf-8"), encoding="utf-8")
+except Exception:
+    pass
+
 
 def _load() -> dict:
     try:

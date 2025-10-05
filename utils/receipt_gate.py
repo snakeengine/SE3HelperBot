@@ -3,9 +3,20 @@ from __future__ import annotations
 import json, time, os
 from pathlib import Path
 from typing import Iterable, Optional
+from utils.paths import BASE  # ← المهم
 
-_FILE = Path("data/receipt_windows.json")
+_FILE = (Path(os.getenv("DATA_DIR")) if os.getenv("DATA_DIR") else BASE) / "receipt_windows.json"
 _DEFAULT_TTL = int(os.getenv("RECEIPT_TTL_SECONDS", "3600"))  # مدة السماح الافتراضية بالثواني (افتراضي 60 دقيقة)
+
+_OLD = Path("data/receipt_windows.json")
+try:
+    if _OLD.exists() and not _FILE.exists():
+        _FILE.parent.mkdir(parents=True, exist_ok=True)
+        _FILE.write_text(_OLD.read_text(encoding="utf-8"), encoding="utf-8")
+except Exception:
+    pass
+
+_DEFAULT_TTL = int(os.getenv("RECEIPT_TTL_SECONDS", "3600"))
 
 def _load() -> dict:
     try:

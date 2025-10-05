@@ -1,6 +1,6 @@
 # utils/card_renderer.py
 from __future__ import annotations
-import io, os, math, random
+import io, os, random
 from typing import Tuple
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
 
@@ -13,17 +13,82 @@ except Exception:
     _HAS_AR = False
 
 # ================== خطوط ==================
+def _first_existing(paths: list[str]) -> str | None:
+    for p in paths:
+        if not p:
+            continue
+        pp = os.path.expanduser(p)
+        if os.path.exists(pp):
+            return pp
+    return None
+
 def _font_paths():
+    # جرّب أولاً خطوط مضمّنة في المشروع (لو وضعتها)
+    assets = [
+        "./assets/fonts/NotoSansArabic-Regular.ttf",
+        "./assets/fonts/Amiri-Regular.ttf",
+        "./assets/fonts/Tajawal-Regular.ttf",
+    ]
+    assets_bold = [
+        "./assets/fonts/NotoSansArabic-Bold.ttf",
+        "./assets/fonts/Amiri-Bold.ttf",
+        "./assets/fonts/Tajawal-Bold.ttf",
+    ]
+    assets_en = [
+        "./assets/fonts/Inter-Regular.ttf",
+        "./assets/fonts/Roboto-Regular.ttf",
+    ]
+    assets_en_bold = [
+        "./assets/fonts/Inter-Bold.ttf",
+        "./assets/fonts/Roboto-Bold.ttf",
+    ]
+
+    # مسارات لينكس الشائعة
+    linux_ar = [
+        "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSansArabic-Regular.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    ]
+    linux_ar_bold = [
+        "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Bold.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSansArabic-Bold.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    ]
+    linux_en = [
+        "/usr/share/fonts/truetype/inter/Inter-Regular.ttf",
+        "/usr/share/fonts/truetype/roboto/hinted/Roboto-Regular.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    ]
+    linux_en_bold = [
+        "/usr/share/fonts/truetype/inter/Inter-Bold.ttf",
+        "/usr/share/fonts/truetype/roboto/hinted/Roboto-Bold.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    ]
+
+    # مسارات ويندوز (احتياطي)
+    win_ar = [r"C:\Windows\Fonts\tahoma.ttf"]
+    win_ar_bold = [r"C:\Windows\Fonts\tahomabd.ttf"]
+    win_en = [r"C:\Windows\Fonts\segoeui.ttf"]
+    win_en_bold = [r"C:\Windows\Fonts\segoeuib.ttf"]
+
+    # بيئة .env لها أولوية إن عيّنتها
+    env_ar = os.getenv("APP_AR_FONT")
+    env_ar_bold = os.getenv("APP_AR_FONT_BOLD")
+    env_en = os.getenv("APP_EN_FONT")
+    env_en_bold = os.getenv("APP_EN_FONT_BOLD")
+
     return {
-        "ar_regular": os.getenv("APP_AR_FONT",       r"C:\Windows\Fonts\tahoma.ttf"),
-        "ar_bold":    os.getenv("APP_AR_FONT_BOLD",  r"C:\Windows\Fonts\tahomabd.ttf"),
-        "en_regular": os.getenv("APP_EN_FONT",       r"C:\Windows\Fonts\segoeui.ttf"),
-        "en_bold":    os.getenv("APP_EN_FONT_BOLD",  r"C:\Windows\Fonts\segoeuib.ttf"),
+        "ar_regular": _first_existing([env_ar] + assets + linux_ar + win_ar),
+        "ar_bold":    _first_existing([env_ar_bold] + assets_bold + linux_ar_bold + win_ar_bold),
+        "en_regular": _first_existing([env_en] + assets_en + linux_en + win_en),
+        "en_bold":    _first_existing([env_en_bold] + assets_en_bold + linux_en_bold + win_en_bold),
     }
 
-def _load_font(path: str, size: int) -> ImageFont.FreeTypeFont:
+def _load_font(path: str | None, size: int) -> ImageFont.FreeTypeFont:
     try:
-        return ImageFont.truetype(path, size=size)
+        if path:
+            return ImageFont.truetype(path, size=size)
+        return ImageFont.load_default()
     except Exception:
         return ImageFont.load_default()
 
@@ -46,7 +111,11 @@ def _shape(text: str, lang: str) -> str:
     return "\n".join(lines)
 
 def _text_w(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont) -> int:
-    return int(draw.textlength(text, font=font))
+    try:
+        return int(draw.textlength(text, font=font))
+    except Exception:
+        # Pillow قديمة: استخدم bounding box
+        return int(draw.textbbox((0,0), text, font=font)[2])
 
 def _wrap(draw: ImageDraw.ImageDraw, raw_text: str, font: ImageFont.ImageFont, max_w: int, lang: str) -> list[str]:
     text = _shape(raw_text, lang)
@@ -86,13 +155,14 @@ def _linear_gradient(size, start, end, vertical=True):
     gdraw = ImageDraw.Draw(grad)
     length = h if vertical else w
     for i in range(length):
-        gdraw.line(((0, i) if vertical else (i, 0),
-                    (0, i) if vertical else (i, 0)), fill=int(255 * (i / max(1, length-1))))
+        if vertical:
+            gdraw.line(((0, i), (0, i)), fill=int(255 * (i / max(1, length-1))))
+        else:
+            gdraw.line(((i, 0), (i, 0)), fill=int(255 * (i / max(1, length-1))))
     grad = grad.resize(size)
     top = Image.new("RGBA", size, start)
     bottom = Image.new("RGBA", size, end)
-    base = Image.composite(bottom, top, grad)
-    return base
+    return Image.composite(bottom, top, grad)
 
 def _rounded_gradient(size, r: int, start, end, vertical=True):
     g = _linear_gradient(size, start, end, vertical)
@@ -119,7 +189,8 @@ def _inner_glow(img: Image.Image, xy, r: int, glow_color=(38, 198, 166, 60), glo
     d = ImageDraw.Draw(glow)
     for i in range(glow_width, 0, -1):
         alpha = int(glow_color[3] * (i/glow_width))
-        d.rounded_rectangle((i, i, w-1-i, h-1-i), r, outline=(glow_color[0],glow_color[1],glow_color[2], alpha), width=1)
+        d.rounded_rectangle((i, i, w-1-i, h-1-i), r,
+                            outline=(glow_color[0],glow_color[1],glow_color[2], alpha), width=1)
     img.alpha_composite(glow, (x0, y0))
 
 def _vignette(size, intensity=0.55):
@@ -137,39 +208,35 @@ def _vignette(size, intensity=0.55):
     return Image.composite(vign, Image.new("RGBA", size, 0), mask)
 
 def _grain(size, alpha=18):
-    # حبيبات فيلم خفيفة جداً
     w,h = size
-    # effect_noise قد لا تكون متاحة بكل الإصدارات؛ fallback يدوي
     try:
-        g = Image.effect_noise((w, h), 16)  # grayscale
+        g = Image.effect_noise((w, h), 16)
     except Exception:
-        import random
+        import random as _rnd
         g = Image.new("L", (w,h), 0)
         px = g.load()
         for y in range(h):
             for x in range(w):
-                px[x,y] = random.randint(0, 30)
+                px[x,y] = _rnd.randint(0, 30)
     g = ImageOps.autocontrast(g)
     return Image.merge("RGBA", (g,g,g, Image.new("L", (w,h), alpha)))
 
-def _light_streak(size, angle_deg=24, width_ratio=0.42, color=(255,255,255,80)):
+def _light_streak(size, angle_deg=28, width_ratio=0.55, color=(255,255,255,80)):
     w,h = size
     lw = int(w * width_ratio)
     stripe = Image.new("RGBA", (lw, h), 0)
     grad = _linear_gradient((lw, h), (255,255,255,0), color, vertical=False)
     stripe.alpha_composite(grad)
     stripe = stripe.rotate(angle_deg, resample=Image.BICUBIC, expand=True, fillcolor=(0,0,0,0))
-    # ضعها من أعلى يسار تقريباً
     canvas = Image.new("RGBA", (w,h), 0)
     canvas.alpha_composite(stripe, (-int(w*0.2), -int(h*0.15)))
     return canvas
 
-# ===== أيقونات بسيطة للفقـرات =====
+# ===== أيقونات بسيطة =====
 def _icon_circle(draw: ImageDraw.ImageDraw, cx, cy, r, fill, outline=(255,255,255,140)):
     draw.ellipse((cx-r, cy-r, cx+r, cy+r), fill=fill, outline=outline, width=2)
 
 def _icon_shield(img: Image.Image, cx, cy, s, color=(80,220,190,230)):
-    # درع بسيط
     d = ImageDraw.Draw(img)
     w = s; h = int(s*1.2)
     x0, y0 = cx - w//2, cy - h//2
@@ -182,7 +249,7 @@ def _icon_shield(img: Image.Image, cx, cy, s, color=(80,220,190,230)):
     ]
     d.polygon(poly, fill=color, outline=(255,255,255,180))
 
-# ================== البطاقة الاحترافية ==================
+# ================== البطاقة ==================
 def render_welcome_card(
     *,
     lang: str,
@@ -195,7 +262,6 @@ def render_welcome_card(
     size: Tuple[int, int] | None = None,
     dpr: float = 2.0,
 ) -> bytes:
-    # مقاس / دقّة
     if size is None:
         W = int(os.getenv("WELCOME_WIDTH", "1400"))
         H = int(os.getenv("WELCOME_HEIGHT", "760"))
@@ -204,9 +270,7 @@ def render_welcome_card(
     scale = max(1.0, float(dpr))
     cw, ch = int(W*scale), int(H*scale)
 
-    # ألوان أساسية (متحيّزة للأزرق المخضر)
     ACCENT   = (38, 198, 166, 230)
-    ACCENT_D = (22, 120, 100, 230)
     BG_TOP   = (8, 28, 42, 255)
     BG_BOT   = (12, 16, 30, 255)
     CARD_T1  = (24, 30, 48, 235)
@@ -214,13 +278,11 @@ def render_welcome_card(
     TXT_MAIN = (236, 244, 255, 255)
     TXT_DIM  = (188, 204, 226, 255)
 
-    # خلفية + مؤثرات
     bg = _linear_gradient((cw, ch), BG_TOP, BG_BOT, vertical=True)
-    bg.alpha_composite(_light_streak((cw, ch), angle_deg=28, width_ratio=0.55, color=(255,255,255,70)))
+    bg.alpha_composite(_light_streak((cw, ch)))
     bg.alpha_composite(_grain((cw, ch), alpha=16))
     bg.alpha_composite(_vignette((cw, ch), intensity=0.55))
 
-    # بطاقة زجاجية مع ظل
     pad    = int(30*scale)
     radius = int(26*scale)
     inner  = (pad, pad, cw-pad, ch-pad)
@@ -230,7 +292,6 @@ def render_welcome_card(
     bg.alpha_composite(shadow, (pad, pad-6))
 
     card = _rounded_gradient(card_size, radius, CARD_T1, CARD_T2, vertical=True)
-    # لمعان زجاجي مائل خفي
     gloss = Image.new("RGBA", card_size, (255,255,255,0))
     gd = ImageDraw.Draw(gloss)
     gd.polygon([(0,int(card_size[1]*0.12)), (card_size[0],0), (card_size[0],int(card_size[1]*0.35))],
@@ -239,7 +300,6 @@ def render_welcome_card(
     card.alpha_composite(gloss)
 
     bg.alpha_composite(card, (pad, pad))
-    # حدّ وتوهج داخلي
     _draw_round_rect(bg, inner, r=radius, outline=ACCENT, width=int(2*scale))
     _inner_glow(bg, inner, r=radius, glow_color=(ACCENT[0],ACCENT[1],ACCENT[2],80), glow_width=int(16*scale))
 
@@ -248,14 +308,14 @@ def render_welcome_card(
     x0, x1 = inset, cw - inset
     y = inset
 
-    # خطوط
     f_title = _font(lang, int(64*scale), bold=True)
     f_sub   = _font(lang, int(30*scale))
     f_body  = _font(lang, int(40*scale))
     f_small = _font(lang, int(32*scale))
 
     anchor = "ra" if lang == "ar" else "la"
-    # عنوان + ظل خفيف
+
+    # عنوان مع ظل
     title_shaped = _shape(title, lang)
     off = int(3*scale)
     pos = (x1 if lang=="ar" else x0, y)
@@ -264,36 +324,30 @@ def render_welcome_card(
            stroke_width=int(1*scale), stroke_fill=(255,255,255,35))
     y += int(f_title.size*1.55)
 
-    # سطر ترحيب صغير
+    # سطر ترحيب
     d.text((x1 if lang=="ar" else x0, y), _shape(hello, lang), font=f_sub, fill=TXT_DIM, anchor=anchor)
     y += int(f_sub.size*1.5)
 
-    # كبسولة الحالة (زجاج)
+    # كبسولة الحالة
     pill_h = int(56*scale)
     pill_pad = int(22*scale)
     pill_txt = _shape(status_line, lang)
     pill_w = _text_w(d, pill_txt, f_small) + pill_pad*2
     pill_bbox = (x1-pill_w, y, x1, y+pill_h) if lang=="ar" else (x0, y, x0+pill_w, y+pill_h)
 
-    # ظل الكبسولة
     bg.alpha_composite(_rounded_shadow((pill_w, pill_h), int(pill_h/2), blur=int(18*scale), offset=(0,6), color=(0,0,0,120)),
                        (pill_bbox[0], pill_bbox[1]-int(2*scale)))
-    # جسم زجاجي متدرّج
     pill = _rounded_gradient((pill_w, pill_h), int(pill_h/2), (255,255,255,35), (120,200,170,90), vertical=False)
     bg.alpha_composite(pill, (pill_bbox[0], pill_bbox[1]))
-    # حد داخلي
     d.rounded_rectangle(pill_bbox, radius=int(pill_h/2), outline=(255,255,255,95), width=int(1*scale))
-    # نص الكبسولة
     d.text((pill_bbox[2]-pill_pad if lang=="ar" else pill_bbox[0]+pill_pad, pill_bbox[1]+pill_h//2),
            pill_txt, font=f_small, fill=(255,255,255,240), anchor=("rm" if lang=="ar" else "lm"))
     y = pill_bbox[3] + int(26*scale)
 
-    # فقرة 1 (أيقونة دائرة مضيئة)
+    # فقرة 1
     max_w = (x1-x0) - int(28*scale)
     line_h = int(f_body.size*1.45)
     icon_r = int(10*scale)
-
-    # أيقونة الفقرة الأولى (دائرة متدرّجة)
     cx = (x1 + int(18*scale)) if lang=="ar" else (x0 - int(18*scale))
     cy = y + f_body.size//2
     _icon_circle(d, cx, cy, icon_r, fill=(255,255,255,230))
@@ -302,7 +356,7 @@ def render_welcome_card(
         d.text((x1 if lang=="ar" else x0, y + i*line_h), ln, font=f_body, fill=TXT_MAIN, anchor=anchor)
     y += len(lines)*line_h + int(10*scale)
 
-    # فقرة 2 (درع)
+    # فقرة 2
     lines2 = _wrap(d, safety, f_body, max_w, lang)
     cy2 = y + f_body.size//2
     _icon_shield(bg, (x1 + int(18*scale)) if lang=="ar" else (x0 - int(18*scale)), cy2, int(22*scale),
@@ -311,7 +365,7 @@ def render_welcome_card(
         d.text((x1 if lang=="ar" else x0, y + i*line_h), ln, font=f_body, fill=TXT_MAIN, anchor=anchor)
     y += len(lines2)*line_h + int(16*scale)
 
-    # زر CTA زجاجي (يضفي إحساس واقعي)
+    # زر CTA
     btn_h  = int(64*scale)
     btn_pad = int(26*scale)
     btn_txt = _shape(cta, lang)
@@ -319,17 +373,15 @@ def render_welcome_card(
     btn_x0 = (x1-btn_w) if lang=="ar" else x0
     btn_box = (btn_x0, y, btn_x0+btn_w, y+btn_h)
 
-    # ظل + جسم زجاجي
     bg.alpha_composite(_rounded_shadow((btn_w, btn_h), int(btn_h/2), blur=int(20*scale), offset=(0,7), color=(0,0,0,120)),
                        (btn_box[0], btn_box[1]-int(2*scale)))
     btn = _rounded_gradient((btn_w, btn_h), int(btn_h/2), (255,255,255,40), (ACCENT[0],ACCENT[1],ACCENT[2],85), vertical=False)
     bg.alpha_composite(btn, (btn_box[0], btn_box[1]))
     d.rounded_rectangle(btn_box, radius=int(btn_h/2), outline=(255,255,255,100), width=int(1*scale))
 
-    # نص الزر + سهم اتجاه
     d.text((btn_box[2]-btn_pad if lang=="ar" else btn_box[0]+btn_pad, btn_box[1]+btn_h//2),
            btn_txt, font=f_small, fill=(255,255,255,250), anchor=("rm" if lang=="ar" else "lm"))
-    # سهم
+
     tri_w = int(16*scale); tri_h = int(14*scale)
     if lang == "ar":
         tri = [(btn_box[0]+btn_pad, btn_box[1]+btn_h//2),
@@ -339,9 +391,8 @@ def render_welcome_card(
         tri = [(btn_box[2]-btn_pad, btn_box[1]+btn_h//2),
                (btn_box[2]-btn_pad-tri_w, btn_box[1]+btn_h//2-tri_h//2),
                (btn_box[2]-btn_pad-tri_w, btn_box[1]+btn_h//2+tri_h//2)]
-    ImageDraw.Draw(bg).polygon(tri, fill=(255,255,255,230))
+    d.polygon(tri, fill=(255,255,255,230))
 
-    # تصغير لحيوية الخطوط
     if scale != 1.0:
         bg = bg.resize((W, H), Image.LANCZOS)
 

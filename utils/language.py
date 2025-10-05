@@ -5,9 +5,10 @@ Compatibility shim for legacy imports.
 Primary: re-export from `lang.py` (single source of truth).
 Fallback: loads from ./locales/en.json & ./locales/ar.json (flat dict), with a minimal built-in EN/AR set.
 
-Notes:
-- Default language is *forced* to English in fallback to avoid accidental flips.
-- Shares the same user_langs.json location/policy as lang.py (project root).
+Improvements:
+- Smarter resolution for user_langs.json (prefers BASE/data).
+- Safe atomic writes (uses utils.json_box if available).
+- Looks for locales under BASE/locales then ./locales.
 """
 
 from __future__ import annotations
@@ -22,15 +23,60 @@ try:
 except Exception:
     # ====== Fallback implementation (EN/AR only) ======
 
-    BASE_DIR = Path(__file__).resolve().parent  # project root (same dir as lang.py)
-    USER_LANG_FILE = BASE_DIR / "user_langs.json"
+    # --- discover BASE (shared data root) ---
+    try:
+        from utils.paths import BASE  # type: ignore
+    except Exception:
+        BASE = Path(os.getenv("DATA_DIR", "data")).resolve()
+
+    # --- json helpers (atomic write if available) ---
+    try:
+        from utils.json_box import load_json as _jb_load, save_json as _jb_save  # type: ignore
+    except Exception:
+        _jb_load = _jb_save = None  # type: ignore
+
+    def _atomic_write(path: Path, data: dict) -> None:
+        if _jb_save:
+            _jb_save(path, data)
+            return
+        tmp = Path(str(path) + ".tmp")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with tmp.open("w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, path)
+
+    def _atomic_read(path: Path, default):
+        if _jb_load:
+            return _jb_load(path, default)
+        try:
+            return json.loads(path.read_text("utf-8"))
+        except Exception:
+            return default
+
+    # --- choose user_langs.json location (prefer data/ or BASE) ---
+    CANDIDATE_LANG_FILES = [
+        BASE / "user_langs.json",
+        BASE / "data" / "user_langs.json",
+        Path("data/user_langs.json"),
+        Path("user_langs.json"),
+    ]
+    _chosen = None
+    for cand in CANDIDATE_LANG_FILES:
+        if cand.exists():
+            _chosen = cand
+            break
+    USER_LANG_FILE = _chosen or (BASE / "user_langs.json")
+
+    # --- locales location (prefer BASE/locales, then ./locales) ---
+    LOCALES_DIRS = [
+        BASE / "locales",
+        Path(__file__).resolve().parent / "locales",
+        Path("locales"),
+    ]
 
     # Force default EN in fallback
     DEFAULT_LANG = "en"
     ALLOWED_LANGS = {"en", "ar"}
-
-    # Look for ./locales (same as lang.py)
-    LOCALES_DIR = BASE_DIR / "locales"
 
     # ---- helpers ----
     def _normalize_lang(code: Optional[str]) -> str:
@@ -46,13 +92,6 @@ except Exception:
             return "en"
         return DEFAULT_LANG
 
-    def _atomic_write(path: Path, data: dict) -> None:
-        tmp = Path(str(path) + ".tmp")
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with tmp.open("w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        os.replace(tmp, path)
-
     # ---- locales store ----
     _LOCALES: Dict[str, Dict[str, str]] = {"en": {}, "ar": {}}
 
@@ -67,7 +106,6 @@ except Exception:
             "cmd_sections": "Quick sections",
             "cmd_alerts": "Alerts",
             "cmd_admin_center": "Admin Center",
-
             # Language UI
             "btn_lang_en": "English",
             "btn_lang_ar": "Arabic",
@@ -86,7 +124,6 @@ except Exception:
             "cmd_sections": "الأقسام السريعة",
             "cmd_alerts": "الإشعارات",
             "cmd_admin_center": "مركز الإدارة",
-
             # Language UI
             "btn_lang_en": "الإنجليزية",
             "btn_lang_ar": "العربية",
@@ -97,17 +134,21 @@ except Exception:
         },
     }
 
-    def _load_lang_file(lang_code: str) -> Dict[str, str]:
-        """Load locales/<code>.json if exists (flat dict), else {}."""
+    def _load_lang_file_from(dir_path: Path, lang_code: str) -> Dict[str, str]:
         try:
-            p = LOCALES_DIR / f"{lang_code}.json"
+            p = dir_path / f"{lang_code}.json"
             if p.exists():
-                with p.open("r", encoding="utf-8") as f:
-                    data = json.load(f) or {}
-                # accept flat dict or {"strings":{...}}
+                data = _atomic_read(p, {}) or {}
                 return data.get("strings", data) if isinstance(data, dict) else {}
         except Exception:
             pass
+        return {}
+
+    def _load_lang_file(lang_code: str) -> Dict[str, str]:
+        for d in LOCALES_DIRS:
+            res = _load_lang_file_from(d, lang_code)
+            if res:
+                return res
         return {}
 
     def _ensure_locales_loaded() -> None:
@@ -121,26 +162,14 @@ except Exception:
 
     # -------- API: get/set user lang --------
     def get_user_lang(user_id: int) -> str:
-        try:
-            with USER_LANG_FILE.open("r", encoding="utf-8") as f:
-                data = json.load(f) or {}
-                return _normalize_lang(data.get(str(user_id), DEFAULT_LANG))
-        except FileNotFoundError:
-            return DEFAULT_LANG
-        except Exception:
-            return DEFAULT_LANG
+        data = _atomic_read(USER_LANG_FILE, {}) or {}
+        return _normalize_lang(data.get(str(user_id), DEFAULT_LANG))
 
     def set_user_lang(user_id: int, lang_code: str) -> None:
         code = _normalize_lang(lang_code)
-        try:
-            data = {}
-            if USER_LANG_FILE.exists():
-                with USER_LANG_FILE.open("r", encoding="utf-8") as f:
-                    data = json.load(f) or {}
-            data[str(user_id)] = code
-            _atomic_write(USER_LANG_FILE, data)
-        except Exception:
-            pass  # never break
+        data = _atomic_read(USER_LANG_FILE, {}) or {}
+        data[str(user_id)] = code
+        _atomic_write(USER_LANG_FILE, data)
 
     # -------- API: translator --------
     def t(lang: str, key: str) -> str:

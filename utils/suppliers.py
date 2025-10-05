@@ -1,20 +1,25 @@
 # utils/suppliers.py
 from __future__ import annotations
 
-import os, json, time, threading
+import os, json, time, threading, contextlib
 from pathlib import Path
 from typing import Set, List, Optional
-import contextlib
 
-# ========= إعدادات المسار والملفات (Secure Paths & Permissions) =========
-DATA_DIR = Path("data")
-FILE = DATA_DIR / "suppliers.json"
+# ========= مسار التخزين الموحّد =========
+# نحاول استخدام BASE من utils.paths؛ وإن لم تتوفر لأي سبب نرجع إلى /data أو ./data.
+try:
+    from utils.paths import BASE  # مخزن البيانات الموحّد على السيرفر/الدبلويمنت
+    DATA_DIR = BASE
+except Exception:
+    # أولاً جرّب /data إن كان موجود، وإلا أنشئ ./data محليًا
+    DATA_DIR = Path("/data") if Path("/data").exists() else Path("data")
+
+FILE     = DATA_DIR / "suppliers.json"
 LOCKFILE = DATA_DIR / "suppliers.lock"
 
 # أنشئ المجلد بصلاحيات مقيدة (إن أمكن)
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 try:
-    # على ويندوز قد لا تُحترم الصلاحيات بنفس الدقة، لكن لا ضرر من المحاولة
     os.chmod(DATA_DIR, 0o700)
 except Exception:
     pass
@@ -29,7 +34,10 @@ _MIN_UID = 1
 _MAX_UID = 2**63 - 1  # حد منطقي لمنع قيم شاذة جداً
 
 def _normalize_uid(user_id: int) -> int:
-    """Normalize and validate a user id. يتحقّق من أن المعرف رقم صحيح وموجب وبنطاق معقول"""
+    """
+    Normalize and validate a user id.
+    يتحقّق من أن المعرّف رقم صحيح وموجب وبنطاق معقول.
+    """
     try:
         uid = int(user_id)
     except Exception as e:
@@ -46,8 +54,7 @@ if os.name == "posix":
     def _interprocess_lock(exclusive: bool = True):
         LOCKFILE.parent.mkdir(parents=True, exist_ok=True)
         with open(LOCKFILE, "a+b") as lf:
-            flags = fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH
-            fcntl.flock(lf.fileno(), flags)
+            fcntl.flock(lf.fileno(), fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH)
             try:
                 yield
             finally:
@@ -61,17 +68,15 @@ else:
         LOCKFILE.parent.mkdir(parents=True, exist_ok=True)
         lf = open(LOCKFILE, "a+b")
         try:
-            # استخدم قفل كامل الملف بمنطقة صغيرة (بايت واحد يكفي للإمساك بالقفل)
-            mode_block = msvcrt.LK_LOCK   # حظر حتى توفر القفل
-            size = 1
+            # قفل كامل الملف بمنطقة صغيرة (بايت واحد يكفي للإمساك بالقفل)
             lf.seek(0)
-            msvcrt.locking(lf.fileno(), mode_block, size)
+            msvcrt.locking(lf.fileno(), msvcrt.LK_LOCK, 1)  # حظر حتى يتوفر القفل
             try:
                 yield
             finally:
                 lf.seek(0)
                 try:
-                    msvcrt.locking(lf.fileno(), msvcrt.LK_UNLCK, size)
+                    msvcrt.locking(lf.fileno(), msvcrt.LK_UNLCK, 1)
                 except Exception:
                     pass
         finally:
@@ -89,24 +94,25 @@ def _decode_set(raw) -> Set[int]:
     if isinstance(raw, list):
         for v in raw:
             try:
-                uid = _normalize_uid(v)
+                s.add(_normalize_uid(v))
             except Exception:
                 continue
-            s.add(uid)
     return s
 
 def _rotate_corrupt_file():
+    """تدوير الملف التالف (إن وُجد) كي نبدأ بملف نظيف بدون تعطيل النظام."""
     try:
         if FILE.exists():
             ts = time.strftime("%Y%m%d-%H%M%S")
-            corrupt = FILE.with_suffix(FILE.suffix + f".corrupt-{ts}")
-            os.replace(FILE, corrupt)
+            os.replace(FILE, FILE.with_suffix(FILE.suffix + f".corrupt-{ts}"))
     except Exception:
-        # لا نريد تعطيل النظام إن فشل التدوير
         pass
 
 def _load_from_disk_nolock() -> Set[int]:
-    """اقرأ الملف بدون أخذ قفل (المستوى الأعلى يتولى القفل)."""
+    """
+    اقرأ الملف بدون أخذ قفل (المستوى الأعلى يتولى القفل).
+    الكتابة تستخدم استبدالًا ذريًا، لذا القراءة بدون قفل آمنة.
+    """
     try:
         with open(FILE, "r", encoding="utf-8") as f:
             raw = json.load(f)
@@ -119,22 +125,22 @@ def _load_from_disk_nolock() -> Set[int]:
     return _decode_set(raw)
 
 def _save_to_disk_nolock(s: Set[int]) -> None:
-    """اكتب الملف بشكل ذري وآمن، بدون أخذ قفل (المستوى الأعلى يتولى القفل)."""
+    """
+    اكتب الملف بشكل ذري وآمن، بدون أخذ قفل (المستوى الأعلى يتولى القفل).
+    - json مضغوط (separators) لتقليل الحجم.
+    - fsync للملف ثم للمجلد لضمان ثبات البيانات على بعض الأنظمة.
+    """
     tmp = FILE.with_suffix(FILE.suffix + ".tmp")
-    # اكتب البيانات
     with open(tmp, "w", encoding="utf-8") as f:
-        # لا نحتاج indent في الإنتاج، يقلل الحجم ويسرّع القراءة
         json.dump(sorted(s), f, ensure_ascii=False, separators=(",", ":"))
         f.flush()
         os.fsync(f.fileno())
-    # شدّد الصلاحيات إن أمكن
     try:
         os.chmod(tmp, 0o600)
     except Exception:
         pass
-    # استبدال ذري
     os.replace(tmp, FILE)
-    # fsync للمجلد لضمان ثبات الدخول (dirent) على أقراص وأنظمة ملفات معينة
+    # fsync للمجلد لضمان ثبات dirent
     try:
         dfd = os.open(str(DATA_DIR), os.O_RDONLY)
         try:
@@ -145,22 +151,26 @@ def _save_to_disk_nolock(s: Set[int]) -> None:
         pass
 
 def _ensure_cache_up_to_date() -> Set[int]:
-    """يحدّث الكاش داخل العملية إذا تغيّر mtime على القرص."""
+    """
+    يحدّث الكاش داخل العملية إذا تغيّر mtime على القرص.
+    يمنع القراءات المتكررة الثقيلة ويواكب التعديلات من عمليات أخرى.
+    """
     global _cache, _cache_mtime_ns
     with _cache_lock:
         disk_mtime = _get_mtime_ns()
         if _cache is None or disk_mtime != _cache_mtime_ns:
-            # قراءة بدون قفل هنا آمنة لأن الكتابة تستخدم استبدال ذري
             _cache = _load_from_disk_nolock()
             _cache_mtime_ns = disk_mtime
         return _cache
 
 # ========= الواجهة العامة (API) =========
 def is_supplier(user_id: int) -> bool:
-    """تحقق هل المستخدم مورّد. / Check if user is a supplier."""
+    """
+    تحقق هل المستخدم مورّد. / Check if user is a supplier.
+    قراءة فقط من الكاش المحدّث — لا حاجة لقفل خيوط هنا.
+    """
     uid = _normalize_uid(user_id)
     s = _ensure_cache_up_to_date()
-    # لا حاجة لقفل خيوط هنا لأننا لا نعدّل الكاش
     return uid in s
 
 def set_supplier(user_id: int, value: bool = True) -> None:
@@ -193,10 +203,8 @@ def set_supplier(user_id: int, value: bool = True) -> None:
 
 def list_suppliers() -> List[int]:
     """قائمة مرتبة بكل المورّدين. / Sorted list of supplier IDs."""
-    s = _ensure_cache_up_to_date()
-    return sorted(s)
+    return sorted(_ensure_cache_up_to_date())
 
 def count_suppliers() -> int:
     """عدد المورّدين. / Count suppliers."""
-    s = _ensure_cache_up_to_date()
-    return len(s)
+    return len(_ensure_cache_up_to_date())

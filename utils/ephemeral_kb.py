@@ -1,28 +1,85 @@
 # utils/ephemeral_kb.py
 from __future__ import annotations
 
-import json, time
+import json, time, os, threading
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 
-_STORE = Path("data/ephemeral_kb.json")
+# ===== إعدادات ومسار التخزين =====
+# يمكنك override عبر EPHEMERAL_KB_PATH (مثال: /data/ephemeral_kb.json)
+_EP_PATH = (os.getenv("EPHEMERAL_KB_PATH") or "data/ephemeral_kb.json").strip()
+_STORE = Path(_EP_PATH)
 _STORE.parent.mkdir(parents=True, exist_ok=True)
 
-def _now() -> int: return int(time.time())
+_LOCK = threading.Lock()
 
-def _load() -> Dict[str, Any]:
+def _now() -> int:
+    return int(time.time())
+
+# ===== I/O آمِن وذرّي =====
+def _atomic_write_json(path: Path, data: Dict[str, Any]) -> None:
+    payload = json.dumps(data, ensure_ascii=False, indent=2)
+    tmp = path.with_suffix(path.suffix + f".{int(time.time()*1000)}.tmp")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
+        f.write(payload)
+        try:
+            f.flush()
+            os.fsync(f.fileno())
+        except Exception:
+            # بعض بيئات الحاويات لا تدعم fsync — تجاهل بأمان
+            pass
+    os.replace(tmp, path)
+
+def _read_json_safe(path: Path) -> Dict[str, Any]:
     try:
-        if _STORE.exists():
-            return json.loads(_STORE.read_text("utf-8")) or {"users": {}}
+        if path.exists():
+            raw = path.read_text("utf-8")
+            obj = json.loads(raw or "{}")
+            if isinstance(obj, dict):
+                return obj
     except Exception:
+        # في حال تلف الملف نعيد خريطة افتراضية
         pass
     return {"users": {}}
 
+def _gc(d: Dict[str, Any]) -> Dict[str, Any]:
+    """تنظيف السجلات المنتهية قبل الإرجاع/الحفظ."""
+    users = d.get("users") or {}
+    now = _now()
+    kept: Dict[str, Any] = {}
+    for k, rec in users.items():
+        try:
+            exp = int(rec.get("expires_at", 0) or 0)
+        except Exception:
+            exp = 0
+        if exp and now > exp:
+            continue
+        kept[k] = rec
+    d["users"] = kept
+    return d
+
+def _load() -> Dict[str, Any]:
+    with _LOCK:
+        d = _read_json_safe(_STORE)
+        if "users" not in d or not isinstance(d["users"], dict):
+            d["users"] = {}
+        # نظّف المنتهي أثناء التحميل
+        d = _gc(d)
+        return d
+
 def _save(d: Dict[str, Any]) -> None:
-    try:
-        _STORE.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
-    except Exception:
-        pass
+    with _LOCK:
+        # تنظيف قبل الحفظ لتقليل الحجم
+        d = _gc(d)
+        try:
+            _atomic_write_json(_STORE, d)
+        except Exception:
+            # لا نرفع استثناءً حتى لا يعطّل مسار البوت
+            try:
+                _STORE.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+            except Exception:
+                pass
 
 # -------- API --------
 
@@ -49,17 +106,18 @@ def open_panel(
     - allow_any_callbacks: اسمح بكل الكولباكات (لن تُغلق بسبب الكولباكات)
     """
     d = _load()
+    now = _now()
     rec = {
         "owner": str(owner),
-        "opened_at": _now(),
-        "last_touch": _now(),
-        "expires_at": _now() + max(1, int(ttl_sec)),
+        "opened_at": now,
+        "last_touch": now,
+        "expires_at": now + max(1, int(ttl_sec)),
         "allow_prefixes": list(allow_prefixes or []),
         "allow_texts": list(allow_texts or []),
         "close_on_any_message": bool(close_on_any_message),
         "close_on_unmatched_callback": bool(close_on_unmatched_callback),
         "allow_any_callbacks": bool(allow_any_callbacks),
-        "meta": meta or {},
+        "meta": dict(meta or {}),
     }
     d.setdefault("users", {})[str(uid)] = rec
     _save(d)
@@ -73,10 +131,14 @@ def get(uid: int) -> Optional[Dict[str, Any]]:
     rec = d.get("users", {}).get(str(uid))
     if not rec:
         return None
-    rec = dict(rec)  # نسخة
-    exp = int(rec.get("expires_at", 0) or 0)
-    rec["_expired"] = bool(exp and _now() > exp)
-    return rec
+    # نسخة آمنة مع إشارة انتهاء
+    out = dict(rec)
+    try:
+        exp = int(out.get("expires_at", 0) or 0)
+    except Exception:
+        exp = 0
+    out["_expired"] = bool(exp and _now() > exp)
+    return out
 
 def is_active(uid: int, owner: str | None = None) -> bool:
     rec = get(uid)
@@ -89,9 +151,14 @@ def touch(uid: int, *, extend_sec: int | None = None) -> None:
     rec = d.get("users", {}).get(str(uid))
     if not rec:
         return
-    rec["last_touch"] = _now()
+    now = _now()
+    rec["last_touch"] = now
     if isinstance(extend_sec, int) and extend_sec > 0:
-        rec["expires_at"] = max(int(rec.get("expires_at", 0) or 0), _now()) + extend_sec
+        try:
+            exp = int(rec.get("expires_at", 0) or 0)
+        except Exception:
+            exp = 0
+        rec["expires_at"] = max(exp, now) + int(extend_sec)
     d["users"][str(uid)] = rec
     _save(d)
 
@@ -114,21 +181,22 @@ def should_close_on_message(uid: int, text: str) -> bool:
         return False
     if rec.get("_expired"):
         return True
-    text = (text or "").strip()
-    if text.startswith("/"):
+    t = (text or "").strip()
+    if t.startswith("/"):
         return True
     if rec.get("close_on_any_message", False):
         allowed = set(rec.get("allow_texts") or [])
-        return text not in allowed
+        return t not in allowed
     return False
 
 def _allowed_by_prefixes(rec: Dict[str, Any], data: str) -> bool:
+    data = str(data or "")
     for p in (rec.get("allow_prefixes") or []):
         try:
             if data.startswith(str(p)):
                 return True
         except Exception:
-            pass
+            continue
     return False
 
 def should_close_on_callback(uid: int, data: str) -> bool:
@@ -161,9 +229,13 @@ def cleanup_all() -> None:
     changed = False
     now = _now()
     for k in users:
-        rec = d.get("users", {}).get(k) or {}
-        if int(rec.get("expires_at", 0) or 0) and now > int(rec["expires_at"]):
-            d["users"].pop(k, None)
+        rec = (d.get("users") or {}).get(k) or {}
+        try:
+            exp = int(rec.get("expires_at", 0) or 0)
+        except Exception:
+            exp = 0
+        if exp and now > exp:
+            (d.get("users") or {}).pop(k, None)
             changed = True
     if changed:
         _save(d)

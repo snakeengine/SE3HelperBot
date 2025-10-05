@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-# ---------- أساس المشروع ----------
 def _default_base() -> Path:
     env = (os.getenv("DATA_DIR") or "").strip()
     if env:
@@ -12,50 +11,25 @@ def _default_base() -> Path:
         return Path("/data").resolve()
     return Path(__file__).resolve().parents[1] / "data"
 
-# جذر المشروع (مجلد الريبو/المصدر)
 PROJECT_ROOT: Path = Path(__file__).resolve().parents[1]
-
-# مجلد البيانات الموحد
 BASE: Path = _default_base()
 BASE.mkdir(parents=True, exist_ok=True)
 
-# مخازن شائعة
 INVENTORY_DIR = BASE / "inventory"
 USED_DIR      = BASE / "used"
 for d in (INVENTORY_DIR, USED_DIR):
     d.mkdir(parents=True, exist_ok=True)
 
-# ملفات إعدادات المتجر
 FLAGS_PATH  = BASE / "shop_flags.json"
 SHOP_CFG    = BASE / "shop_config.json"
 INV_BL_PATH = BASE / "inv_blacklist.json"
 
-# طباعة للتشخيص
-try:
-    print(f"[STORAGE] BASE={BASE}")
-    print(f"[STORAGE] INVENTORY_DIR={INVENTORY_DIR}")
-    print(f"[STORAGE] USED_DIR={USED_DIR}")
-    print(f"[STORAGE] BASE={BASE}")
-    print(f"[STORAGE] FLAGS_PATH={FLAGS_PATH}")
-    print(f"[STORAGE] SHOP_CFG={SHOP_CFG}")
-    print(f"[STORAGE] INV_BL_PATH={INV_BL_PATH}")
-except Exception:
-    pass
-
-# ---------- دالة safe_join (تمنع الهروب من المجلد) ----------
 def safe_join(base: Path | str, *parts: str | os.PathLike, must_exist: bool = False) -> Path:
-    """
-    يجمع المسار بأمان داخل base ويمنع Path Traversal.
-    - base: الجذر المسموح.
-    - parts: أجزاء تُضمّ.
-    - must_exist: إن True سيرفع خطأ إذا الناتج غير موجود.
-    """
     b = Path(base).resolve()
     p = b
     for part in parts:
         p = p / Path(part)
     p = p.resolve()
-    # يمنع الخروج من base
     try:
         p.relative_to(b)
     except ValueError:
@@ -64,7 +38,7 @@ def safe_join(base: Path | str, *parts: str | os.PathLike, must_exist: bool = Fa
         raise FileNotFoundError(str(p))
     return p
 
-# ===== شِمم توافقية لأكواد قديمة =====
+# Compatibility aliases
 shop_base      = BASE / "shop"
 cache_base     = BASE / "cache"
 inventory_base = INVENTORY_DIR
@@ -74,12 +48,22 @@ for d in (shop_base, cache_base, inventory_base):
     except Exception:
         pass
 
+# Optional debug prints (set PATHS_DEBUG=1)
+if (os.getenv("PATHS_DEBUG") or "").strip() == "1":
+    try:
+        print(f"[STORAGE] BASE={BASE}")
+        print(f"[STORAGE] INVENTORY_DIR={INVENTORY_DIR}")
+        print(f"[STORAGE] USED_DIR={USED_DIR}")
+        print(f"[STORAGE] FLAGS_PATH={FLAGS_PATH}")
+        print(f"[STORAGE] SHOP_CFG={SHOP_CFG}")
+        print(f"[STORAGE] INV_BL_PATH={INV_BL_PATH}")
+    except Exception:
+        pass
+
 __all__ = [
-    "PROJECT_ROOT",
-    "BASE",
+    "PROJECT_ROOT", "BASE",
     "INVENTORY_DIR", "USED_DIR",
     "FLAGS_PATH", "SHOP_CFG", "INV_BL_PATH",
     "safe_join",
-    # aliases (توافق)
     "shop_base", "cache_base", "inventory_base",
 ]

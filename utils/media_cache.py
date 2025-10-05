@@ -4,29 +4,40 @@ import hashlib, os
 from pathlib import Path
 from typing import Optional
 
-_CACHE_DIR = Path(os.getenv("MEDIA_CACHE_DIR", "cache/media"))
+try:
+    from utils.paths import BASE
+except Exception:
+    BASE = Path(os.getenv("DATA_DIR", "data")).resolve()
+
+_CACHE_DIR = (BASE / "cache" / "media")
 _CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-_EXT = {"gif": "gif", "png": "png"}
+_EXT = {"gif": "gif", "png": "png", "jpg": "jpg", "jpeg": "jpg", "webp": "webp"}
 
 def _sha1(data: bytes) -> str:
     return hashlib.sha1(data).hexdigest()
 
 def build_key(kind: str, payload: dict) -> str:
     """
-    kind: 'gif' أو 'png'
-    payload: كل النصوص + المقاسات + dpr + fps + seconds + lang
+    kind: 'gif' | 'png' | 'jpg' | 'webp' ...
+    payload: أي بيانات تُحدد المُخرَج (نصوص/مقاسات/dpr/fps/seconds/lang ...).
     """
     buf = repr(sorted(payload.items())).encode("utf-8")
     return f"{kind}_{_sha1(buf)}"
 
+def _path_for(kind: str, key: str) -> Path:
+    ext = _EXT.get(kind.lower(), "bin")
+    return _CACHE_DIR / f"{key}.{ext}"
+
 def get(kind: str, key: str) -> Optional[bytes]:
-    ext = _EXT.get(kind, "bin")
-    f = _CACHE_DIR / f"{key}.{ext}"
-    return f.read_bytes() if f.exists() else None
+    p = _path_for(kind, key)
+    try:
+        return p.read_bytes() if p.exists() else None
+    except Exception:
+        return None
 
 def put(kind: str, key: str, data: bytes) -> str:
-    ext = _EXT.get(kind, "bin")
-    f = _CACHE_DIR / f"{key}.{ext}"
-    f.write_bytes(data)
-    return str(f)
+    p = _path_for(kind, key)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_bytes(data)
+    return str(p)

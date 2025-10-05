@@ -1,0 +1,124 @@
+{
+  "8336010603": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1759620976,
+    "updated_at": 1759688450,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0,
+    "earned": 0,
+    "spent": 0,
+    "streak": 0,
+    "last_claim": null,
+    "history": []
+  },
+  "5247491836": {
+    "points": 0,
+    "blocked": true,
+    "created_at": 1759621210,
+    "updated_at": 1759688449,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 1,
+    "earned": 0,
+    "spent": 0,
+    "streak": 0,
+    "last_claim": null,
+    "history": []
+  },
+  "6403644551": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1759621225,
+    "updated_at": 1759688449,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 2,
+    "earned": 0,
+    "spent": 0,
+    "streak": 0,
+    "last_claim": null,
+    "history": []
+  },
+  "7967056065": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1759621774,
+    "updated_at": 1759688450,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0,
+    "earned": 0,
+    "spent": 0,
+    "streak": 0,
+    "last_claim": null,
+    "history": []
+  },
+  "1483576923": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1759622492,
+    "updated_at": 1759688449,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0,
+    "earned": 0,
+    "spent": 0,
+    "streak": 0,
+    "last_claim": null,
+    "history": []
+  },
+  "7360982123": {
+    "points": 0,
+    "blocked": false,
+    "created_at": 1759657456,
+    "updated_at": 1759688450,
+    "last_actions": {},
+    "daily_date": "",
+    "warns": 0,
+    "earned": 0,
+    "spent": 0,
+    "streak": 0,
+    "last_claim": null,
+    "history": []
+  },
+  "8371697148": {
+    "points": 110,
+    "blocked": false,
+    "created_at": 1759688130,
+    "updated_at": 1759688475,
+    "last_actions": {
+      "daily_click": 1759688418,
+      "daily24": 1759688420
+    },
+    "daily_date": "",
+    "warns": 0,
+    "earned": 110,
+    "spent": 0,
+    "streak": 0,
+    "last_claim": null,
+    "history": [
+      {
+        "t": 1759688470,
+        "type": "adjust",
+        "amount": 100,
+        "note": "admin_grant"
+      },
+      {
+        "t": 1759688420,
+        "type": "daily",
+        "amount": 10,
+        "note": "daily"
+      }
+    ],
+    "abuse": {
+      "risk": 0,
+      "fails": 0,
+      "captcha_passed_at": 1759688420,
+      "last_captcha": 1759688418,
+      "ban_until": 0,
+      "captcha": {}
+    }
+  }
+}

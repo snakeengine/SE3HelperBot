@@ -2,8 +2,19 @@ from __future__ import annotations
 import json, time, os
 from pathlib import Path
 from typing import Dict, Any, Optional
+from utils.paths import BASE  # ← المهم
 
-ORDERS_FILE = Path("data") / "rewards_orders.json"
+ORDERS_FILE = (Path(os.getenv("DATA_DIR")) if os.getenv("DATA_DIR") else BASE) / "rewards_orders.json"
+
+# ترحيل من القديم
+_OLD = Path("data") / "rewards_orders.json"
+try:
+    if _OLD.exists() and not ORDERS_FILE.exists():
+        ORDERS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        ORDERS_FILE.write_text(_OLD.read_text(encoding="utf-8"), encoding="utf-8")
+except Exception:
+    pass
+
 
 def _load() -> Dict[str, Any]:
     """Load file and migrate 'orders' list -> dict if needed."""

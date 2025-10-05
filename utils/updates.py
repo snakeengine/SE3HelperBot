@@ -1,28 +1,37 @@
 # 📁 utils/updates.py
 from __future__ import annotations
 
-import json, os
+import json
+import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any, Iterable
+from pathlib import Path
+import threading
 
-UPDATE_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "update.json")
-os.makedirs(os.path.dirname(UPDATE_FILE), exist_ok=True)
+# ===== ملف الحالة (يدعم override عبر env) =====
+_ENV_PATH = (os.getenv("APP_UPDATE_FILE") or "").strip()
+_DEFAULT_PATH = Path(__file__).resolve().parent.parent / "data" / "update.json"
+UPDATE_PATH: Path = (Path(_ENV_PATH).expanduser().resolve() if _ENV_PATH else _DEFAULT_PATH)
+UPDATE_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 ALLOWED_LANGS = ("en", "ar")
 DEFAULT_LANG = "en"
 
+# قفل آمن للقراءة/الكتابة داخل العملية (thread-safe)
+_LOCK = threading.RLock()
+
 # ============ I/O ============
 
-def _safe_load(path: str, default):
+def _safe_load(path: Path, default):
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with path.open("r", encoding="utf-8") as f:
             return json.load(f)
     except Exception:
         return default
 
-def _safe_save(path: str, data):
-    tmp = f"{path}.tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
+def _safe_save(path: Path, data):
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    with tmp.open("w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
     os.replace(tmp, path)
 
@@ -52,39 +61,29 @@ def _empty_state() -> dict:
     }
 
 def load_update_info() -> dict:
-    data = _safe_load(UPDATE_FILE, None)
-    if not data:
-        data = _empty_state()
-        _safe_save(UPDATE_FILE, data)
+    with _LOCK:
+        data = _safe_load(UPDATE_PATH, None)
+        if not data:
+            data = _empty_state()
+            _safe_save(UPDATE_PATH, data)
+
+        msgs = data.get("message") or {}
+        data["message"] = {
+            "en": str(msgs.get("en") or ""),
+            "ar": str(msgs.get("ar") or ""),
+        }
+        data["notified_users"] = _coerce_user_ids(data.get("notified_users") or [])
+        data["active_until"]   = data.get("active_until", None)
+        data["duration_days"]  = data.get("duration_days", None)
+        data["active"]         = bool(data.get("active", False))
         return data
 
-    # ضمان الحقول + تنظيفها
-    msgs = data.get("message") or {}
-    if not isinstance(msgs, dict):
-        msgs = {}
-    data["message"] = {
-        "en": str(msgs.get("en") or ""),
-        "ar": str(msgs.get("ar") or ""),
-    }
-    data["notified_users"] = _coerce_user_ids(data.get("notified_users") or [])
-    data["active_until"]   = data.get("active_until", None)
-    data["duration_days"]  = data.get("duration_days", None)
-    data["active"]         = bool(data.get("active", False))
-
-    # تنظيف أي لغات غير مسموحة إن وُجدت
-    for k in list(msgs.keys()):
-        if k not in ALLOWED_LANGS:
-            msgs.pop(k, None)
-
-    return data
-
 def save_update_info(data: dict):
-    # تنظيف سريع قبل الحفظ
-    data["notified_users"] = _coerce_user_ids(data.get("notified_users") or [])
-    # تأكد من حصر الرسائل في EN/AR
-    msgs = data.get("message") or {}
-    data["message"] = {"en": str(msgs.get("en") or ""), "ar": str(msgs.get("ar") or "")}
-    _safe_save(UPDATE_FILE, data)
+    with _LOCK:
+        data["notified_users"] = _coerce_user_ids(data.get("notified_users") or [])
+        msgs = data.get("message") or {}
+        data["message"] = {"en": str(msgs.get("en") or ""), "ar": str(msgs.get("ar") or "")}
+        _safe_save(UPDATE_PATH, data)
 
 # ============ Duration parsing ============
 
@@ -102,10 +101,10 @@ def parse_duration_to_days(s: Optional[str]) -> Optional[int]:
     '7d' → 7   |  '48h' → 2  |  '90m' → 0 (أقل من يوم)
     'none'/None → None       |  رقم خام = أيام
     """
-    if not s:
+    if s is None:
         return None
     s = str(s).strip().lower()
-    if s in ("none", "off", "no", "0"):
+    if s in ("none", "off", "no", "0", ""):
         return None
     try:
         if s.endswith("d"):
@@ -123,8 +122,7 @@ def parse_duration_to_days(s: Optional[str]) -> Optional[int]:
 def set_messages(en: str = "", ar: str = ""):
     data = load_update_info()
     data["message"] = {"en": en or "", "ar": ar or ""}
-    # إعادة الإرسال للجميع عند تغيير النص
-    data["notified_users"] = []
+    data["notified_users"] = []  # إعادة الإرسال للجميع عند تغيير النص
     save_update_info(data)
 
 def set_message_for(lang: str, text: str):
@@ -152,6 +150,10 @@ def set_duration_days(days: Optional[int]):
     data = load_update_info()
     _set_active_until_by_days(data, days)
     save_update_info(data)
+
+def set_duration_str(s: Optional[str]):
+    """نفس set_duration_days لكن يقبل '7d'/'48h'/'90m'/'none'."""
+    set_duration_days(parse_duration_to_days(s))
 
 def set_active_until(dt: Optional[datetime]):
     data = load_update_info()
@@ -183,6 +185,10 @@ def mark_user_notified(user_id: int):
     data["notified_users"] = list(s)
     save_update_info(data)
 
+def should_notify_user(user_id: int) -> bool:
+    """مساعد: يُفيد قبل الإرسال—True إذا لم يُخطَر من قبل."""
+    return not was_user_notified(user_id)
+
 def clear_notified():
     data = load_update_info()
     data["notified_users"] = []
@@ -196,7 +202,8 @@ def get_update_text(lang_code: str) -> str:
     lang = (lang_code or DEFAULT_LANG).lower()
     if lang not in ALLOWED_LANGS:
         lang = DEFAULT_LANG
-    return (msgs.get(lang) or msgs.get(DEFAULT_LANG) or "").strip()
+    txt = (msgs.get(lang) or msgs.get(DEFAULT_LANG) or "").strip()
+    return txt
 
 # ----- حالة التفعيل والوقت المتبقي -----
 
@@ -272,8 +279,8 @@ def get_admin_summary(lang: str = "en") -> str:
     msgs = st["messages"]
     remaining = remaining_time_str()
     status_txt = _t(lang, "update_admin_active") if st["active"] else _t(lang, "update_admin_inactive")
-    msg_en = msgs.get("en") or _t(lang, "update_admin_not_set")
-    msg_ar = msgs.get("ar") or _t(lang, "update_admin_not_set")
+    msg_en = (msgs.get("en") or _t(lang, "update_admin_not_set")).strip()
+    msg_ar = (msgs.get("ar") or _t(lang, "update_admin_not_set")).strip()
 
     return (
         f"<b>{_t(lang, 'update_admin_title')}</b>\n\n"
@@ -284,3 +291,18 @@ def get_admin_summary(lang: str = "en") -> str:
         f"EN: <i>{msg_en}</i>\n"
         f"AR: <i>{msg_ar}</i>"
     )
+
+# ===== واجهات راحة إضافية لا تكسر التوافق =====
+
+def activate(*, en: str = "", ar: str = "", duration_days: Optional[int] = None):
+    """تفعيل سريع مع ضبط النص والمدة (إن وُجدت)."""
+    data = load_update_info()
+    data["active"] = True
+    data["message"] = {"en": en or data["message"].get("en", ""), "ar": ar or data["message"].get("ar", "")}
+    data["notified_users"] = []
+    _set_active_until_by_days(data, duration_days)
+    save_update_info(data)
+
+def deactivate():
+    """إيقاف سريع (يعادل set_active(False))"""
+    set_active(False)
