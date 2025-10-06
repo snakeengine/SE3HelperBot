@@ -491,6 +491,11 @@ def register_routers(dp: Dispatcher):
     except Exception:
         pass
 
+    dp.include_router(_rewards_gate.router)
+    dp.include_router(_rewards_hub.router)
+    dp.include_router(_rewards_wallet.router)
+    dp.include_router(_rewards_market.router)
+    dp.include_router(_rewards_compat.router)
     # ===== (NEW) امنع الراوترات النصية من ابتلاع الأوامر =====
     home_menu_router.message.filter(~F.text.startswith("/"))
     bot_panel_router.message.filter(~F.text.startswith("/"))
@@ -562,11 +567,7 @@ def register_routers(dp: Dispatcher):
         _mount_rewards_routers(dp)
 
     # أولوية عالية
-    dp.include_router(_rewards_gate.router)
-    dp.include_router(_rewards_hub.router)
-    dp.include_router(_rewards_wallet.router)
-    dp.include_router(_rewards_market.router)
-    dp.include_router(_rewards_compat.router)
+    
 
     dp.include_router(admin_manage)
     dp.include_router(admin_access)

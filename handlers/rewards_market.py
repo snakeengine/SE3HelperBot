@@ -15,6 +15,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
+from aiogram.filters import StateFilter
 
 from lang import t, get_user_lang
 from utils.rewards_store import (
@@ -30,27 +31,23 @@ from utils.rewards_notify import (
     notify_user_vip_approved,
     notify_user_vip_rejected,
 )
-from aiogram.filters import StateFilter
-from handlers.live_chat import LiveChat  # حالة الدردشة الحيّة
 
+# وضع الدردشة الحيّة
+from handlers.live_chat import LiveChat
+
+# ========= الراوتر + فلاتر عامة =========
 router = Router(name="rewards_market")
 # امنع التنفيذ أثناء جلسة الدردشة الحيّة، واشتغل بالخاص فقط
 router.message.filter(F.chat.type == "private", ~StateFilter(LiveChat.active))
-router.callback_query.filter(F.message.chat.type == "private", ~StateFilter(LiveChat.active))
-log = logging.getLogger(__name__)
-
-# امنع أي تداخل مع الدردشة الحيّة + قَيِّد نطاق الكولباكات لهذا الراوتر فقط
-router.message.filter(
-    F.chat.type == "private",
-    ~StateFilter(LiveChat.active)
-)
 router.callback_query.filter(
     F.message.chat.type == "private",
     ~StateFilter(LiveChat.active),
     F.data.func(lambda s: isinstance(s, str) and (s.startswith("rwd:") or s.startswith("rwdadm:")))
 )
 
-# ✅ كابتشا بشرية + استئناف تلقائي بعد النجاح (مع fallback آمن)
+log = logging.getLogger(__name__)
+
+# ========= كابتشا بشرية (اختياري) =========
 try:
     from .human_check import require_human, ensure_human_then  # type: ignore
 except Exception:
@@ -62,13 +59,12 @@ except Exception:
             return True
         return False
 
-router = Router(name="rewards_market")
-log = logging.getLogger(__name__)
-
 # ========= إعدادات عامة =========
 _admin_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
 ADMIN_IDS = [int(x) for x in _admin_env.split(",") if x.strip().isdigit()]
-def _is_admin(uid: int) -> bool: return uid in ADMIN_IDS
+
+def _is_admin(uid: int) -> bool:
+    return uid in ADMIN_IDS
 
 def _L(uid: int) -> str:
     return get_user_lang(uid) or "ar"
@@ -90,18 +86,28 @@ COST_1H  = int(os.getenv("SHOP_VIP1H_COST",  "100"))
 COST_1D  = int(os.getenv("SHOP_VIP1D_COST",  "500"))
 COST_3D  = int(os.getenv("SHOP_VIP3D_COST",  "1000"))
 COST_30D = int(os.getenv("SHOP_VIP30D_COST", "8000"))  # 30 يوم
+# NEW: تكلفة الاستبدال (إن رغبت بتكلفة ثابتة)
+COST_REDEEM = int(os.getenv("SHOP_REDEEM_COST", "0"))
+ENABLE_REDEEM = (os.getenv("SHOP_REDEEM_ENABLED", "0").strip().lower() in {"1","true","yes","on"})
 
 SHOP_ITEMS: Dict[str, Dict[str, Any]] = {
     "vip1h":  {"title_ar": f"اشتراك VIP • {_fmt_hours_ar(1)}",       "title_en": "VIP • 1 hour",   "cost": COST_1H,  "kind": "vip_hours", "hours": 1},
     "vip1d":  {"title_ar": f"اشتراك VIP • {_fmt_hours_ar(24)}",      "title_en": "VIP • 1 day",    "cost": COST_1D,  "kind": "vip_hours", "hours": 24},
     "vip3d":  {"title_ar": f"اشتراك VIP • {_fmt_hours_ar(72)}",      "title_en": "VIP • 3 days",   "cost": COST_3D,  "kind": "vip_hours", "hours": 72},
     "vip30d": {"title_ar": f"اشتراك VIP • {_fmt_hours_ar(24 * 30)}", "title_en": "VIP • 30 days",  "cost": COST_30D, "kind": "vip_hours", "hours": 24 * 30},
+
+    # NEW: استبدال نقاط بدل اشتراك — يجبر المستخدم على تحديد اللعبة ويُبلّغ الإدارة
+    "redeem": {"title_ar": "استبدال نقاط بدل اشتراك", "title_en": "Redeem points (no subscription)",
+               "cost": COST_REDEEM, "kind": "redeem"},
 }
 
 # ======== واجهة المتجر ========
 def _kb_market(lang: str) -> InlineKeyboardBuilder:
     kb = InlineKeyboardBuilder()
     for item_id, it in SHOP_ITEMS.items():
+        # ✅ اخفِ خيار الاستبدال إذا غير مفعّل
+        if item_id == "redeem" and not ENABLE_REDEEM:
+            continue
         title = it["title_ar"] if lang.startswith("ar") else it["title_en"]
         cost = it["cost"]
         label = f"💎 {title} • {cost}"
@@ -109,8 +115,9 @@ def _kb_market(lang: str) -> InlineKeyboardBuilder:
     kb.row(InlineKeyboardButton(text=t(lang, "market.back", "⬅️ رجوع"), callback_data="rwd:hub"))
     return kb
 
+
 async def _show_market(msg_or_cb: Message | CallbackQuery):
-    """يعرض قائمة المتجر (تفصلنا لكي نستعملها مع ensure_human_then)."""
+    """يعرض قائمة المتجر (مفصولة لاستخدامها مع ensure_human_then)."""
     uid = msg_or_cb.from_user.id
     lang = _L(uid)
 
@@ -157,7 +164,8 @@ async def cb_buy_item(cb: CallbackQuery):
     item_id = cb.data.split(":")[-1]
     it = SHOP_ITEMS.get(item_id)
     if not it:
-        return await cb.answer("Item not found", show_alert=True)
+        return await cb.answer(t(lang, "market.unavailable", "هذا الخيار غير متاح حاليًا."), show_alert=True)
+
 
     # عضوية + كابتشا خفيفة + تبريد
     if await require_membership(cb) is False:
@@ -187,9 +195,14 @@ async def cb_buy_item(cb: CallbackQuery):
             raise
     await cb.answer()
 
-# ======== FSM: جمع بيانات الاشتراك بعد الخصم ========
+# ======== FSM: شراء VIP (بعد الخصم) ========
 class BuyStates(StatesGroup):
     wait_app = State()       # معرّف تطبيق الثعبان
+    wait_details = State()   # تفاصيل إضافية
+
+# ======== FSM: استبدال النقاط (يجبر نوع اللعبة) ========
+class RedeemStates(StatesGroup):
+    wait_game = State()      # نوع/اسم اللعبة
     wait_details = State()   # تفاصيل إضافية
 
 # --- اكتشاف الإلغاء بشكل مرن (AR/EN) ---
@@ -230,7 +243,7 @@ def _normalize_app_id(raw: str) -> Optional[str]:
         return s.lstrip("@")
     return None
 
-# بعد التأكيد → خصم ثم جمع البيانات
+# ======== تأكيد الشراء → خصم → مسار VIP أو Redeem ========
 @router.callback_query(F.data.startswith("rwd:mkt:cfm:"))
 async def cb_confirm_buy(cb: CallbackQuery, state: FSMContext):
     uid = cb.from_user.id
@@ -238,7 +251,7 @@ async def cb_confirm_buy(cb: CallbackQuery, state: FSMContext):
     item_id = cb.data.split(":")[-1]
     it = SHOP_ITEMS.get(item_id)
     if not it:
-        return await cb.answer("Item not found", show_alert=True)
+        return await cb.answer(t(lang, "market.unavailable", "هذا الخيار غير متاح حاليًا."), show_alert=True)
 
     # عضوية + كابتشا أقوى + منع النقر المكرر
     if await require_membership(cb) is False:
@@ -256,12 +269,29 @@ async def cb_confirm_buy(cb: CallbackQuery, state: FSMContext):
     # خصم فوري قبل جمع البيانات (يسجّل في السجل تلقائيًا)
     add_points(uid, -cost, reason=f"market_buy_{item_id}", typ="buy")
 
-    # خزّن سياق الطلب
+    # NEW: فرع الاستبدال — اجمع نوع اللعبة ثم التفاصيل
+    if it.get("kind") == "redeem":
+        await state.clear()
+        await state.set_state(RedeemStates.wait_game)
+        await state.update_data(item_id=item_id, cost=cost)
+
+        ask_game = t(lang, "market.redeem.ask_game",
+                     "اكتب نوع/اسم اللعبة التي تريد استبدال نقاطك لها (مثال: PUBG، Free Fire، Fortnite...).")
+        try:
+            await cb.message.edit_text(ask_game, disable_web_page_preview=True)
+        except TelegramBadRequest:
+            await cb.message.answer(ask_game, disable_web_page_preview=True)
+        await cb.message.answer(
+            t(lang, "market.redeem.tip_game", "أرسل اسم اللعبة الآن أو اختر «إلغاء واسترجاع»."),
+            reply_markup=_cancel_rk(lang)
+        )
+        return
+
+    # المسار الحالي للاشتراك VIP كما هو: خزّن سياق الطلب ثم اطلب معرّف التطبيق
     await state.clear()
     await state.set_state(BuyStates.wait_app)
     await state.update_data(item_id=item_id, cost=cost, hours=int(it.get("hours", 0)))
 
-    # اطلب معرّف التطبيق (صيغة مبسطة)
     tip = t(
         lang, "market.vip.ask_app",
         "اذهب إلى تطبيق محرك الثعبان، في أعلى الواجهة (الزاوية اليسرى) ستجد <b>معرّف التطبيق</b> الخاص بك. انسخه وأرسله هنا."
@@ -276,7 +306,7 @@ async def cb_confirm_buy(cb: CallbackQuery, state: FSMContext):
     )
     await cb.answer()
 
-# استلام معرّف التطبيق → ثم التفاصيل
+# ======== استلام معرّف التطبيق (VIP) → ثم التفاصيل ========
 @router.message(BuyStates.wait_app)
 async def buy_get_app(msg: Message, state: FSMContext):
     uid = msg.from_user.id
@@ -306,7 +336,7 @@ async def buy_get_app(msg: Message, state: FSMContext):
     await msg.answer(ask)
     await msg.answer(tip, reply_markup=_cancel_rk(lang))
 
-# استلام تفاصيل الطلب → إنشاء طلب Pending + إشعارات
+# ======== استلام تفاصيل (VIP) → إنشاء طلب Pending + إشعارات ========
 @router.message(BuyStates.wait_details)
 async def buy_get_details(msg: Message, state: FSMContext):
     uid = msg.from_user.id
@@ -335,7 +365,7 @@ async def buy_get_details(msg: Message, state: FSMContext):
     app_id = data.get("app_id") or "-"
     tg_username = (msg.from_user.username or "").lstrip("@")
 
-    # إنشاء طلب Pending (يحتوي اسم المستخدم)
+    # إنشاء طلب Pending (VIP)
     oid = create_order(uid, kind="vip", payload={
         "hours": hours,
         "app": app_id,
@@ -356,7 +386,87 @@ async def buy_get_details(msg: Message, state: FSMContext):
         except Exception:
             pass
 
-# ======== (أدمن) قبول/رفض الطلب ========
+# ======== (REDEEM) استلام نوع اللعبة → التفاصيل → إنشاء الطلب وإشعار الأدمن ========
+@router.message(RedeemStates.wait_game)
+async def redeem_get_game(msg: Message, state: FSMContext):
+    uid = msg.from_user.id
+    lang = _L(uid)
+    txt = (msg.text or "").strip()
+
+    if _is_cancel(txt, lang):
+        data = await state.get_data()
+        add_points(uid, +int(data.get("cost", 0)), reason="redeem_refund_cancel", typ="refund")
+        await state.clear()
+        return await msg.answer(t(lang, "market.redeem.cancelled_refund", "تم الإلغاء واستُرجعت نقاطك."),
+                                reply_markup=ReplyKeyboardRemove())
+
+    # إلزام كتابة لعبة واضحة
+    game = txt
+    if len(game) < 2:
+        return await msg.reply(
+            t(lang, "market.redeem.invalid_game", "من فضلك اكتب اسم اللعبة بشكل واضح."),
+            reply_markup=_cancel_rk(lang)
+        )
+
+    await state.update_data(game=game)
+    await state.set_state(RedeemStates.wait_details)
+
+    ask = t(lang, "market.redeem.ask_details",
+            "أرسل تفاصيل إضافية (مثال: النظام/السيرفر/ملاحظات تهم التنفيذ).")
+    tip = t(lang, "market.redeem.details_tip", "تفاصيل أكثر تساعد الإدارة على تنفيذ الاستبدال.")
+    await msg.answer(ask)
+    await msg.answer(tip, reply_markup=_cancel_rk(lang))
+
+@router.message(RedeemStates.wait_details)
+async def redeem_get_details(msg: Message, state: FSMContext):
+    uid = msg.from_user.id
+    lang = _L(uid)
+    txt = (msg.text or "").strip()
+
+    if _is_cancel(txt, lang):
+        data = await state.get_data()
+        add_points(uid, +int(data.get("cost", 0)), reason="redeem_refund_cancel", typ="refund")
+        await state.clear()
+        return await msg.answer(t(lang, "market.redeem.cancelled_refund", "تم الإلغاء واستُرجعت نقاطك."),
+                                reply_markup=ReplyKeyboardRemove())
+
+    data = await state.get_data()
+    await state.clear()
+
+    cost = int(data.get("cost", 0))
+    game = data.get("game") or "-"
+    tg_username = (msg.from_user.username or "").lstrip("@")
+
+    # إنشاء طلب Pending لنوع redeem
+    oid = create_order(uid, kind="redeem", payload={
+        "game": game,
+        "details": txt,
+        "tg_username": tg_username,
+        "cost": cost,
+    })
+
+    # إشعار المستخدم
+    await msg.answer(
+        t(lang, "market.redeem.submitted",
+          f"✅ تم إرسال طلب الاستبدال #{oid}.\nاللعبة: {game}\nسيتم المراجعة والتنفيذ قريبًا."),
+        reply_markup=ReplyKeyboardRemove()
+    )
+
+    # إشعار الأدمن — يتضمن نوع اللعبة صراحةً
+    admin_text = (
+        f"🆕 طلب استبدال نقاط #{oid}\n"
+        f"• User: <code>{uid}</code>{(' — @' + tg_username) if tg_username else ''}\n"
+        f"• Game: <b>{game}</b>\n"
+        f"• Details: {txt or '-'}\n"
+        f"• Cost: {cost}"
+    )
+    for aid in ADMIN_IDS:
+        try:
+            await msg.bot.send_message(aid, admin_text, disable_web_page_preview=True)
+        except Exception:
+            pass
+
+# ======== (أدمن) قبول/رفض طلب VIP ========
 async def _grant_vip_hours_bridge(bot, uid: int, hours: int, reason: str = "rewards_approved") -> bool:
     """جسر اختياري لتفعيل VIP إن توفرت وحدة الإدارة المناسبة."""
     try:
