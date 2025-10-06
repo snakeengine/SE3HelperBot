@@ -643,6 +643,14 @@ async def choose_qty(cb: CallbackQuery):
         head = "السعر: ${usd} — {days} يوم | اختر الكمية:" if str(lang).startswith("ar") else "Plan: {days}d — ${usd} | Choose quantity:"
         txt = head.format(days=days, usd=_fmt_money(usd, 2))
 
+    # أضف المتوفر الفعلي
+    left = await _count_for_safe(days, product)
+    if left is not None:
+        if str(lang).startswith("ar"):
+            txt += f"\n(المتوفر الآن: {left})"
+        else:
+            txt += f"\n(Available now: {left})"
+
     kb = InlineKeyboardBuilder()
     for n in range(1, 11):
         kb.button(text=f"{n}×", callback_data=f"shop:q:{product}:{method}:{days}:{n}")
@@ -654,6 +662,7 @@ async def choose_qty(cb: CallbackQuery):
     except Exception:
         await cb.message.answer(txt, reply_markup=kb.as_markup())
     await cb.answer()
+
 
 async def _count_for_safe(days: int, product: str) -> int:
     f = getattr(inv, "count_for", None)
@@ -682,6 +691,45 @@ async def _count_for_safe(days: int, product: str) -> int:
     except Exception:
         return 0
 
+# === Helpers: نص وأزرار اقتراح كمية أقل ===
+def _not_enough_stock_text(lang: str, days: int, left: int) -> str:
+    if str(lang).startswith("ar"):
+        if left <= 0:
+            return f"لا يوجد مخزون لمدة {days} يوم."
+        unit = "مفتاح" if left == 1 else ("مفتاحين" if left == 2 else "مفاتيح")
+        return f"الكمية المطلوبة غير متاحة لمدة {days} يوم.\nالمتوفر الآن: {left} {unit}.\n💡 جرّب كمية أقل."
+    else:
+        if left <= 0:
+            return f"No inventory for {days}d."
+        unit = "key" if left == 1 else "keys"
+        return f"Requested quantity not available for {days}d.\nAvailable now: {left} {unit}.\n💡 Try a lower quantity."
+
+def _suggest_qty_kb(lang: str, product: str, method: str, days: int, left: int):
+    """
+    يبني كيبورد باقتراحات كميات <= المتوفر.
+    يستخدم نفس callback المستعمل سابقًا: shop:q:{product}:{method}:{days}:{qty}
+    """
+    kb = InlineKeyboardBuilder()
+    # كميات مقترحة: إن كان المتوفر قليل (<=5) نعرض 1..left
+    # وإلا نعرض بعض الخيارات الذكية + زر المتوفر بالضبط
+    if left <= 5:
+        options = list(range(1, left + 1))
+    else:
+        half = max(1, left // 2)
+        options = sorted({1, half, max(half - 1, 1), left - 1, left})
+    for q in options:
+        label = (f"{q}×" if not str(lang).startswith("ar") else f"{q}×")
+        kb.button(text=label, callback_data=f"shop:q:{product}:{method}:{days}:{q}")
+    # رجوع
+    back_txt = "رجوع ◀️" if str(lang).startswith("ar") else "Back ◀️"
+    kb.button(text=back_txt, callback_data=f"shop:p:{product}:{method}:{days}")
+    # ترتيب الأزرار
+    if left <= 5:
+        kb.adjust(min(left, 5), 5, 1)
+    else:
+        kb.adjust(3, 2, 1)
+    return kb.as_markup()
+
 # ========= تأكيد المخزون ثم إنشاء الفاتورة حسب الطريقة =========
 @router.callback_query(F.data.startswith("shop:q:"))
 async def prepare_invoice(cb: CallbackQuery):
@@ -691,21 +739,59 @@ async def prepare_invoice(cb: CallbackQuery):
     days = int(days_s); qty = int(qty_s)
 
     left = await _count_for_safe(days, product)
+
+    # لا يوجد أي مخزون
     if left <= 0:
-        await cb.answer(("لا يوجد مخزون لمدة {days} يوم.".format(days=days) if str(lang).startswith("ar") else f"No inventory for {days}d."), show_alert=True)
-        try: await inv.maybe_alert_low_stock(cb.bot, days, product=product)
-        except Exception: pass
-        return
-    if qty > left:
-        await cb.answer(("الكمية المطلوبة غير متاحة لمدة {days} يوم.".format(days=days) if str(lang).startswith("ar") else f"Not enough stock for {days}d."), show_alert=True)
-        try: await inv.maybe_alert_low_stock(cb.bot, days, product=product)
-        except Exception: pass
+        # تنبيه مع زر رجوع للمدة
+        try:
+            await cb.answer(_not_enough_stock_text(lang, days, left=0), show_alert=True)
+        except Exception:
+            pass
+        try:
+            back_txt = "رجوع ◀️" if str(lang).startswith("ar") else "Back ◀️"
+            ask_txt  = "نفدت الكمية لهذه المدة. اختر مدة أخرى:" if str(lang).startswith("ar") else "Out of stock for this plan. Pick another duration:"
+            kb = InlineKeyboardBuilder()
+            kb.button(text=back_txt, callback_data=f"shop:pm:{product}:{method}")
+            kb.adjust(1)
+            try:
+                await cb.message.edit_text(ask_txt, reply_markup=kb.as_markup())
+            except Exception:
+                await cb.message.answer(ask_txt, reply_markup=kb.as_markup())
+        except Exception:
+            pass
+        try:
+            await inv.maybe_alert_low_stock(cb.bot, days, product=product)
+        except Exception:
+            pass
         return
 
+    # كمية مطلوبة أكبر من المتوفر → اقترح كميات أقل
+    if qty > left:
+        text = _not_enough_stock_text(lang, days, left=left)
+        try:
+            await cb.answer(text, show_alert=True)
+        except Exception:
+            pass
+        try:
+            kb = _suggest_qty_kb(lang, product, method, days, left)
+            # إن أمكن عدّل الرسالة الحالية ليشوف الأزرار فورًا
+            try:
+                await cb.message.edit_text(text, reply_markup=kb)
+            except Exception:
+                await cb.message.answer(text, reply_markup=kb)
+        except Exception:
+            pass
+        try:
+            await inv.maybe_alert_low_stock(cb.bot, days, product=product)
+        except Exception:
+            pass
+        return
+
+    # الكمية مناسبة → تابع إنشاء الفاتورة
     if method == "stars":
         return await _create_stars_invoice(cb, product, days, qty)
 
-    # ======= Crypto path =======
+    # Crypto: اختيار الأصول عند توافر أكثر من أصل
     if CRYPTO_ENABLED and len(CRYPTO_ASSETS) > 1:
         text = "اختر طريقة الدفع:" if str(lang).startswith("ar") else "Choose a payment asset:"
         kb = InlineKeyboardBuilder()
@@ -719,6 +805,7 @@ async def prepare_invoice(cb: CallbackQuery):
             await cb.message.answer(text, reply_markup=kb.as_markup())
         await cb.answer()
         return
+
     await _create_invoice_crypto(cb, product, days, qty, asset=(DEFAULT_ASSET if CRYPTO_ENABLED else None))
 
 @router.callback_query(F.data.startswith("shop:a:"))
