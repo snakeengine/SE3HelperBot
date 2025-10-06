@@ -958,28 +958,17 @@ async def refresh_status(cb: CallbackQuery):
     lang = _user_lang(cb)
     oid  = int(cb.data.split(":")[-1])
 
-    # 1) إذا كانت البطاقة أُرسلت من قبل، أي ضغطات لاحقة على "تحديث"
-    #    ترجع تنبيهًا قصيرًا فقط (بدون أي رسائل جديدة).
-    if oid in _PROFILE_SENT:
-        tip = (
-            "لو واجهت مشكلة استخدم الأمر /report"
-            if str(lang).startswith("ar")
-            else "If you face an issue, use /report"
-        )
-        await cb.answer(tip)
-        return
-
-    # 2) snapshot قبل الفحص
+    # حالة الطلب قبل الفحص
     try:
         r0 = await ords.get_by_id(oid)
         pre_status = str(getattr(r0, "status", "") or "")
     except Exception:
         pre_status = ""
 
-    # 3) تحقّق/تسليم لكن بدون إرسال تلقائي (سنرسل نحن بطاقة واحدة فقط)
+    # تحقّق/تسليم بدون أي إرسال تلقائي من هنا
     ok, delivered_text = await check_and_deliver_one(cb.bot, oid, notify_user=False)
 
-    # 4) snapshot بعد الفحص
+    # حالة الطلب بعد الفحص
     try:
         r1 = await ords.get_by_id(oid)
         post_status = str(getattr(r1, "status", "") or "")
@@ -991,30 +980,26 @@ async def refresh_status(cb: CallbackQuery):
         post_status = ""
         days, qty, product = 0, 0, DEFAULT_PRODUCT
 
-    # 5) لسه ما تم الدفع
+    # لو ما زال بانتظار الدفع
     if not ok or post_status not in ("paid", "delivered"):
         await cb.answer(
             "بانتظار الدفع… (سنتحقق تلقائيًا)" if str(lang).startswith("ar") else "Waiting for payment… (auto-checking)"
         )
         return
 
-    # 6) لو الطلب كان مسلّم أصلًا قبل الضغط الحالي → لا شيء جديد
+    # لو كان مُسلَّم مسبقًا → لا ترسل البطاقة مرة ثانية
     if pre_status == "delivered" and post_status == "delivered":
-        tip = (
-            "لو واجهت مشكلة استخدم الأمر /report"
-            if str(lang).startswith("ar")
-            else "If you face an issue, use /report"
-        )
-        await cb.answer(tip)
+        await cb.answer("تم التأكيد ✅" if str(lang).startswith("ar") else "Confirmed ✅")
         return
 
-    # 7) هذه أول مرة يتأكد فيها الدفع الآن:
+    # من هنا: تغيّرت الحالة للتو إلى delivered (أول مرة)
     try:
         confirm_txt = (
             "✅ تم تأكيد الدفع.\nلو واجهت مشكلة استخدم الأمر /report"
             if str(lang).startswith("ar")
             else "✅ Payment confirmed.\nIf you face any issue, use /report"
         )
+        # قد تفشل edit_text لو الرسالة ليست قابلة للتعديل؛ نتجاهل بهدوء
         try:
             await cb.message.edit_text(confirm_txt, reply_markup=None)
         except Exception:
@@ -1022,9 +1007,11 @@ async def refresh_status(cb: CallbackQuery):
     except Exception:
         pass
 
-    # 8) أرسل بطاقة الشراء مرة واحدة فقط
+    # جهّز المفاتيح المخزّنة داخل delivered_text (بدون إعادة إرسال الفاتورة/الإيصال)
     keys = _extract_keys_from_text(delivered_text or "")
     _DELIVERED_KEYS[oid] = keys
+
+    # أرسل بطاقة الشراء مرة واحدة فقط
     if oid not in _PROFILE_SENT:
         try:
             await _send_profile_block(cb, lang, oid, days, qty, keys, product=product)
@@ -1032,9 +1019,7 @@ async def refresh_status(cb: CallbackQuery):
             pass
         _PROFILE_SENT.add(oid)
 
-    await cb.answer(
-        "تم التأكيد ✅" if str(lang).startswith("ar") else "Confirmed ✅"
-    )
+    await cb.answer("تم التأكيد ✅" if str(lang).startswith("ar") else "Confirmed ✅")
 
 
 
