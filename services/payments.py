@@ -360,8 +360,9 @@ def _get_lock(order_id: int) -> asyncio.Lock:
 # ===================== منطق الدفع والتسليم =====================
 async def _deliver(bot, order: "ords.Order", *, notify_user: bool = True) -> Tuple[bool, str]:
     """
-    يسحب مفاتيح من المنتج الصحيح، يتجاهل المفاتيح المحظورة، ويحفظ/يرسل نص التسليم (HTML).
+    يسحب مفاتيح من المنتج الصحيح، يتجاهل المفاتيح المحظورة، ويحفظ نص التسليم (HTML).
     آمن للتكرار: لو كان الطلب مسلّمًا يعيد النص المخزَّن كما هو.
+    يرسل للمستخدم بطاقة الشراء فقط (بدون رسالة 'تم استلام الدفع').
     """
     if getattr(order, "status", "") == "delivered":
         text = (
@@ -399,9 +400,11 @@ async def _deliver(bot, order: "ords.Order", *, notify_user: bool = True) -> Tup
 
     if len(picked) < need:
         # نفدت قبل التسليم
-        return False, L(lang,
-                        "⚠️ نفد المخزون قبل التسليم. تواصل مع الدعم لاسترجاع المبلغ.",
-                        "⚠️ Out of stock before delivery. Contact support for a refund.")
+        return False, L(
+            lang,
+            "⚠️ نفد المخزون قبل التسليم. تواصل مع الدعم لاسترجاع المبلغ.",
+            "⚠️ Out of stock before delivery. Contact support for a refund."
+        )
 
     lines = [
         tr(lang, "pay.received", L(lang, "تم استلام الدفع ✅", "Payment received ✅")),
@@ -414,13 +417,11 @@ async def _deliver(bot, order: "ords.Order", *, notify_user: bool = True) -> Tup
     ]
     text = "\n".join(lines)
 
-    await ords.save_delivery(order.id, text)  # يضبط الحالة إلى delivered
+    # خزّن نص التسليم (يضبط الحالة إلى delivered)
+    await ords.save_delivery(order.id, text)
 
     if notify_user:
-        try:
-            await bot.send_message(order.user_id, text, parse_mode=ParseMode.HTML)
-        except Exception:
-            pass
+        # نرسل بطاقة الشراء فقط (من دون إرسال نص الإيصال أعلاه)
         try:
             await _send_profile_and_help(bot, order, text)
         except Exception as e:
