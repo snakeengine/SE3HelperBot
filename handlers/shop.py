@@ -32,7 +32,6 @@ from utils.paths import BASE
 from constants import PRICE_USD_3, PRICE_USD_10, PRICE_USD_30
 from aiogram.fsm.context import FSMContext
 from handlers.home_hero import render_home_card
-
 # --- Pay modes per product (admin toggles) ---
 try:
     from services.payments import (
@@ -438,29 +437,6 @@ async def _ensure_service_available(ev: Union[Message, CallbackQuery]) -> bool:
         pass
     return False
 
-# ========= هيلبر تعديل/استبدال الرسالة (لمنع تكرار الفاتورة) =========
-async def _edit_or_replace(msg, text: str, *, reply_markup=None, parse_mode: str | None = ParseMode.HTML):
-    """
-    يحاول تعديل الرسالة الحالية؛ وإن فشل (لا يمكن التعديل/انتهت/…)
-    يحذف القديمة ويرسل جديدة بنفس المكان — لتجنّب التكرار.
-    """
-    try:
-        await msg.edit_text(text, reply_markup=reply_markup, parse_mode=parse_mode)
-    except TelegramBadRequest as e:
-        if "message is not modified" in str(e).lower():
-            return
-        try:
-            await msg.delete()
-        except Exception:
-            pass
-        await msg.answer(text, reply_markup=reply_markup, parse_mode=parse_mode)
-    except Exception:
-        try:
-            await msg.delete()
-        except Exception:
-            pass
-        await msg.answer(text, reply_markup=reply_markup, parse_mode=parse_mode)
-
 # ========= واجهة المتجر =========
 def _shop_home_text(lang: str) -> str:
     title = "متجر المفاتيح" if str(lang).startswith("ar") else "Key Store"
@@ -540,7 +516,6 @@ async def shop_to_main(cb: CallbackQuery, state: FSMContext):
     # أعرض بطاقة البداية بنفس اللغة
     await render_home_card(cb.message, lang=lang)
     await cb.answer()
-
 # ========= اختيار المنتج ثم طريقة الدفع =========
 def _pay_methods_for(product: str) -> List[str]:
     """
@@ -893,11 +868,11 @@ async def _create_invoice_crypto(cb: CallbackQuery, product: str, days: int, qty
             kb.button(text=("إلغاء" if str(lang).startswith("ar") else "Cancel"),  callback_data=f"shop:c:{order.id}")
             kb.adjust(1, 2)
 
-            await _edit_or_replace(
-                cb.message,
-                _invoice_caption(lang, usd_total, ton_equiv, qty, days, asset),
-                reply_markup=kb.as_markup()
-            )
+            text = _invoice_caption(lang, usd_total, ton_equiv, qty, days, asset)
+            try:
+                await cb.message.edit_text(text, reply_markup=kb.as_markup())
+            except Exception:
+                await cb.message.answer(text, reply_markup=kb.as_markup())
             await cb.answer()
             return
         except Exception as e:
@@ -921,11 +896,11 @@ async def _create_invoice_crypto(cb: CallbackQuery, product: str, days: int, qty
     kb.button(text=("إلغاء" if str(lang).startswith("ar") else "Cancel"),  callback_data=f"shop:c:{order.id}")
     kb.adjust(2)
 
-    await _edit_or_replace(
-        cb.message,
-        _invoice_caption(lang, usd_total, ton_equiv, qty, days, ASSET_TON),
-        reply_markup=kb.as_markup()
-    )
+    text = _invoice_caption(lang, usd_total, ton_equiv, qty, days, ASSET_TON)
+    try:
+        await cb.message.edit_text(text, reply_markup=kb.as_markup())
+    except Exception:
+        await cb.message.answer(text, reply_markup=kb.as_markup())
     await cb.answer()
 
 # ========= إنشاء فاتورة نجوم تيليجرام =========
@@ -963,13 +938,18 @@ async def _create_stars_invoice(cb: CallbackQuery, product: str, days: int, qty:
     kb.button(text=tr(lang, "btn_cancel",  L(lang, "إلغاء", "Cancel")),  callback_data=f"shop:c:{order.id}")
     kb.adjust(2)
 
-    await _edit_or_replace(
-        cb.message,
-        L(lang, "تم إنشاء فاتورة النجوم. بعد الدفع اضغط «تحديث» لو لم يصلك المفتاح.", 
-                 "Stars invoice created. After payment tap “Refresh” if the key didn’t arrive."),
-        reply_markup=kb.as_markup(),
-        parse_mode=ParseMode.HTML
-    )
+    try:
+        await cb.message.edit_text(
+            L(lang, "تم إنشاء فاتورة النجوم. بعد الدفع اضغط «تحديث» لو لم يصلك المفتاح.", 
+                     "Stars invoice created. After payment tap “Refresh” if the key didn’t arrive."),
+            reply_markup=kb.as_markup()
+        )
+    except Exception:
+        await cb.message.answer(
+            L(lang, "تم إنشاء فاتورة النجوم. بعد الدفع اضغط «تحديث».", 
+                     "Stars invoice created. After payment tap “Refresh”."),
+            reply_markup=kb.as_markup()
+        )
     await cb.answer()
 
 # ========= زر تحديث/إلغاء =========
@@ -978,50 +958,24 @@ async def refresh_status(cb: CallbackQuery):
     lang = _user_lang(cb)
     oid  = int(cb.data.split(":")[-1])
 
+    # نتحقق ونسلّم (بدون إشعار تلقائي هنا؛ بنرسل البطاقة نحن تحت)
     ok, delivered_text = await check_and_deliver_one(cb.bot, oid, notify_user=False)
 
-    if not ok:
-        try:
-            r = await ords.get_by_id(oid)
-        except Exception:
-            r = None
-        if r and getattr(r, "status", "") == "delivered":
-            delivered_text = (
-                getattr(r, "delivered_text", None)
-                or getattr(r, "delivery_text", None)
-                or getattr(r, "text", None)
-                or ""
-            )
-            ok = bool(delivered_text)
-
+    # لو لسه ما تم الدفع
     if not ok:
         await cb.answer("بانتظار الدفع… (سنتحقق تلقائيًا)" if str(lang).startswith("ar") else "Waiting for payment… (auto-checking)")
         return
 
-    # تم الدفع
-    confirm_txt = "✅ تم تأكيد الدفع.\n\nإذا واجهت أي مشكلة، أرسل بلاغ عبر الأمر /report" if str(lang).startswith("ar") \
-                  else "✅ Payment confirmed.\n\nIf you face any issue, reach us via /report"
-    try:
-        await cb.message.edit_reply_markup(reply_markup=None)
-    except Exception:
-        pass
-    await _edit_or_replace(cb.message, confirm_txt, reply_markup=None, parse_mode=ParseMode.HTML)
-    _CONFIRMED_SHOWN.add(oid)
-
-    delivered_text = re.sub(r'^\s*(تم\s+استلام\s+الدفع|Payment\s+received).*\n?', '', delivered_text or '', flags=re.IGNORECASE).strip()
-
-    if oid not in _DELIVERED_POSTED and delivered_text:
+    # أظهر "تم التأكيد" مرة واحدة فقط
+    if oid not in _CONFIRMED_SHOWN:
         try:
-            await cb.message.answer(delivered_text, parse_mode=ParseMode.HTML)
-        except TelegramBadRequest:
-            await cb.message.answer(delivered_text)
+            await cb.message.edit_text("✅ تم تأكيد الدفع." if str(lang).startswith("ar") else "✅ Payment confirmed.", reply_markup=None)
         except Exception:
             pass
-        _DELIVERED_POSTED.add(oid)
+        _CONFIRMED_SHOWN.add(oid)
 
-    keys = _extract_keys_from_text(delivered_text or "")
-    _DELIVERED_KEYS[oid] = keys
-
+    # لا تعاود نشر نص الإيصال نفسه (منع التكرار)
+    # نكتفي ببطاقة الشراء + روابط المساعدة
     try:
         r = await ords.get_by_id(oid)
         days = int(getattr(r, "days", 0) or 0)
@@ -1030,6 +984,11 @@ async def refresh_status(cb: CallbackQuery):
     except Exception:
         days, qty, product = 0, 0, DEFAULT_PRODUCT
 
+    # استخرج المفاتيح من نص التسليم المخزّن
+    keys = _extract_keys_from_text(delivered_text or "")
+    _DELIVERED_KEYS[oid] = keys
+
+    # أرسل بطاقة الشراء مرة واحدة فقط
     if oid not in _PROFILE_SENT:
         try:
             await _send_profile_block(cb, lang, oid, days, qty, keys, product=product)
@@ -1042,6 +1001,7 @@ async def refresh_status(cb: CallbackQuery):
         _PROFILE_SENT.add(oid)
 
     await cb.answer("تم التأكيد ✅" if str(lang).startswith("ar") else "Confirmed ✅")
+
 
 @router.callback_query(F.data.startswith("shop:c:"))
 async def cancel_order(cb: CallbackQuery):
