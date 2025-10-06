@@ -958,24 +958,34 @@ async def refresh_status(cb: CallbackQuery):
     lang = _user_lang(cb)
     oid  = int(cb.data.split(":")[-1])
 
-    # نتحقق ونسلّم (بدون إشعار تلقائي هنا؛ بنرسل البطاقة نحن تحت)
+    # نتحقق ونسلّم بدون أي إرسال تلقائي هنا
     ok, delivered_text = await check_and_deliver_one(cb.bot, oid, notify_user=False)
 
     # لو لسه ما تم الدفع
     if not ok:
-        await cb.answer("بانتظار الدفع… (سنتحقق تلقائيًا)" if str(lang).startswith("ar") else "Waiting for payment… (auto-checking)")
+        await cb.answer(
+            "بانتظار الدفع… (سنتحقق تلقائيًا)" if str(lang).startswith("ar") else "Waiting for payment… (auto-checking)"
+        )
         return
 
-    # أظهر "تم التأكيد" مرة واحدة فقط
+    # أظهر نص التأكيد مرة واحدة فقط
     if oid not in _CONFIRMED_SHOWN:
         try:
-            await cb.message.edit_text("✅ تم تأكيد الدفع." if str(lang).startswith("ar") else "✅ Payment confirmed.", reply_markup=None)
+            confirm_txt = (
+                "✅ تم تأكيد الدفع.\nلو واجهت مشكلة استخدم الأمر /report"
+                if str(lang).startswith("ar")
+                else "✅ Payment confirmed.\nIf you face any issue, use /report"
+            )
+            await cb.message.edit_text(confirm_txt, reply_markup=None)
         except Exception:
             pass
         _CONFIRMED_SHOWN.add(oid)
 
-    # لا تعاود نشر نص الإيصال نفسه (منع التكرار)
-    # نكتفي ببطاقة الشراء + روابط المساعدة
+    # استخرج المفاتيح من نص التسليم المخزَّن
+    keys = _extract_keys_from_text(delivered_text or "")
+    _DELIVERED_KEYS[oid] = keys
+
+    # معلومات الطلب لبطاقة الشراء
     try:
         r = await ords.get_by_id(oid)
         days = int(getattr(r, "days", 0) or 0)
@@ -984,23 +994,18 @@ async def refresh_status(cb: CallbackQuery):
     except Exception:
         days, qty, product = 0, 0, DEFAULT_PRODUCT
 
-    # استخرج المفاتيح من نص التسليم المخزّن
-    keys = _extract_keys_from_text(delivered_text or "")
-    _DELIVERED_KEYS[oid] = keys
-
-    # أرسل بطاقة الشراء مرة واحدة فقط
+    # أرسل بطاقـة الشـراء (مرّة واحدة)، بدون إرسال “طريقة التفعيل” تلقائيًا
     if oid not in _PROFILE_SENT:
         try:
             await _send_profile_block(cb, lang, oid, days, qty, keys, product=product)
         except Exception:
             pass
-        try:
-            asyncio.create_task(_send_activation_help(cb.bot, cb.from_user.id, lang, product, oid))
-        except Exception:
-            pass
+        # ⚠️ تم حذف الإرسال التلقائي لرسالة "طريقة التفعيل"
+        # لو حاب المستخدم يشوفها يضغط زر "ℹ️ طريقة التفعيل" من البطاقة
         _PROFILE_SENT.add(oid)
 
     await cb.answer("تم التأكيد ✅" if str(lang).startswith("ar") else "Confirmed ✅")
+
 
 
 @router.callback_query(F.data.startswith("shop:c:"))
