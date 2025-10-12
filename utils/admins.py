@@ -68,6 +68,28 @@ def reload_from_disk() -> None:
     global _state
     _state = _load_store()
 
+def _sync_env_into_store() -> None:
+    """ادمج ما في البيئة (OWNERS/ADMIN_IDS) مع الملف الحالي، ثم احفظ إذا تغيّر."""
+    owners_env, admins_env = _env_admins()
+    changed = False
+    owners = set(_state.get("owners", []))
+    admins = set(_state.get("admins", []))
+    if owners_env:
+        before = owners.copy()
+        owners |= set(owners_env)
+        changed |= (owners != before)
+    if admins_env:
+        before = admins.copy()
+        admins |= set(admins_env)
+        changed |= (admins != before)
+    if changed:
+        _state["owners"] = sorted(owners)
+        _state["admins"] = sorted(admins)
+        _save_store(_state)
+
+# نفّذ المزامنة فور التحميل
+_sync_env_into_store()
+
 # مكشوفة للتوافق مع الكود القديم
 OWNERS: list[int] = list(_state.get("owners", []))
 ADMIN_IDS: list[int] = list(_state.get("admins", []))
