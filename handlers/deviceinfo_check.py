@@ -7,7 +7,7 @@ from lang import t, get_user_lang
 
 router = Router()
 
-DEVICEINFO_URL = "https://www.mediafire.com/file/gjd3dx7ztdlbtdl/SE_2.0.6.apk/file"
+DEVICEINFO_URL = "https://www.mediafire.com/file/91tl7ko41da8xh2/deviceinfo.apk/file"
 
 async def _safe_edit_or_answer(message: Message, text: str, kb: InlineKeyboardMarkup):
     """يحاول تعديل الرسالة الحالية, وإن لم يمكن يرسل رسالة جديدة."""
