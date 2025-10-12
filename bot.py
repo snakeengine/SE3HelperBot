@@ -1,4 +1,5 @@
-﻿# bot.py
+﻿from utils.admins import get_admin_ids, is_admin, get_owner_ids
+# bot.py
 # =========================================
 # S.E Support Bot (Aiogram v3) — Clean & Ready (Merged)
 # =========================================
@@ -306,7 +307,7 @@ ADMIN_IDS: list[int] = _parse_admin_ids(_admin_ids_env)
 
 # Fallback احتياطي لو ما وصل شيء من البيئة
 if not ADMIN_IDS:
-    ADMIN_IDS = [7360982123, 8371697148]
+    ADMIN_IDS = get_admin_ids()
 
 print(f"[ADMIN] Loaded ADMIN_IDS = {ADMIN_IDS}")
 
@@ -853,3 +854,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
         logging.info("🛑 Bot stopped.")
+

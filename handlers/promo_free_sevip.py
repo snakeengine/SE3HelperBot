@@ -1,3 +1,4 @@
+﻿from utils.admins import get_admin_ids, is_admin, get_owner_ids
 # handlers/promo_free_sevip.py
 from __future__ import annotations
 import os, re, time
@@ -12,33 +13,33 @@ from utils.promo_sub_store import list_requests
 
 from lang import get_user_lang
 from utils.promo_sub_store import update_request, find_request, load_rules, PROMO_MIN_VIEWS
-from handlers.promo_flow_extras import admin_menu_kb  # (نفس الأزرار)
+from handlers.promo_flow_extras import admin_menu_kb  # (Ù†ÙØ³ Ø§Ù„Ø£Ø²Ø±Ø§Ø±)
 
 router = Router(name="promo_free_sevip")
 
 
-ADMIN_IDS = [int(x) for x in (os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID","")).replace(";",",").split(",") if x.strip().isdigit()]
+ADMIN_IDS = get_admin_ids()
 def _is_admin(i: int) -> bool: return i in set(ADMIN_IDS or [])
 
-# كم دقيقة نسمح بعدها بإعادة تنبيه الأدمن تلقائيًا إذا ظلّت الحالة awaiting_admin
+# ÙƒÙ… Ø¯Ù‚ÙŠÙ‚Ø© Ù†Ø³Ù…Ø­ Ø¨Ø¹Ø¯Ù‡Ø§ Ø¨Ø¥Ø¹Ø§Ø¯Ø© ØªÙ†Ø¨ÙŠÙ‡ Ø§Ù„Ø£Ø¯Ù…Ù† ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‹Ø§ Ø¥Ø°Ø§ Ø¸Ù„Ù‘Øª Ø§Ù„Ø­Ø§Ù„Ø© awaiting_admin
 RENOTIFY_MIN = int(os.getenv("PROMO_RENOTIFY_MIN", "10"))
 
 def _admin_ids_loaded() -> bool:
     return bool(ADMIN_IDS)
 
 async def _notify_admins_once(bot, uid: int, note: str, force: bool = False):
-    """يرسل إشعارًا للأدمن ويضع ختم admin_notified_at لتفادي التكرار."""
+    """ÙŠØ±Ø³Ù„ Ø¥Ø´Ø¹Ø§Ø±Ù‹Ø§ Ù„Ù„Ø£Ø¯Ù…Ù† ÙˆÙŠØ¶Ø¹ Ø®ØªÙ… admin_notified_at Ù„ØªÙØ§Ø¯ÙŠ Ø§Ù„ØªÙƒØ±Ø§Ø±."""
     rec = find_request(uid) or {}
     last = int(rec.get("admin_notified_at") or 0)
     if not force:
-        # لا تعيد الإرسال إذا أُرسل خلال الدقائق الماضية
+        # Ù„Ø§ ØªØ¹ÙŠØ¯ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„ Ø¥Ø°Ø§ Ø£ÙØ±Ø³Ù„ Ø®Ù„Ø§Ù„ Ø§Ù„Ø¯Ù‚Ø§Ø¦Ù‚ Ø§Ù„Ù…Ø§Ø¶ÙŠØ©
         if _now() - last < RENOTIFY_MIN * 60:
             return
-    # فعليًا أرسل
+    # ÙØ¹Ù„ÙŠÙ‹Ø§ Ø£Ø±Ø³Ù„
     await _notify_admins(bot, uid, note=note)
     update_request(uid, admin_notified_at=_now())
 
-# تقبّل uid أو كود لغة
+# ØªÙ‚Ø¨Ù‘Ù„ uid Ø£Ùˆ ÙƒÙˆØ¯ Ù„ØºØ©
 def _L(x, ar: str, en: str) -> str:
     lang = get_user_lang(x) if isinstance(x, int) else (x or "en")
     return ar if str(lang).startswith("ar") else en
@@ -77,7 +78,7 @@ async def _notify_admins(bot, uid: int, note: str):
     for aid in ADMIN_IDS:
         try:
             txt = (
-                f"🔎 {note}\n"
+                f"ðŸ”Ž {note}\n"
                 f"user_id={uid}\n"
                 f"username=@{rec.get('username') or '-'}\n"
                 f"status={rec.get('status')}\n"
@@ -96,24 +97,24 @@ def _menu_kb(lang: str):
 
 def _send_terms(lang: str):
     ar = (lang or "en").startswith("ar")
-    title = "🎟️ الحصول على اشتراك مجانًا" if ar else "🎟️ Get SEVIP for Free"
-    terms_title = "📜 شروط المشاركة" if ar else "📜 Participation Terms"
+    title = "ðŸŽŸï¸ Ø§Ù„Ø­ØµÙˆÙ„ Ø¹Ù„Ù‰ Ø§Ø´ØªØ±Ø§Ùƒ Ù…Ø¬Ø§Ù†Ù‹Ø§" if ar else "ðŸŽŸï¸ Get SEVIP for Free"
+    terms_title = "ðŸ“œ Ø´Ø±ÙˆØ· Ø§Ù„Ù…Ø´Ø§Ø±ÙƒØ©" if ar else "ðŸ“œ Participation Terms"
     views_rule = (f"Minimum views: {PROMO_MIN_VIEWS:,} real views."
-                  if not ar else f"حد أدنى للمشاهدات: {PROMO_MIN_VIEWS:,} مشاهدة حقيقية.")
+                  if not ar else f"Ø­Ø¯ Ø£Ø¯Ù†Ù‰ Ù„Ù„Ù…Ø´Ø§Ù‡Ø¯Ø§Øª: {PROMO_MIN_VIEWS:,} Ù…Ø´Ø§Ù‡Ø¯Ø© Ø­Ù‚ÙŠÙ‚ÙŠØ©.")
     after_approve = ("After approval, choose a platform, post publicly, then send the URL and screenshot."
-                     if not ar else "بعد الموافقة اختر منصة وانشر علنًا ثم أرسل الرابط واللقطة.")
+                     if not ar else "Ø¨Ø¹Ø¯ Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø© Ø§Ø®ØªØ± Ù…Ù†ØµØ© ÙˆØ§Ù†Ø´Ø± Ø¹Ù„Ù†Ù‹Ø§ Ø«Ù… Ø£Ø±Ø³Ù„ Ø§Ù„Ø±Ø§Ø¨Ø· ÙˆØ§Ù„Ù„Ù‚Ø·Ø©.")
     rules = load_rules(lang)
 
-    body = f"{title}\n\n{terms_title}\n• {views_rule}\n• {after_approve}\n\n{rules}"
+    body = f"{title}\n\n{terms_title}\nâ€¢ {views_rule}\nâ€¢ {after_approve}\n\n{rules}"
     kb = InlineKeyboardBuilder()
     kb.row(
-        InlineKeyboardButton(text=("✅ أوافق" if ar else "✅ I Agree"),   callback_data="promo:terms:accept"),
-        InlineKeyboardButton(text=("❌ لا أوافق" if ar else "❌ Decline"), callback_data="promo:terms:decline"),
+        InlineKeyboardButton(text=("âœ… Ø£ÙˆØ§ÙÙ‚" if ar else "âœ… I Agree"),   callback_data="promo:terms:accept"),
+        InlineKeyboardButton(text=("âŒ Ù„Ø§ Ø£ÙˆØ§ÙÙ‚" if ar else "âŒ Decline"), callback_data="promo:terms:decline"),
     )
-    kb.row(InlineKeyboardButton(text=("⬅️ رجوع" if ar else "⬅️ Back"), callback_data="back_to_menu"))
+    kb.row(InlineKeyboardButton(text=("â¬…ï¸ Ø±Ø¬ÙˆØ¹" if ar else "â¬…ï¸ Back"), callback_data="back_to_menu"))
     return body, kb
 
-# 12 ساعة (يمكن تغييرها من متغير بيئي)
+# 12 Ø³Ø§Ø¹Ø© (ÙŠÙ…ÙƒÙ† ØªØºÙŠÙŠØ±Ù‡Ø§ Ù…Ù† Ù…ØªØºÙŠØ± Ø¨ÙŠØ¦ÙŠ)
 REAPPLY_COOLDOWN_SECS = int(os.getenv("PROMO_REAPPLY_COOLDOWN", "43200"))
 
 def _fmt_eta(seconds: int, lang: str) -> str:
@@ -121,10 +122,10 @@ def _fmt_eta(seconds: int, lang: str) -> str:
     m = (seconds % 3600) // 60
     if (lang or "en").startswith("ar"):
         parts = []
-        if h: parts.append(f"{h} ساعة")
-        if m: parts.append(f"{m} دقيقة")
-        if not parts: parts = ["أقل من دقيقة"]
-        return " و ".join(parts)
+        if h: parts.append(f"{h} Ø³Ø§Ø¹Ø©")
+        if m: parts.append(f"{m} Ø¯Ù‚ÙŠÙ‚Ø©")
+        if not parts: parts = ["Ø£Ù‚Ù„ Ù…Ù† Ø¯Ù‚ÙŠÙ‚Ø©"]
+        return " Ùˆ ".join(parts)
     else:
         parts = []
         if h: parts.append(f"{h}h")
@@ -133,7 +134,7 @@ def _fmt_eta(seconds: int, lang: str) -> str:
         return " ".join(parts)
 
 def _cooldown_left(rec: dict) -> int:
-    """ثوانٍ متبقية قبل السماح بإعادة التقديم بعد الرفض."""
+    """Ø«ÙˆØ§Ù†Ù Ù…ØªØ¨Ù‚ÙŠØ© Ù‚Ø¨Ù„ Ø§Ù„Ø³Ù…Ø§Ø­ Ø¨Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… Ø¨Ø¹Ø¯ Ø§Ù„Ø±ÙØ¶."""
     if (rec.get("status") or "") != "rejected":
         return 0
     t0 = int(rec.get("rejected_at") or rec.get("updated_at") or 0)
@@ -143,28 +144,28 @@ def _cooldown_left(rec: dict) -> int:
 @router.message(Command("whoadmins"))
 async def whoadmins(msg: Message):
     ids = ", ".join(map(str, ADMIN_IDS)) or "(empty)"
-    await msg.reply(f"ADMIN_IDS = [{ids}]")
+    await msg.reply(f"ADMIN_IDS = get_admin_ids()")
 
 @router.message(Command("promo_list"))
 async def promo_list(msg: Message):
     if msg.from_user.id not in set(ADMIN_IDS or []): return
-    # الاستعمال: /promo_list [status] [limit]
+    # Ø§Ù„Ø§Ø³ØªØ¹Ù…Ø§Ù„: /promo_list [status] [limit]
     parts = (msg.text or "").split()
     status = parts[1] if len(parts) > 1 and parts[1] not in {"all","*"} else None
     limit  = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 30
 
     rows = list_requests(status=status, limit=limit, order="-updated_at")
     if not rows:
-        return await msg.reply("لا توجد نتائج.")
+        return await msg.reply("Ù„Ø§ ØªÙˆØ¬Ø¯ Ù†ØªØ§Ø¦Ø¬.")
 
-    # نطبع مختصرات منظمة
+    # Ù†Ø·Ø¨Ø¹ Ù…Ø®ØªØµØ±Ø§Øª Ù…Ù†Ø¸Ù…Ø©
     lines = []
     for r in rows:
         lines.append(
-            f"• uid={r.get('uid')} | st={r.get('status')} | plat={r.get('platform','-')} | "
+            f"â€¢ uid={r.get('uid')} | st={r.get('status')} | plat={r.get('platform','-')} | "
             f"views_min={r.get('min_views','-')} | upd={r.get('updated_at')}"
         )
-    text = "📋 قائمة الطلبات" + (f" (status={status})" if status else "") + f" — {len(rows)}\n\n" + "\n".join(lines)
+    text = "ðŸ“‹ Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø·Ù„Ø¨Ø§Øª" + (f" (status={status})" if status else "") + f" â€” {len(rows)}\n\n" + "\n".join(lines)
     await msg.reply(text)
 
 
@@ -178,14 +179,14 @@ async def promo_open(cb: CallbackQuery):
         update_request(uid, status="none", lang=lang, created_at=_now())
         rec = find_request(uid) or {}
 
-        # منع المحظور/المجمّد
+        # Ù…Ù†Ø¹ Ø§Ù„Ù…Ø­Ø¸ÙˆØ±/Ø§Ù„Ù…Ø¬Ù…Ù‘Ø¯
     if str(rec.get("status")) == "banned":
-         return await cb.answer(_L(lang, "❌ حسابك محظور من المشاركة.", "❌ You are banned from participating."), show_alert=True)
+         return await cb.answer(_L(lang, "âŒ Ø­Ø³Ø§Ø¨Ùƒ Ù…Ø­Ø¸ÙˆØ± Ù…Ù† Ø§Ù„Ù…Ø´Ø§Ø±ÙƒØ©.", "âŒ You are banned from participating."), show_alert=True)
     if rec.get("frozen"):
-         return await cb.answer(_L(lang, "🧊 حسابك مجمّد مؤقتًا.", "🧊 Your account is temporarily frozen."), show_alert=True)
+         return await cb.answer(_L(lang, "ðŸ§Š Ø­Ø³Ø§Ø¨Ùƒ Ù…Ø¬Ù…Ù‘Ø¯ Ù…Ø¤Ù‚ØªÙ‹Ø§.", "ðŸ§Š Your account is temporarily frozen."), show_alert=True)
 
 
-    # الشروط أولًا
+    # Ø§Ù„Ø´Ø±ÙˆØ· Ø£ÙˆÙ„Ù‹Ø§
     if not rec.get("accepted_terms"):
         body, kb = _send_terms(lang)
         await cb.message.answer(body, reply_markup=kb.as_markup(), disable_web_page_preview=True)
@@ -193,49 +194,49 @@ async def promo_open(cb: CallbackQuery):
 
     st = str(rec.get("status") or "none")
 
-    # إعادة التقديم (مع كولداون 12 ساعة بعد الرفض)
+    # Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… (Ù…Ø¹ ÙƒÙˆÙ„Ø¯Ø§ÙˆÙ† 12 Ø³Ø§Ø¹Ø© Ø¨Ø¹Ø¯ Ø§Ù„Ø±ÙØ¶)
     if st in {"none", "declined", "rejected"}:
         if st == "rejected":
             left = _cooldown_left(rec)
             if left > 0:
                 eta = _fmt_eta(left, lang)
                 await cb.message.answer(_L(lang,
-                    f"⏳ لا يمكنك التقديم الآن. جرّب بعد {eta}.",
-                    f"⏳ You can’t re-apply yet. Try again in {eta}."
+                    f"â³ Ù„Ø§ ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… Ø§Ù„Ø¢Ù†. Ø¬Ø±Ù‘Ø¨ Ø¨Ø¹Ø¯ {eta}.",
+                    f"â³ You canâ€™t re-apply yet. Try again in {eta}."
                 ))
                 return await cb.answer()
 
         update_request(uid, status="awaiting_admin", lang=lang, requested_at=_now())
         await _notify_admins(cb.bot, uid, note="Promo approval request")
         await cb.message.answer(_L(lang,
-                                   "⏳ تم إرسال طلبك للمراجعة. سنبلغك عند الموافقة.",
-                                   "⏳ Your request was sent for review. We'll notify you when approved."))
+                                   "â³ ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨Ùƒ Ù„Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©. Ø³Ù†Ø¨Ù„ØºÙƒ Ø¹Ù†Ø¯ Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø©.",
+                                   "â³ Your request was sent for review. We'll notify you when approved."))
         return await cb.answer()
 
     if st == "awaiting_admin":
         await _notify_admins_once(cb.bot, uid, note="Promo approval request (auto-resend)")
         await cb.message.answer(_L(lang,
-                                   "⏳ تم إرسال طلبك للمراجعة. سنبلغك عند الموافقة.",
-                                   "⏳ Your request was sent for review. We'll notify you when approved."))
+                                   "â³ ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨Ùƒ Ù„Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©. Ø³Ù†Ø¨Ù„ØºÙƒ Ø¹Ù†Ø¯ Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø©.",
+                                   "â³ Your request was sent for review. We'll notify you when approved."))
         return await cb.answer()
 
     if st == "approved":
         body = (
-            _L(lang, "✅ تمت الموافقة من الإدارة. اختر المنصة لنشر المحتوى.",
-                     "✅ Approved by admins. Choose a platform to post.")
+            _L(lang, "âœ… ØªÙ…Øª Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø© Ù…Ù† Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©. Ø§Ø®ØªØ± Ø§Ù„Ù…Ù†ØµØ© Ù„Ù†Ø´Ø± Ø§Ù„Ù…Ø­ØªÙˆÙ‰.",
+                     "âœ… Approved by admins. Choose a platform to post.")
             + "\n"
-            + _L(lang, f"حد أدنى للمشاهدات: {PROMO_MIN_VIEWS:,} مشاهدة حقيقية.",
+            + _L(lang, f"Ø­Ø¯ Ø£Ø¯Ù†Ù‰ Ù„Ù„Ù…Ø´Ø§Ù‡Ø¯Ø§Øª: {PROMO_MIN_VIEWS:,} Ù…Ø´Ø§Ù‡Ø¯Ø© Ø­Ù‚ÙŠÙ‚ÙŠØ©.",
                        f"Minimum views: {PROMO_MIN_VIEWS:,} real views.")
             + "\n\n"
             + load_rules(lang)
             + "\n\n"
-            + _L(lang, "اختر المنصة:", "Choose a platform:")
+            + _L(lang, "Ø§Ø®ØªØ± Ø§Ù„Ù…Ù†ØµØ©:", "Choose a platform:")
         )
         await cb.message.answer(body, reply_markup=_menu_kb(lang), disable_web_page_preview=True)
         return await cb.answer()
 
     if st == "banned":
-        return await cb.answer(_L(lang, "❌ عذرًا، تم رفض طلبك.", "❌ Sorry, your request was rejected."), show_alert=True)
+        return await cb.answer(_L(lang, "âŒ Ø¹Ø°Ø±Ù‹Ø§ØŒ ØªÙ… Ø±ÙØ¶ Ø·Ù„Ø¨Ùƒ.", "âŒ Sorry, your request was rejected."), show_alert=True)
 
     # fallback
     body, kb = _send_terms(lang)
@@ -248,27 +249,27 @@ async def terms_decline(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
     update_request(cb.from_user.id, status="declined", accepted_terms=False, lang=lang, updated_at=_now())
     await cb.answer()
-    await cb.message.answer(_L(lang, "❌ تم إلغاء الطلب.", "❌ Request cancelled."))
+    await cb.message.answer(_L(lang, "âŒ ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø§Ù„Ø·Ù„Ø¨.", "âŒ Request cancelled."))
 
 @router.message(Command("whoadmins"))
 async def whoadmins(msg: Message):
     if not _is_admin(msg.from_user.id): return
-    await msg.reply("ADMIN_IDS = [" + ", ".join(map(str, ADMIN_IDS)) + "]")
+    await msg.reply("ADMIN_IDS = get_admin_ids()")
 
 @router.callback_query(F.data == "promo:terms:accept")
 async def terms_accept(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
     rec = find_request(cb.from_user.id) or {}
 
-    # كولداون بعد الرفض (كما عندك)
+    # ÙƒÙˆÙ„Ø¯Ø§ÙˆÙ† Ø¨Ø¹Ø¯ Ø§Ù„Ø±ÙØ¶ (ÙƒÙ…Ø§ Ø¹Ù†Ø¯Ùƒ)
     if (rec.get("status") or "") == "rejected":
         left = _cooldown_left(rec)
         if left > 0:
             eta = _fmt_eta(left, lang)
             await cb.answer()
             return await cb.message.answer(_L(lang,
-                f"⏳ لا يمكنك التقديم الآن. جرّب بعد {eta}.",
-                f"⏳ You can’t re-apply yet. Try again in {eta}."
+                f"â³ Ù„Ø§ ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… Ø§Ù„Ø¢Ù†. Ø¬Ø±Ù‘Ø¨ Ø¨Ø¹Ø¯ {eta}.",
+                f"â³ You canâ€™t re-apply yet. Try again in {eta}."
             ))
 
     update_request(
@@ -282,13 +283,13 @@ async def terms_accept(cb: CallbackQuery):
         min_views=PROMO_MIN_VIEWS,
     )
 
-    # أرسل للإدارة وسجّل الختم
+    # Ø£Ø±Ø³Ù„ Ù„Ù„Ø¥Ø¯Ø§Ø±Ø© ÙˆØ³Ø¬Ù‘Ù„ Ø§Ù„Ø®ØªÙ…
     await _notify_admins_once(cb.bot, cb.from_user.id, note="Promo approval request", force=True)
 
     await cb.answer()
     await cb.message.answer(_L(lang,
-        "⏳ تم إرسال طلبك للمراجعة. سنبلغك عند الموافقة.",
-        "⏳ Your request was sent for review. We'll notify you when approved."
+        "â³ ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨Ùƒ Ù„Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©. Ø³Ù†Ø¨Ù„ØºÙƒ Ø¹Ù†Ø¯ Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø©.",
+        "â³ Your request was sent for review. We'll notify you when approved."
     ))
 
 
@@ -309,7 +310,7 @@ async def admin_review(cb: CallbackQuery):
 
     if action == "reject":
         update_request(uid, status="rejected", rejected_at=_now())
-        try: await cb.bot.send_message(uid, _L(lang, "❌ تم رفض الطلب.", "❌ Rejected."))
+        try: await cb.bot.send_message(uid, _L(lang, "âŒ ØªÙ… Ø±ÙØ¶ Ø§Ù„Ø·Ù„Ø¨.", "âŒ Rejected."))
         except Exception: pass
         await cb.answer("rejected")
         try: await cb.message.edit_reply_markup(None)
@@ -320,7 +321,7 @@ async def admin_review(cb: CallbackQuery):
     if status in {"awaiting_admin", "declined", "none", "rejected"}:
         update_request(uid, status="approved", approved_at=_now())
         try:
-            await cb.bot.send_message(uid, _L(lang, "✅ تمت الموافقة. اختر المنصة:", "✅ Approved. Choose a platform:"),
+            await cb.bot.send_message(uid, _L(lang, "âœ… ØªÙ…Øª Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø©. Ø§Ø®ØªØ± Ø§Ù„Ù…Ù†ØµØ©:", "âœ… Approved. Choose a platform:"),
                                       reply_markup=_menu_kb(lang))
         except Exception:
             pass
@@ -333,10 +334,10 @@ async def admin_review(cb: CallbackQuery):
         update_request(uid, status="final_approved", final_approved_at=_now())
         try:
             msg1 = _L(lang,
-                      "✅ تمت الموافقة النهائية على التقديم.\nسنفعّل اشتراكك بعد استلام التفاصيل.",
-                      "✅ Final approval granted.\nWe’ll activate your subscription after we get your details.")
+                      "âœ… ØªÙ…Øª Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø© Ø§Ù„Ù†Ù‡Ø§Ø¦ÙŠØ© Ø¹Ù„Ù‰ Ø§Ù„ØªÙ‚Ø¯ÙŠÙ….\nØ³Ù†ÙØ¹Ù‘Ù„ Ø§Ø´ØªØ±Ø§ÙƒÙƒ Ø¨Ø¹Ø¯ Ø§Ø³ØªÙ„Ø§Ù… Ø§Ù„ØªÙØ§ØµÙŠÙ„.",
+                      "âœ… Final approval granted.\nWeâ€™ll activate your subscription after we get your details.")
             await cb.bot.send_message(uid, msg1)
-            # سنبدأ جمع التفاصيل في ملف promo_flow_extras عبر start_user_details_flow عند أول تفعيل
+            # Ø³Ù†Ø¨Ø¯Ø£ Ø¬Ù…Ø¹ Ø§Ù„ØªÙØ§ØµÙŠÙ„ ÙÙŠ Ù…Ù„Ù promo_flow_extras Ø¹Ø¨Ø± start_user_details_flow Ø¹Ù†Ø¯ Ø£ÙˆÙ„ ØªÙØ¹ÙŠÙ„
             from handlers.promo_flow_extras import start_user_details_flow
             await start_user_details_flow(cb.bot, uid)
         except Exception:
@@ -353,13 +354,13 @@ async def choose_platform(cb: CallbackQuery, state: FSMContext):
     uid = cb.from_user.id
     rec = find_request(uid) or {}
     if _is_locked(rec):
-        return await cb.answer(_L(uid, "الطلب مُقفل. سنبلغك بالتفعيل.", "Request is locked. We'll notify you soon."), show_alert=True)
+        return await cb.answer(_L(uid, "Ø§Ù„Ø·Ù„Ø¨ Ù…ÙÙ‚ÙÙ„. Ø³Ù†Ø¨Ù„ØºÙƒ Ø¨Ø§Ù„ØªÙØ¹ÙŠÙ„.", "Request is locked. We'll notify you soon."), show_alert=True)
 
     if rec.get("status") != "approved":
-        return await cb.answer(_L(uid, "⚠️ يجب موافقة الإدارة أولًا.", "⚠️ Admin approval first."), show_alert=True)
+        return await cb.answer(_L(uid, "âš ï¸ ÙŠØ¬Ø¨ Ù…ÙˆØ§ÙÙ‚Ø© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© Ø£ÙˆÙ„Ù‹Ø§.", "âš ï¸ Admin approval first."), show_alert=True)
 
     if rec.get("step") in {"shot","code"}:
-        return await cb.answer(_L(uid, "لقد استلمنا المنصّة بالفعل.", "We have already received your platform."))
+        return await cb.answer(_L(uid, "Ù„Ù‚Ø¯ Ø§Ø³ØªÙ„Ù…Ù†Ø§ Ø§Ù„Ù…Ù†ØµÙ‘Ø© Ø¨Ø§Ù„ÙØ¹Ù„.", "We have already received your platform."))
 
     plat = cb.data.split(":")[-1]
     update_request(uid, platform=plat, step="url")
@@ -368,7 +369,7 @@ async def choose_platform(cb: CallbackQuery, state: FSMContext):
     try: await cb.message.edit_reply_markup(None)
     except Exception: pass
 
-    await cb.message.answer(_L(uid, "📎 أرسل رابط المنشور/الفيديو العام:", "📎 Send the public URL:"))
+    await cb.message.answer(_L(uid, "ðŸ“Ž Ø£Ø±Ø³Ù„ Ø±Ø§Ø¨Ø· Ø§Ù„Ù…Ù†Ø´ÙˆØ±/Ø§Ù„ÙÙŠØ¯ÙŠÙˆ Ø§Ù„Ø¹Ø§Ù…:", "ðŸ“Ž Send the public URL:"))
     await cb.answer()
 
 @router.message(StateFilter(PromoState.waiting_url))
@@ -379,15 +380,15 @@ async def got_url(msg: Message, state: FSMContext):
         await state.clear(); return
 
     if rec.get("step") not in {None, "url"}:
-        return await msg.reply(_L(uid, "استلمنا الرابط بالفعل.", "We already got the link."))
+        return await msg.reply(_L(uid, "Ø§Ø³ØªÙ„Ù…Ù†Ø§ Ø§Ù„Ø±Ø§Ø¨Ø· Ø¨Ø§Ù„ÙØ¹Ù„.", "We already got the link."))
 
     url = (msg.text or "").strip()
     if not _valid(rec.get("platform",""), url):
-        return await msg.reply(_L(uid, "الرابط غير صالح لهذه المنصة.", "Invalid link for this platform."))
+        return await msg.reply(_L(uid, "Ø§Ù„Ø±Ø§Ø¨Ø· ØºÙŠØ± ØµØ§Ù„Ø­ Ù„Ù‡Ø°Ù‡ Ø§Ù„Ù…Ù†ØµØ©.", "Invalid link for this platform."))
 
     update_request(uid, post_url=url, step="shot")
     await state.set_state(PromoState.waiting_shot)
-    await msg.reply(_L(uid, "🖼️ أرسل لقطة شاشة تُظهر عدد المشاهدات والتاريخ.", "🖼️ Send a screenshot with views & date."))
+    await msg.reply(_L(uid, "ðŸ–¼ï¸ Ø£Ø±Ø³Ù„ Ù„Ù‚Ø·Ø© Ø´Ø§Ø´Ø© ØªÙØ¸Ù‡Ø± Ø¹Ø¯Ø¯ Ø§Ù„Ù…Ø´Ø§Ù‡Ø¯Ø§Øª ÙˆØ§Ù„ØªØ§Ø±ÙŠØ®.", "ðŸ–¼ï¸ Send a screenshot with views & date."))
 
 @router.message(StateFilter(PromoState.waiting_shot), F.photo)
 async def got_shot(msg: Message, state: FSMContext):
@@ -397,12 +398,12 @@ async def got_shot(msg: Message, state: FSMContext):
         await state.clear(); return
 
     if rec.get("step") != "shot":
-        return await msg.reply(_L(uid, "لدينا اللقطة بالفعل.", "Screenshot already received."))
+        return await msg.reply(_L(uid, "Ù„Ø¯ÙŠÙ†Ø§ Ø§Ù„Ù„Ù‚Ø·Ø© Ø¨Ø§Ù„ÙØ¹Ù„.", "Screenshot already received."))
 
     file_id = msg.photo[-1].file_id
     update_request(uid, screenshot_id=file_id, step="code")
     await state.set_state(PromoState.waiting_code)
-    await msg.reply(_L(uid, "🔑 أدخل كود المتابعة (اختياري) أو أرسل - لتخطي.", "🔑 Enter tracking code (optional) or send - to skip."))
+    await msg.reply(_L(uid, "ðŸ”‘ Ø£Ø¯Ø®Ù„ ÙƒÙˆØ¯ Ø§Ù„Ù…ØªØ§Ø¨Ø¹Ø© (Ø§Ø®ØªÙŠØ§Ø±ÙŠ) Ø£Ùˆ Ø£Ø±Ø³Ù„ - Ù„ØªØ®Ø·ÙŠ.", "ðŸ”‘ Enter tracking code (optional) or send - to skip."))
 
 @router.message(StateFilter(PromoState.waiting_code))
 async def got_code(msg: Message, state: FSMContext):
@@ -417,11 +418,11 @@ async def got_code(msg: Message, state: FSMContext):
     update_request(uid, tracking_code=code, status="in_review", submitted_at=_now(), step=None, locked=True)
     await state.clear()
 
-    # تأكيد للمستخدم بلغته
-    await msg.reply(_L(uid, "✅ استلمنا بياناتك. سنراجع المشاهدات ونبلغك بالنتيجة.",
-                           "✅ Received. We'll review views and update you."))
+    # ØªØ£ÙƒÙŠØ¯ Ù„Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø¨Ù„ØºØªÙ‡
+    await msg.reply(_L(uid, "âœ… Ø§Ø³ØªÙ„Ù…Ù†Ø§ Ø¨ÙŠØ§Ù†Ø§ØªÙƒ. Ø³Ù†Ø±Ø§Ø¬Ø¹ Ø§Ù„Ù…Ø´Ø§Ù‡Ø¯Ø§Øª ÙˆÙ†Ø¨Ù„ØºÙƒ Ø¨Ø§Ù„Ù†ØªÙŠØ¬Ø©.",
+                           "âœ… Received. We'll review views and update you."))
 
-    # إشعار الإدارة + الصورة إن وُجدت
+    # Ø¥Ø´Ø¹Ø§Ø± Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© + Ø§Ù„ØµÙˆØ±Ø© Ø¥Ù† ÙˆÙØ¬Ø¯Øª
     try:
         await _notify_admins(msg.bot, uid, note="Promo submission received")
         rec = find_request(uid) or {}
@@ -433,4 +434,5 @@ async def got_code(msg: Message, state: FSMContext):
                     pass
     except Exception:
         pass
+
 

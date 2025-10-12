@@ -1,3 +1,4 @@
+﻿from utils.admins import get_admin_ids, is_admin, get_owner_ids
 # handlers/rewards_gate.py
 from __future__ import annotations
 
@@ -27,12 +28,12 @@ from handlers.live_chat import LiveChat
 
 
 router = Router(name="rewards_gate")
-# امنع التنفيذ أثناء جلسة الدردشة الحيّة، واشتغل بالخاص فقط
+# Ø§Ù…Ù†Ø¹ Ø§Ù„ØªÙ†ÙÙŠØ° Ø£Ø«Ù†Ø§Ø¡ Ø¬Ù„Ø³Ø© Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„Ø­ÙŠÙ‘Ø©ØŒ ÙˆØ§Ø´ØªØºÙ„ Ø¨Ø§Ù„Ø®Ø§Øµ ÙÙ‚Ø·
 router.message.filter(F.chat.type == "private", ~StateFilter(LiveChat.active))
 router.callback_query.filter(F.message.chat.type == "private", ~StateFilter(LiveChat.active))
 
-# امنع أي رسائل/كولباكات خاصة أثناء جلسة الدردشة الحيّة،
-# وحصّر كولباكات هذا الملف على بادئة rwd:gate:
+# Ø§Ù…Ù†Ø¹ Ø£ÙŠ Ø±Ø³Ø§Ø¦Ù„/ÙƒÙˆÙ„Ø¨Ø§ÙƒØ§Øª Ø®Ø§ØµØ© Ø£Ø«Ù†Ø§Ø¡ Ø¬Ù„Ø³Ø© Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„Ø­ÙŠÙ‘Ø©ØŒ
+# ÙˆØ­ØµÙ‘Ø± ÙƒÙˆÙ„Ø¨Ø§ÙƒØ§Øª Ù‡Ø°Ø§ Ø§Ù„Ù…Ù„Ù Ø¹Ù„Ù‰ Ø¨Ø§Ø¯Ø¦Ø© rwd:gate:
 router.message.filter(
     F.chat.type == "private",
     ~StateFilter(LiveChat.active)
@@ -43,18 +44,18 @@ router.callback_query.filter(
     F.data.func(lambda s: isinstance(s, str) and s.startswith("rwd:gate:"))
 )
 
-# ملاحظة: chat_member updates لا نقيّدها لأنها تأتي من القنوات/السوبرجروبات
-# وليست جزءًا من محادثة المستخدم الخاصة، وبالتالي ما تتأثر بـ LiveChat.
+# Ù…Ù„Ø§Ø­Ø¸Ø©: chat_member updates Ù„Ø§ Ù†Ù‚ÙŠÙ‘Ø¯Ù‡Ø§ Ù„Ø£Ù†Ù‡Ø§ ØªØ£ØªÙŠ Ù…Ù† Ø§Ù„Ù‚Ù†ÙˆØ§Øª/Ø§Ù„Ø³ÙˆØ¨Ø±Ø¬Ø±ÙˆØ¨Ø§Øª
+# ÙˆÙ„ÙŠØ³Øª Ø¬Ø²Ø¡Ù‹Ø§ Ù…Ù† Ù…Ø­Ø§Ø¯Ø«Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø§Ù„Ø®Ø§ØµØ©ØŒ ÙˆØ¨Ø§Ù„ØªØ§Ù„ÙŠ Ù…Ø§ ØªØªØ£Ø«Ø± Ø¨Ù€ LiveChat.
 log = logging.getLogger(__name__)
 
-# ---------------------- إعداد إشعار الأدمن ----------------------
+# ---------------------- Ø¥Ø¹Ø¯Ø§Ø¯ Ø¥Ø´Ø¹Ø§Ø± Ø§Ù„Ø£Ø¯Ù…Ù† ----------------------
 _admin_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
-ADMIN_IDS = [int(x) for x in _admin_env.split(",") if x.strip().isdigit()]
+ADMIN_IDS = get_admin_ids()
 
 async def _notify_admins(bot, text: str):
     """
-    يحاول الإرسال عبر utils.admin_notify.notify_admins إن وُجد؛
-    وإلا يرسل مباشرة إلى ADMIN_IDS.
+    ÙŠØ­Ø§ÙˆÙ„ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„ Ø¹Ø¨Ø± utils.admin_notify.notify_admins Ø¥Ù† ÙˆÙØ¬Ø¯Ø›
+    ÙˆØ¥Ù„Ø§ ÙŠØ±Ø³Ù„ Ù…Ø¨Ø§Ø´Ø±Ø© Ø¥Ù„Ù‰ ADMIN_IDS.
     """
     try:
         from utils.admin_notify import notify_admins  # type: ignore
@@ -68,7 +69,7 @@ async def _notify_admins(bot, text: str):
         except Exception:
             pass
 
-# ---------------------- الإعدادات ----------------------
+# ---------------------- Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª ----------------------
 def _parse_channels(value: str) -> List[Union[int, str]]:
     items: List[Union[int, str]] = []
     for raw in (value or "").split(","):
@@ -84,28 +85,28 @@ def _parse_channels(value: str) -> List[Union[int, str]]:
                 pass
     return items
 
-# مثال REWARDS_CHANNELS: "@SnakeEngine,-1001234567890"
+# Ù…Ø«Ø§Ù„ REWARDS_CHANNELS: "@SnakeEngine,-1001234567890"
 REQUIRED_CHANNELS = _parse_channels(os.getenv("REWARDS_CHANNELS", ""))
 
 LEAVE_DEDUCT_DEFAULT = int(os.getenv("REWARDS_LEAVE_DEDUCT", "50"))
-GRACE_SECONDS        = int(os.getenv("REWARDS_GRACE_SECONDS", "120"))   # مهلة السماح
-MEMBERSHIP_TTL       = int(os.getenv("REWARDS_RECHECK_TTL", "60"))      # كاش فحص الاشتراك
+GRACE_SECONDS        = int(os.getenv("REWARDS_GRACE_SECONDS", "120"))   # Ù…Ù‡Ù„Ø© Ø§Ù„Ø³Ù…Ø§Ø­
+MEMBERSHIP_TTL       = int(os.getenv("REWARDS_RECHECK_TTL", "60"))      # ÙƒØ§Ø´ ÙØ­Øµ Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ
 ESCALATE             = os.getenv("REWARDS_DEDUCT_ESCALATE", "").strip() # "20,50,100"
 DEDUCT_SEQ           = [int(x) for x in ESCALATE.split(",") if x.strip().isdigit()]
-SKIP_ADMINS          = int(os.getenv("REWARDS_SKIP_ADMINS", "1"))       # إعفاء الأدمن
+SKIP_ADMINS          = int(os.getenv("REWARDS_SKIP_ADMINS", "1"))       # Ø¥Ø¹ÙØ§Ø¡ Ø§Ù„Ø£Ø¯Ù…Ù†
 
-# تنبيه مبكّر وحدّ السلوك مع الرصيد الصفري:
-PREWARN_ON_LEAVE = int(os.getenv("REWARDS_PREWARN", "1"))        # 1=فعّال
-WARN_ZERO_BAL    = int(os.getenv("REWARDS_WARN_ZERO_BAL", "0"))  # 0=لا تنبّه إن الرصيد صفر
+# ØªÙ†Ø¨ÙŠÙ‡ Ù…Ø¨ÙƒÙ‘Ø± ÙˆØ­Ø¯Ù‘ Ø§Ù„Ø³Ù„ÙˆÙƒ Ù…Ø¹ Ø§Ù„Ø±ØµÙŠØ¯ Ø§Ù„ØµÙØ±ÙŠ:
+PREWARN_ON_LEAVE = int(os.getenv("REWARDS_PREWARN", "1"))        # 1=ÙØ¹Ù‘Ø§Ù„
+WARN_ZERO_BAL    = int(os.getenv("REWARDS_WARN_ZERO_BAL", "0"))  # 0=Ù„Ø§ ØªÙ†Ø¨Ù‘Ù‡ Ø¥Ù† Ø§Ù„Ø±ØµÙŠØ¯ ØµÙØ±
 
-# ✅ مفاتيح كتم إشعارات الأدمن (افتراضيًا متوقفة)
-NOTIFY_LEAVE      = int(os.getenv("REWARDS_NOTIFY_LEAVE", "0"))        # إشعار "Leave detected"
-NOTIFY_JOIN_BACK  = int(os.getenv("REWARDS_NOTIFY_JOIN_BACK", "0"))    # إشعار "User re-subscribed"
+# âœ… Ù…ÙØ§ØªÙŠØ­ ÙƒØªÙ… Ø¥Ø´Ø¹Ø§Ø±Ø§Øª Ø§Ù„Ø£Ø¯Ù…Ù† (Ø§ÙØªØ±Ø§Ø¶ÙŠÙ‹Ø§ Ù…ØªÙˆÙ‚ÙØ©)
+NOTIFY_LEAVE      = int(os.getenv("REWARDS_NOTIFY_LEAVE", "0"))        # Ø¥Ø´Ø¹Ø§Ø± "Leave detected"
+NOTIFY_JOIN_BACK  = int(os.getenv("REWARDS_NOTIFY_JOIN_BACK", "0"))    # Ø¥Ø´Ø¹Ø§Ø± "User re-subscribed"
 
 def _L(uid: int) -> str:
     return get_user_lang(uid) or "ar"
 
-# ---------------------- كاش ----------------------
+# ---------------------- ÙƒØ§Ø´ ----------------------
 _channel_title_cache: Dict[Union[int, str], str] = {}
 _membership_cache: Dict[tuple[int, Union[int, str]], tuple[bool, int]] = {}
 _leave_pending: Dict[tuple[int, Union[int, str]], int] = {}  # (uid, channel)->ts
@@ -146,7 +147,7 @@ async def check_membership(bot, user_id: int) -> Tuple[bool, List[Union[int, str
             missing.append(ch)
     return (len(missing) == 0), missing
 
-# ---------------------- كيبورد الانضمام ----------------------
+# ---------------------- ÙƒÙŠØ¨ÙˆØ±Ø¯ Ø§Ù„Ø§Ù†Ø¶Ù…Ø§Ù… ----------------------
 def _channel_url(ch: Union[int, str]) -> str:
     if isinstance(ch, int):
         return f"https://t.me/c/{str(ch)[4:]}" if str(ch).startswith("-100") else f"https://t.me/{ch}"
@@ -160,21 +161,21 @@ async def join_keyboard(bot, lang: str) -> InlineKeyboardBuilder:
             title = await _get_channel_title(bot, ch)
         except Exception:
             title = str(ch)
-        btn_txt = t(lang, "rewards.gate.join_named", "اشترك في {name}").format(name=title or str(ch))
+        btn_txt = t(lang, "rewards.gate.join_named", "Ø§Ø´ØªØ±Ùƒ ÙÙŠ {name}").format(name=title or str(ch))
         kb.row(InlineKeyboardButton(text=btn_txt, url=_channel_url(ch)))
     kb.row(
-        InlineKeyboardButton(text=t(lang, "rewards.gate.ive_joined", "✅ اشتركت / تحقق"), callback_data="rwd:gate:recheck")
+        InlineKeyboardButton(text=t(lang, "rewards.gate.ive_joined", "âœ… Ø§Ø´ØªØ±ÙƒØª / ØªØ­Ù‚Ù‚"), callback_data="rwd:gate:recheck")
     )
-    kb.row(InlineKeyboardButton(text=t(lang, "common.close", "إغلاق"), callback_data="rwd:gate:close"))
+    kb.row(InlineKeyboardButton(text=t(lang, "common.close", "Ø¥ØºÙ„Ø§Ù‚"), callback_data="rwd:gate:close"))
     return kb
 
-# ---------------------- واجهة الإلزام ----------------------
+# ---------------------- ÙˆØ§Ø¬Ù‡Ø© Ø§Ù„Ø¥Ù„Ø²Ø§Ù… ----------------------
 async def require_membership(msg_or_cb: Message | CallbackQuery) -> bool:
     uid = msg_or_cb.from_user.id
     lang = _L(uid)
 
     if is_global_paused() or is_user_paused(uid):
-        txt = t(lang, "rewards.paused", "⏸️ نظام الجوائز متوقف مؤقتًا من الإدارة.")
+        txt = t(lang, "rewards.paused", "â¸ï¸ Ù†Ø¸Ø§Ù… Ø§Ù„Ø¬ÙˆØ§Ø¦Ø² Ù…ØªÙˆÙ‚Ù Ù…Ø¤Ù‚ØªÙ‹Ø§ Ù…Ù† Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©.")
         if isinstance(msg_or_cb, Message):
             await msg_or_cb.answer(txt)
         else:
@@ -187,14 +188,14 @@ async def require_membership(msg_or_cb: Message | CallbackQuery) -> bool:
         return True
 
     set_blocked(uid, True)
-    text = t(lang, "rewards.gate.required", "الاشتراك بالقنوات إلزامي لاستخدام الجوائز.")
+    text = t(lang, "rewards.gate.required", "Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ Ø¨Ø§Ù„Ù‚Ù†ÙˆØ§Øª Ø¥Ù„Ø²Ø§Ù…ÙŠ Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ø¬ÙˆØ§Ø¦Ø².")
     if missing:
         lines = []
         for ch in missing:
             title = await _get_channel_title(msg_or_cb.bot, ch)
-            lines.append(f"• {title}")
+            lines.append(f"â€¢ {title}")
         if lines:
-            text += "\n" + t(lang, "rewards.gate.missing_list", "القنوات المطلوبة التي لم تشترك بها:") + "\n" + "\n".join(lines)
+            text += "\n" + t(lang, "rewards.gate.missing_list", "Ø§Ù„Ù‚Ù†ÙˆØ§Øª Ø§Ù„Ù…Ø·Ù„ÙˆØ¨Ø© Ø§Ù„ØªÙŠ Ù„Ù… ØªØ´ØªØ±Ùƒ Ø¨Ù‡Ø§:") + "\n" + "\n".join(lines)
     kb_markup = (await join_keyboard(msg_or_cb.bot, lang)).as_markup()
 
     if isinstance(msg_or_cb, Message):
@@ -208,19 +209,19 @@ async def require_membership(msg_or_cb: Message | CallbackQuery) -> bool:
         except TelegramBadRequest as e:
             if "message is not modified" in str(e):
                 await msg_or_cb.answer(
-                    t(lang, "rewards.gate.still_missing", "لم نرصد اشتراكك بعد. تأكد ثم اضغط \"تحقق\" مرة أخرى."),
+                    t(lang, "rewards.gate.still_missing", "Ù„Ù… Ù†Ø±ØµØ¯ Ø§Ø´ØªØ±Ø§ÙƒÙƒ Ø¨Ø¹Ø¯. ØªØ£ÙƒØ¯ Ø«Ù… Ø§Ø¶ØºØ· \"ØªØ­Ù‚Ù‚\" Ù…Ø±Ø© Ø£Ø®Ø±Ù‰."),
                     show_alert=True
                 )
             else:
                 raise
     return False
 
-# ---------------------- أوامر مساعدة ----------------------
+# ---------------------- Ø£ÙˆØ§Ù…Ø± Ù…Ø³Ø§Ø¹Ø¯Ø© ----------------------
 @router.message(Command("rewards_join"))
 async def cmd_rewards_join(m: Message):
     lang = _L(m.from_user.id)
     await m.answer(
-        t(lang, "rewards.gate.required", "الاشتراك بالقنوات إلزامي لاستخدام الجوائز."),
+        t(lang, "rewards.gate.required", "Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ Ø¨Ø§Ù„Ù‚Ù†ÙˆØ§Øª Ø¥Ù„Ø²Ø§Ù…ÙŠ Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ø¬ÙˆØ§Ø¦Ø²."),
         reply_markup=(await join_keyboard(m.bot, lang)).as_markup(),
         disable_web_page_preview=True
     )
@@ -242,7 +243,7 @@ async def cb_gate_recheck(cb: CallbackQuery):
     except Exception:
         await cb.answer("OK", show_alert=False)
 
-# ---------------------- حساب قيمة الخصم ----------------------
+# ---------------------- Ø­Ø³Ø§Ø¨ Ù‚ÙŠÙ…Ø© Ø§Ù„Ø®ØµÙ… ----------------------
 def _calc_deduct(uid: int) -> int:
     u = ensure_user(uid)
     warns = int(u.get("warns", 0))
@@ -251,11 +252,11 @@ def _calc_deduct(uid: int) -> int:
         return int(DEDUCT_SEQ[idx])
     return LEAVE_DEDUCT_DEFAULT
 
-# ---------------------- تنبيه مبكّر عند المغادرة ----------------------
+# ---------------------- ØªÙ†Ø¨ÙŠÙ‡ Ù…Ø¨ÙƒÙ‘Ø± Ø¹Ù†Ø¯ Ø§Ù„Ù…ØºØ§Ø¯Ø±Ø© ----------------------
 async def _send_preleave_notice(bot, uid: int, channel: Union[int, str]):
     if not PREWARN_ON_LEAVE:
         return
-    # إن عاد فورًا لا داعي للتنبيه
+    # Ø¥Ù† Ø¹Ø§Ø¯ ÙÙˆØ±Ù‹Ø§ Ù„Ø§ Ø¯Ø§Ø¹ÙŠ Ù„Ù„ØªÙ†Ø¨ÙŠÙ‡
     if await _is_member_of(bot, uid, channel):
         return
 
@@ -273,13 +274,13 @@ async def _send_preleave_notice(bot, uid: int, channel: Union[int, str]):
         text = t(
             lang,
             "rewards.gate.left_pre_nodeduct",
-            "ℹ️ غادرت قناة إلزامية ({name}). سيتم إيقاف الجوائز حتى تعود للاشتراك."
+            "â„¹ï¸ ØºØ§Ø¯Ø±Øª Ù‚Ù†Ø§Ø© Ø¥Ù„Ø²Ø§Ù…ÙŠØ© ({name}). Ø³ÙŠØªÙ… Ø¥ÙŠÙ‚Ø§Ù Ø§Ù„Ø¬ÙˆØ§Ø¦Ø² Ø­ØªÙ‰ ØªØ¹ÙˆØ¯ Ù„Ù„Ø§Ø´ØªØ±Ø§Ùƒ."
         ).format(name=title)
     else:
         text = t(
             lang,
             "rewards.gate.left_pre",
-            "⚠️ لقد غادرت قناة إلزامية ({name}). لديك {grace} ثوانٍ للعودة قبل خصم {deduct} نقطة وإيقاف الجوائز."
+            "âš ï¸ Ù„Ù‚Ø¯ ØºØ§Ø¯Ø±Øª Ù‚Ù†Ø§Ø© Ø¥Ù„Ø²Ø§Ù…ÙŠØ© ({name}). Ù„Ø¯ÙŠÙƒ {grace} Ø«ÙˆØ§Ù†Ù Ù„Ù„Ø¹ÙˆØ¯Ø© Ù‚Ø¨Ù„ Ø®ØµÙ… {deduct} Ù†Ù‚Ø·Ø© ÙˆØ¥ÙŠÙ‚Ø§Ù Ø§Ù„Ø¬ÙˆØ§Ø¦Ø²."
         ).format(name=title, grace=GRACE_SECONDS, deduct=deduct)
 
     try:
@@ -292,7 +293,7 @@ async def _send_preleave_notice(bot, uid: int, channel: Union[int, str]):
     except Exception:
         pass
 
-# ---------------------- مهلة السماح والخصم ----------------------
+# ---------------------- Ù…Ù‡Ù„Ø© Ø§Ù„Ø³Ù…Ø§Ø­ ÙˆØ§Ù„Ø®ØµÙ… ----------------------
 async def _apply_grace_and_deduct(bot, uid: int, channel: Union[int, str], leave_ts: int):
     await asyncio.sleep(max(0, GRACE_SECONDS))
 
@@ -300,7 +301,7 @@ async def _apply_grace_and_deduct(bot, uid: int, channel: Union[int, str], leave
         return
 
     if await _is_member_of(bot, uid, channel):
-        return  # عاد خلال المهلة
+        return  # Ø¹Ø§Ø¯ Ø®Ù„Ø§Ù„ Ø§Ù„Ù…Ù‡Ù„Ø©
 
     ensure_user(uid)
 
@@ -313,22 +314,22 @@ async def _apply_grace_and_deduct(bot, uid: int, channel: Union[int, str], leave
     lang   = _L(uid)
     deduct = abs(_calc_deduct(uid))
 
-    # إقفال الجوائز دائمًا بعد ثبوت المغادرة
+    # Ø¥Ù‚ÙØ§Ù„ Ø§Ù„Ø¬ÙˆØ§Ø¦Ø² Ø¯Ø§Ø¦Ù…Ù‹Ø§ Ø¨Ø¹Ø¯ Ø«Ø¨ÙˆØª Ø§Ù„Ù…ØºØ§Ø¯Ø±Ø©
     set_blocked(uid, True)
     mark_warn(uid, "left_required_channel")
 
     if bal <= 0:
-        # لا خصم لعدم وجود رصيد — إشعار أدمن اختياري
+        # Ù„Ø§ Ø®ØµÙ… Ù„Ø¹Ø¯Ù… ÙˆØ¬ÙˆØ¯ Ø±ØµÙŠØ¯ â€” Ø¥Ø´Ø¹Ø§Ø± Ø£Ø¯Ù…Ù† Ø§Ø®ØªÙŠØ§Ø±ÙŠ
         if NOTIFY_LEAVE:
             try:
                 await _notify_admins(
                     bot,
                     (
-                        "🚫 <b>Leave detected</b>\n"
-                        f"• User: <a href='tg://user?id={uid}'>{uid}</a>\n"
-                        f"• Channel: <b>{title}</b>\n"
-                        "• Deducted: <b>0</b> pts (no balance)\n"
-                        "• Rewards blocked."
+                        "ðŸš« <b>Leave detected</b>\n"
+                        f"â€¢ User: <a href='tg://user?id={uid}'>{uid}</a>\n"
+                        f"â€¢ Channel: <b>{title}</b>\n"
+                        "â€¢ Deducted: <b>0</b> pts (no balance)\n"
+                        "â€¢ Rewards blocked."
                     )
                 )
             except Exception:
@@ -344,7 +345,7 @@ async def _apply_grace_and_deduct(bot, uid: int, channel: Union[int, str], leave
             text=t(
                 lang,
                 "rewards.gate.left_warn",
-                "⚠️ تم رصد خروجك من قناة إلزامية ({name}). حُذِف {deduct} نقطة وتم إغلاق الجوائز حتى تعود للاشتراك."
+                "âš ï¸ ØªÙ… Ø±ØµØ¯ Ø®Ø±ÙˆØ¬Ùƒ Ù…Ù† Ù‚Ù†Ø§Ø© Ø¥Ù„Ø²Ø§Ù…ÙŠØ© ({name}). Ø­ÙØ°ÙÙ {deduct} Ù†Ù‚Ø·Ø© ÙˆØªÙ… Ø¥ØºÙ„Ø§Ù‚ Ø§Ù„Ø¬ÙˆØ§Ø¦Ø² Ø­ØªÙ‰ ØªØ¹ÙˆØ¯ Ù„Ù„Ø§Ø´ØªØ±Ø§Ùƒ."
             ).format(name=title, deduct=deduct),
             reply_markup=(await join_keyboard(bot, lang)).as_markup(),
             disable_web_page_preview=True
@@ -352,28 +353,28 @@ async def _apply_grace_and_deduct(bot, uid: int, channel: Union[int, str], leave
     except Exception:
         pass
 
-    # إشعار الأدمن — اختياري
+    # Ø¥Ø´Ø¹Ø§Ø± Ø§Ù„Ø£Ø¯Ù…Ù† â€” Ø§Ø®ØªÙŠØ§Ø±ÙŠ
     if NOTIFY_LEAVE:
         try:
             await _notify_admins(
                 bot,
                 (
-                    "🚫 <b>Leave detected</b>\n"
-                    f"• User: <a href='tg://user?id={uid}'>{uid}</a>\n"
-                    f"• Channel: <b>{title}</b>\n"
-                    f"• Deducted: <b>{deduct}</b> pts\n"
-                    "• Rewards blocked."
+                    "ðŸš« <b>Leave detected</b>\n"
+                    f"â€¢ User: <a href='tg://user?id={uid}'>{uid}</a>\n"
+                    f"â€¢ Channel: <b>{title}</b>\n"
+                    f"â€¢ Deducted: <b>{deduct}</b> pts\n"
+                    "â€¢ Rewards blocked."
                 )
             )
         except Exception:
             pass
 
-# ---------------------- مراقبة تغيّرات العضوية ----------------------
+# ---------------------- Ù…Ø±Ø§Ù‚Ø¨Ø© ØªØºÙŠÙ‘Ø±Ø§Øª Ø§Ù„Ø¹Ø¶ÙˆÙŠØ© ----------------------
 @router.chat_member()
 async def on_chat_member_update(event: ChatMemberUpdated):
     """
-    - عند الانضمام: فكّ الحظر وأرسل ترحيب مع زر فتح الجوائز + (إشعار أدمن اختياري).
-    - عند المغادرة: تنبيه مبكّر + مهلة سماح ثم خصم/إقفال + (إشعار أدمن اختياري).
+    - Ø¹Ù†Ø¯ Ø§Ù„Ø§Ù†Ø¶Ù…Ø§Ù…: ÙÙƒÙ‘ Ø§Ù„Ø­Ø¸Ø± ÙˆØ£Ø±Ø³Ù„ ØªØ±Ø­ÙŠØ¨ Ù…Ø¹ Ø²Ø± ÙØªØ­ Ø§Ù„Ø¬ÙˆØ§Ø¦Ø² + (Ø¥Ø´Ø¹Ø§Ø± Ø£Ø¯Ù…Ù† Ø§Ø®ØªÙŠØ§Ø±ÙŠ).
+    - Ø¹Ù†Ø¯ Ø§Ù„Ù…ØºØ§Ø¯Ø±Ø©: ØªÙ†Ø¨ÙŠÙ‡ Ù…Ø¨ÙƒÙ‘Ø± + Ù…Ù‡Ù„Ø© Ø³Ù…Ø§Ø­ Ø«Ù… Ø®ØµÙ…/Ø¥Ù‚ÙØ§Ù„ + (Ø¥Ø´Ø¹Ø§Ø± Ø£Ø¯Ù…Ù† Ø§Ø®ØªÙŠØ§Ø±ÙŠ).
     """
     chat_id = event.chat.id
     if not REQUIRED_CHANNELS:
@@ -389,7 +390,7 @@ async def on_chat_member_update(event: ChatMemberUpdated):
 
     new_status = event.new_chat_member.status
 
-    # ===== عاد أو اشترك
+    # ===== Ø¹Ø§Ø¯ Ø£Ùˆ Ø§Ø´ØªØ±Ùƒ
     if new_status in (ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.CREATOR):
         _leave_pending.pop((uid, chat_id), None)
         was_blocked = is_blocked(uid)
@@ -400,39 +401,40 @@ async def on_chat_member_update(event: ChatMemberUpdated):
                 kb = InlineKeyboardBuilder()
                 kb.row(
                     InlineKeyboardButton(
-                        text=t(lang, "rewards.gate.open_rewards_btn", "🎉 Open Rewards"),
+                        text=t(lang, "rewards.gate.open_rewards_btn", "ðŸŽ‰ Open Rewards"),
                         callback_data="rwd:hub",
                     )
                 )
                 await event.bot.send_message(
                     chat_id=uid,
-                    text=t(lang, "rewards.gate.joined_back", "🎉 تم تفعيل الجوائز مجددًا بعد اشتراكك."),
+                    text=t(lang, "rewards.gate.joined_back", "ðŸŽ‰ ØªÙ… ØªÙØ¹ÙŠÙ„ Ø§Ù„Ø¬ÙˆØ§Ø¦Ø² Ù…Ø¬Ø¯Ø¯Ù‹Ø§ Ø¨Ø¹Ø¯ Ø§Ø´ØªØ±Ø§ÙƒÙƒ."),
                     reply_markup=kb.as_markup(),
                 )
             except Exception:
                 pass
-            # إشعار الأدمن بعودة الاشتراك — اختياري
+            # Ø¥Ø´Ø¹Ø§Ø± Ø§Ù„Ø£Ø¯Ù…Ù† Ø¨Ø¹ÙˆØ¯Ø© Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ â€” Ø§Ø®ØªÙŠØ§Ø±ÙŠ
             if NOTIFY_JOIN_BACK:
                 try:
                     title = await _get_channel_title(event.bot, chat_id)
                     await _notify_admins(
                         event.bot,
                         (
-                            "✅ <b>User re-subscribed</b>\n"
-                            f"• User: <a href='tg://user?id={uid}'>{uid}</a>\n"
-                            f"• Channel: <b>{title}</b>\n"
-                            "• Rewards unlocked."
+                            "âœ… <b>User re-subscribed</b>\n"
+                            f"â€¢ User: <a href='tg://user?id={uid}'>{uid}</a>\n"
+                            f"â€¢ Channel: <b>{title}</b>\n"
+                            "â€¢ Rewards unlocked."
                         )
                     )
                 except Exception:
                     pass
         return
 
-    # ===== غادر القناة
+    # ===== ØºØ§Ø¯Ø± Ø§Ù„Ù‚Ù†Ø§Ø©
     if new_status in (ChatMemberStatus.LEFT, ChatMemberStatus.KICKED):
         leave_ts = int(time.time())
         _leave_pending[(uid, chat_id)] = leave_ts
-        # تنبيه مبكّر
+        # ØªÙ†Ø¨ÙŠÙ‡ Ù…Ø¨ÙƒÙ‘Ø±
         asyncio.create_task(_send_preleave_notice(event.bot, uid, chat_id))
-        # ثم مهلة السماح والخصم
+        # Ø«Ù… Ù…Ù‡Ù„Ø© Ø§Ù„Ø³Ù…Ø§Ø­ ÙˆØ§Ù„Ø®ØµÙ…
         asyncio.create_task(_apply_grace_and_deduct(event.bot, uid, chat_id, leave_ts))
+

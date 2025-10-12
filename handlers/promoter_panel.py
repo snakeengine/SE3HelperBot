@@ -1,3 +1,4 @@
+﻿from utils.admins import get_admin_ids, is_admin, get_owner_ids
 # handlers/promoter_panel.py
 from __future__ import annotations
 
@@ -21,16 +22,16 @@ from lang import t, get_user_lang
 router = Router(name="promoter_panel")
 log = logging.getLogger(__name__)
 
-# ===== ملفات وإعدادات =====
+# ===== Ù…Ù„ÙØ§Øª ÙˆØ¥Ø¹Ø¯Ø§Ø¯Ø§Øª =====
 DATA_DIR = Path("data"); DATA_DIR.mkdir(parents=True, exist_ok=True)
 STORE_FILE = DATA_DIR / "promoters.json"
 
 _admin_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
-ADMIN_IDS = [int(x) for x in str(_admin_env).split(",") if str(x).strip().isdigit()]
+ADMIN_IDS = get_admin_ids()
 if not ADMIN_IDS:
-    ADMIN_IDS = [7360982123]
+    ADMIN_IDS = get_admin_ids()
 
-# ===== أدوات عامة =====
+# ===== Ø£Ø¯ÙˆØ§Øª Ø¹Ø§Ù…Ø© =====
 def _now() -> int: return int(time.time())
 def L(uid: int) -> str: return (get_user_lang(uid) or "ar").strip().lower()
 
@@ -45,40 +46,40 @@ def _tf(lang: str, key: str, fallback: str) -> str:
 
 def _format_duration(sec: int, lang: str) -> str:
     sec = max(0, int(sec)); m = sec // 60; h = m // 60; d = h // 24
-    if d >= 1: return f"{d} " + (_tf(lang,"prom.time.days","يوم" if lang=="ar" else "d"))
-    if h >= 1: return f"{h} " + (_tf(lang,"prom.time.hours","ساعة" if lang=="ar" else "h"))
-    if m >= 1: return f"{m} " + (_tf(lang,"prom.time.minutes","دقيقة" if lang=="ar" else "m"))
-    return f"{sec} " + (_tf(lang,"prom.time.seconds","ثانية" if lang=="ar" else "s"))
+    if d >= 1: return f"{d} " + (_tf(lang,"prom.time.days","ÙŠÙˆÙ…" if lang=="ar" else "d"))
+    if h >= 1: return f"{h} " + (_tf(lang,"prom.time.hours","Ø³Ø§Ø¹Ø©" if lang=="ar" else "h"))
+    if m >= 1: return f"{m} " + (_tf(lang,"prom.time.minutes","Ø¯Ù‚ÙŠÙ‚Ø©" if lang=="ar" else "m"))
+    return f"{sec} " + (_tf(lang,"prom.time.seconds","Ø«Ø§Ù†ÙŠØ©" if lang=="ar" else "s"))
 
 def _duration_short(sec: int, lang: str) -> str:
     sec = max(0, int(sec)); m = sec // 60; h = m // 60; d = h // 24
-    if d >= 1: return f"{d}{_tf(lang,'prom.time.short.days','ي' if lang=='ar' else 'd')}"
-    if h >= 1: return f"{h}{_tf(lang,'prom.time.short.hours','س' if lang=='ar' else 'h')}"
-    if m >= 1: return f"{m}{_tf(lang,'prom.time.short.minutes','د' if lang=='ar' else 'm')}"
-    return f"{sec}{_tf(lang,'prom.time.short.seconds','ث' if lang=='ar' else 's')}"
+    if d >= 1: return f"{d}{_tf(lang,'prom.time.short.days','ÙŠ' if lang=='ar' else 'd')}"
+    if h >= 1: return f"{h}{_tf(lang,'prom.time.short.hours','Ø³' if lang=='ar' else 'h')}"
+    if m >= 1: return f"{m}{_tf(lang,'prom.time.short.minutes','Ø¯' if lang=='ar' else 'm')}"
+    return f"{sec}{_tf(lang,'prom.time.short.seconds','Ø«' if lang=='ar' else 's')}"
 
 def _since_phrase(start_ts: int, lang: str) -> str:
     sec = max(0, _now() - int(start_ts or 0))
-    lead = _tf(lang, "promp.live.since", "منذ" if lang=="ar" else "since")
+    lead = _tf(lang, "promp.live.since", "Ù…Ù†Ø°" if lang=="ar" else "since")
     if sec < 60:
-        unit = _tf(lang, "prom.time.seconds", "ثانية" if lang=="ar" else "s")
+        unit = _tf(lang, "prom.time.seconds", "Ø«Ø§Ù†ÙŠØ©" if lang=="ar" else "s")
         return f"{lead} {sec} {unit}" if lang=="ar" else f"{sec} {unit} ago"
     mins = sec // 60
     if mins < 60:
-        unit = _tf(lang, "prom.time.minutes", "دقيقة" if lang=="ar" else "min")
+        unit = _tf(lang, "prom.time.minutes", "Ø¯Ù‚ÙŠÙ‚Ø©" if lang=="ar" else "min")
         return f"{lead} {mins} {unit}" if lang=="ar" else f"{mins} {unit} ago"
     hrs = mins // 60
     if hrs < 24:
-        unit = _tf(lang, "prom.time.hours", "ساعة" if lang=="ar" else "h")
+        unit = _tf(lang, "prom.time.hours", "Ø³Ø§Ø¹Ø©" if lang=="ar" else "h")
         return f"{lead} {hrs} {unit}" if lang=="ar" else f"{hrs} {unit} ago"
     days = hrs // 24
-    unit = _tf(lang, "prom.time.days", "يوم" if lang=="ar" else "d")
+    unit = _tf(lang, "prom.time.days", "ÙŠÙˆÙ…" if lang=="ar" else "d")
     return f"{lead} {days} {unit}" if lang=="ar" else f"{days} {unit} ago"
 
 def _ts_to_str(ts: Optional[int]) -> str:
-    if not ts: return "—"
+    if not ts: return "â€”"
     try: return time.strftime("%Y-%m-%d %H:%M", time.gmtime(int(ts))) + " UTC"
-    except Exception: return "—"
+    except Exception: return "â€”"
 
 def _is_http_url(s: str) -> bool:
     return isinstance(s, str) and (s.startswith("http://") or s.startswith("https://"))
@@ -98,11 +99,11 @@ def _u(d: Dict[str, Any], uid: int | str) -> Dict[str, Any]:
     return d.setdefault("users", {}).setdefault(str(uid), {
         "status": "approved",
         "name": "-",
-        "links": [],          # يدوية
-        "auto_links": [],     # تُملأ تلقائيًا من تفاصيل البث
+        "links": [],          # ÙŠØ¯ÙˆÙŠØ©
+        "auto_links": [],     # ØªÙÙ…Ù„Ø£ ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‹Ø§ Ù…Ù† ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ø¨Ø«
         "telegram": {"declared": "-", "real": None, "match": False},
         "app_id": None,
-        "app_name": None,     # <-- NEW: اسم اللعبة
+        "app_name": None,     # <-- NEW: Ø§Ø³Ù… Ø§Ù„Ù„Ø¹Ø¨Ø©
         "subscription": {"status": "none", "started_at": 0, "expires_at": 0, "remind_before_h": 24},
         "activities": []
     })
@@ -111,7 +112,7 @@ def _is_promoter(uid: int) -> bool:
     d = _load()
     u = d.get("users", {}).get(str(uid))
     if not u:
-        u = _u(d, uid)   # ينشئ سجل افتراضي (status='approved')
+        u = _u(d, uid)   # ÙŠÙ†Ø´Ø¦ Ø³Ø¬Ù„ Ø§ÙØªØ±Ø§Ø¶ÙŠ (status='approved')
         _save(d)
     return u.get("status") == "approved"
 
@@ -127,25 +128,25 @@ def _merged_links(u: Dict[str, Any]) -> list[str]:
         k = s.strip()
         if not k or k in seen: continue
         seen.add(k); out.append(k)
-    return out[:10]  # حدّ علوي منطقي
+    return out[:10]  # Ø­Ø¯Ù‘ Ø¹Ù„ÙˆÙŠ Ù…Ù†Ø·Ù‚ÙŠ
 
 def _add_auto_link(u: Dict[str, Any], url: str) -> None:
     if not _is_http_url(url): return
     arr = u.setdefault("auto_links", [])
     if url not in arr:
         arr.insert(0, url)
-        del arr[10:]  # حافظ على آخر 10 روابط
+        del arr[10:]  # Ø­Ø§ÙØ¸ Ø¹Ù„Ù‰ Ø¢Ø®Ø± 10 Ø±ÙˆØ§Ø¨Ø·
 
-# ========= Helpers للعرض =========
+# ========= Helpers Ù„Ù„Ø¹Ø±Ø¶ =========
 def _fmt_links(links: list[str]) -> str:
-    if not links: return "—"
+    if not links: return "â€”"
     out = []
     for x in links:
         s = (x or "").strip()
         if not s: continue
-        if s.startswith(("http://","https://","tg://")): out.append(f"• <a href=\"{s}\">{s}</a>")
-        else: out.append(f"• {s}")
-    return "\n".join(out) if out else "—"
+        if s.startswith(("http://","https://","tg://")): out.append(f"â€¢ <a href=\"{s}\">{s}</a>")
+        else: out.append(f"â€¢ {s}")
+    return "\n".join(out) if out else "â€”"
 
 def _fmt_links_short(links: list[str], limit: int = 2) -> str:
     items = []
@@ -153,81 +154,81 @@ def _fmt_links_short(links: list[str], limit: int = 2) -> str:
         s = (x or "").strip()
         if not s: continue
         if s.startswith(("http://","https://","tg://")):
-            text = s if len(s) <= 60 else (s[:57] + "…")
+            text = s if len(s) <= 60 else (s[:57] + "â€¦")
             items.append(f"<a href=\"{s}\">{text}</a>")
         else:
             items.append(s)
         if len(items) >= limit: break
-    return " · ".join(items) if items else "—"
+    return " Â· ".join(items) if items else "â€”"
 
 def _chip(text: str) -> str: return f"<span class=\"tg-spoiler\">{text}</span>"
 
 def _tg_line(lang: str, tg: dict) -> str:
     decl = tg.get("declared") or "-"; real = tg.get("real") or "-"; match = bool(tg.get("match"))
-    mark = "✅" if match else "❗️"
-    real_lbl = _tf(lang, "promp.tg.real_label", "المعرّف الفعلي على تيليجرام" if lang=="ar" else "Actual Telegram label")
-    decl_lbl = _tf(lang, "promp.tg.declared_label", "المعرّف المعلن على تيليجرام" if lang=="ar" else "Declared Telegram label")
+    mark = "âœ…" if match else "â—ï¸"
+    real_lbl = _tf(lang, "promp.tg.real_label", "Ø§Ù„Ù…Ø¹Ø±Ù‘Ù Ø§Ù„ÙØ¹Ù„ÙŠ Ø¹Ù„Ù‰ ØªÙŠÙ„ÙŠØ¬Ø±Ø§Ù…" if lang=="ar" else "Actual Telegram label")
+    decl_lbl = _tf(lang, "promp.tg.declared_label", "Ø§Ù„Ù…Ø¹Ø±Ù‘Ù Ø§Ù„Ù…Ø¹Ù„Ù† Ø¹Ù„Ù‰ ØªÙŠÙ„ÙŠØ¬Ø±Ø§Ù…" if lang=="ar" else "Declared Telegram label")
     return f"{real_lbl}: <code>{real}</code> {mark}\n({decl_lbl}: <code>{decl}</code>)"
 
 def _panel_text(lang: str, u: Dict[str, Any]) -> str:
-    title = _tf(lang, "promp.title", "لوحة المروّجين" if lang=="ar" else "Promoters Panel")
-    name_label = _tf(lang, "promp.name", "الاسم" if lang=="ar" else "Name")
-    links_label = _tf(lang, "promp.links", "الروابط" if lang=="ar" else "Links")
-    app_label = _tf(lang, "promp.app_id", "معرّف التطبيق" if lang=="ar" else "App ID")
-    sub_label = _tf(lang, "promp.sub", "الاشتراك" if lang=="ar" else "Subscription")
-    exp_label = _tf(lang, "promp.sub.expires", "ينتهي في" if lang=="ar" else "Expires at")
+    title = _tf(lang, "promp.title", "Ù„ÙˆØ­Ø© Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬ÙŠÙ†" if lang=="ar" else "Promoters Panel")
+    name_label = _tf(lang, "promp.name", "Ø§Ù„Ø§Ø³Ù…" if lang=="ar" else "Name")
+    links_label = _tf(lang, "promp.links", "Ø§Ù„Ø±ÙˆØ§Ø¨Ø·" if lang=="ar" else "Links")
+    app_label = _tf(lang, "promp.app_id", "Ù…Ø¹Ø±Ù‘Ù Ø§Ù„ØªØ·Ø¨ÙŠÙ‚" if lang=="ar" else "App ID")
+    sub_label = _tf(lang, "promp.sub", "Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ" if lang=="ar" else "Subscription")
+    exp_label = _tf(lang, "promp.sub.expires", "ÙŠÙ†ØªÙ‡ÙŠ ÙÙŠ" if lang=="ar" else "Expires at")
     sub = u.get("subscription", {}) or {}
     left = max(0, int(sub.get("expires_at", 0) or 0) - _now()); left_s = _format_duration(left, lang) if left else None
-    chip = _chip(("✅ " + _tf(lang,"promp.sub.active","نشط" if lang=="ar" else "Active")) + (f" — {(_tf(lang,'promp.sub.left','تبقّى' if lang=='ar' else 'Left'))}: {left_s}" if left_s else "")) if (sub.get("status")=="active") else _chip("🚫 "+_tf(lang,"promp.sub.none","لا يوجد" if lang=="ar" else "None"))
+    chip = _chip(("âœ… " + _tf(lang,"promp.sub.active","Ù†Ø´Ø·" if lang=="ar" else "Active")) + (f" â€” {(_tf(lang,'promp.sub.left','ØªØ¨Ù‚Ù‘Ù‰' if lang=='ar' else 'Left'))}: {left_s}" if left_s else "")) if (sub.get("status")=="active") else _chip("ðŸš« "+_tf(lang,"promp.sub.none","Ù„Ø§ ÙŠÙˆØ¬Ø¯" if lang=="ar" else "None"))
     expires_at = _ts_to_str(sub.get("expires_at"))
     tg = u.get("telegram", {}) or {}; tg_block = _tg_line(lang, tg)
     links_s = _fmt_links(_merged_links(u))
-    return ("🧑‍💼 <b>"+title+"</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
+    return ("ðŸ§‘â€ðŸ’¼ <b>"+title+"</b>\n"
+            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
             f"{name_label}: <b>{u.get('name','-')}</b>\n"
             f"{tg_block}\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
+            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
             f"{links_label}:\n{links_s}\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
+            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
             f"{app_label}: <code>{u.get('app_id') or '-'}</code>\n"
             f"{sub_label}: {chip}\n"
             f"{exp_label}: <code>{expires_at}</code>\n")
 
 def _profile_text(lang: str, u: Dict[str, Any]) -> str:
-    title = _tf(lang, "promp.profile", "الملف الشخصي" if lang=="ar" else "Profile")
-    name_label = _tf(lang, "promp.name", "الاسم" if lang=="ar" else "Name")
-    links_label = _tf(lang, "promp.links", "الروابط" if lang=="ar" else "Links")
+    title = _tf(lang, "promp.profile", "Ø§Ù„Ù…Ù„Ù Ø§Ù„Ø´Ø®ØµÙŠ" if lang=="ar" else "Profile")
+    name_label = _tf(lang, "promp.name", "Ø§Ù„Ø§Ø³Ù…" if lang=="ar" else "Name")
+    links_label = _tf(lang, "promp.links", "Ø§Ù„Ø±ÙˆØ§Ø¨Ø·" if lang=="ar" else "Links")
     tg = u.get("telegram", {}) or {}; tg_block = _tg_line(lang, tg)
     links_s = _fmt_links(_merged_links(u))
-    return ("🪪 <b>"+title+"</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
+    return ("ðŸªª <b>"+title+"</b>\n"
+            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
             f"{name_label}: <b>{u.get('name','-')}</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
+            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
             f"{links_label}:\n{links_s}\n"
-            "━━━━━━━━━━━━━━━━━━━━\n"
+            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
             f"{tg_block}\n")
 
 def _profile_kb(lang: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✏️ " + _tf(lang,"promp.edit.name","تعديل الاسم" if lang=="ar" else "Edit name"),
+        [InlineKeyboardButton(text="âœï¸ " + _tf(lang,"promp.edit.name","ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ø§Ø³Ù…" if lang=="ar" else "Edit name"),
                               callback_data="promp:edit:name"),
-         InlineKeyboardButton(text="🔗 " + _tf(lang,"promp.edit.links","تعديل الروابط" if lang=="ar" else "Edit links"),
+         InlineKeyboardButton(text="ðŸ”— " + _tf(lang,"promp.edit.links","ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ø±ÙˆØ§Ø¨Ø·" if lang=="ar" else "Edit links"),
                               callback_data="promp:edit:links")],
-        [InlineKeyboardButton(text="✈️ " + _tf(lang,"promp.edit.tg","تعديل معرف تيليجرام" if lang=="ar" else "Edit Telegram"),
+        [InlineKeyboardButton(text="âœˆï¸ " + _tf(lang,"promp.edit.tg","ØªØ¹Ø¯ÙŠÙ„ Ù…Ø¹Ø±Ù ØªÙŠÙ„ÙŠØ¬Ø±Ø§Ù…" if lang=="ar" else "Edit Telegram"),
                               callback_data="promp:edit:tg")],
-        [InlineKeyboardButton(text="⬅️ " + _tf(lang,"promp.btn.back","رجوع" if lang=="ar" else "Back"),
+        [InlineKeyboardButton(text="â¬…ï¸ " + _tf(lang,"promp.btn.back","Ø±Ø¬ÙˆØ¹" if lang=="ar" else "Back"),
                               callback_data="promp:open")],
     ])
 
-# ========= الاشتراك =========
+# ========= Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ =========
 def _sub_text(lang: str, u: Dict[str, Any]) -> str:
     sub = u.get("subscription", {}) or {}
     st = (sub.get("status") or "none").lower()
     friendly = {
-        "active": _tf(lang,"promp.sub.active","نشط" if lang=="ar" else "Active"),
-        "pending": _tf(lang,"promp.sub.pending","بانتظار التفعيل" if lang=="ar" else "Pending"),
-        "denied": _tf(lang,"promp.sub.denied","مرفوض" if lang=="ar" else "Denied"),
-        "none": _tf(lang,"promp.sub.none","لا يوجد" if lang=="ar" else "None"),
+        "active": _tf(lang,"promp.sub.active","Ù†Ø´Ø·" if lang=="ar" else "Active"),
+        "pending": _tf(lang,"promp.sub.pending","Ø¨Ø§Ù†ØªØ¸Ø§Ø± Ø§Ù„ØªÙØ¹ÙŠÙ„" if lang=="ar" else "Pending"),
+        "denied": _tf(lang,"promp.sub.denied","Ù…Ø±ÙÙˆØ¶" if lang=="ar" else "Denied"),
+        "none": _tf(lang,"promp.sub.none","Ù„Ø§ ÙŠÙˆØ¬Ø¯" if lang=="ar" else "None"),
     }.get(st, st)
     started = _ts_to_str(sub.get("started_at"))
     expires = _ts_to_str(sub.get("expires_at"))
@@ -235,31 +236,31 @@ def _sub_text(lang: str, u: Dict[str, Any]) -> str:
     left_s = _format_duration(left, lang)
     rb = int(sub.get("remind_before_h", 24) or 24)
     return (
-        f"🎫 <b>{_tf(lang,'promp.sub.title','تفاصيل الاشتراك' if lang=='ar' else 'Subscription')}</b>\n\n"
-        f"{_tf(lang,'promp.sub.status','الحالة' if lang=='ar' else 'Status')}: <b>{friendly}</b>\n"
-        f"{_tf(lang,'promp.sub.started','بدأ في' if lang=='ar' else 'Started')}: <code>{started}</code>\n"
-        f"{_tf(lang,'promp.sub.expires','ينتهي في' if lang=='ar' else 'Expires')}: <code>{expires}</code>\n"
-        f"{_tf(lang,'promp.sub.left','الوقت المتبقي' if lang=='ar' else 'Time left')}: <b>{left_s}</b>\n"
-        f"{_tf(lang,'promp.sub.remind','تنبيه قبل الانتهاء' if lang=='ar' else 'Remind before end')}: <code>{rb}h</code>\n"
+        f"ðŸŽ« <b>{_tf(lang,'promp.sub.title','ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ' if lang=='ar' else 'Subscription')}</b>\n\n"
+        f"{_tf(lang,'promp.sub.status','Ø§Ù„Ø­Ø§Ù„Ø©' if lang=='ar' else 'Status')}: <b>{friendly}</b>\n"
+        f"{_tf(lang,'promp.sub.started','Ø¨Ø¯Ø£ ÙÙŠ' if lang=='ar' else 'Started')}: <code>{started}</code>\n"
+        f"{_tf(lang,'promp.sub.expires','ÙŠÙ†ØªÙ‡ÙŠ ÙÙŠ' if lang=='ar' else 'Expires')}: <code>{expires}</code>\n"
+        f"{_tf(lang,'promp.sub.left','Ø§Ù„ÙˆÙ‚Øª Ø§Ù„Ù…ØªØ¨Ù‚ÙŠ' if lang=='ar' else 'Time left')}: <b>{left_s}</b>\n"
+        f"{_tf(lang,'promp.sub.remind','ØªÙ†Ø¨ÙŠÙ‡ Ù‚Ø¨Ù„ Ø§Ù„Ø§Ù†ØªÙ‡Ø§Ø¡' if lang=='ar' else 'Remind before end')}: <code>{rb}h</code>\n"
     )
 
 
 def _sub_kb(lang: str, selected_hours: Optional[int] = None) -> InlineKeyboardMarkup:
-    # القيمة الحالية المختارة (افتراضي 24h إذا لم تُرسل)
+    # Ø§Ù„Ù‚ÙŠÙ…Ø© Ø§Ù„Ø­Ø§Ù„ÙŠØ© Ø§Ù„Ù…Ø®ØªØ§Ø±Ø© (Ø§ÙØªØ±Ø§Ø¶ÙŠ 24h Ø¥Ø°Ø§ Ù„Ù… ØªÙØ±Ø³Ù„)
     sel = 24 if selected_hours is None else int(selected_hours)
-    off_txt = _tf(lang, "promp.remind.off", "إيقاف" if lang == "ar" else "Off")
+    off_txt = _tf(lang, "promp.remind.off", "Ø¥ÙŠÙ‚Ø§Ù" if lang == "ar" else "Off")
 
-    btn24 = "✅ 24h" if sel == 24 else "🔔 24h"
-    btn48 = "✅ 48h" if sel == 48 else "🔔 48h"
-    btn72 = "✅ 72h" if sel == 72 else "🔔 72h"
-    btnOff = f"✅ {off_txt}" if sel == 0 else f"🔕 {off_txt}"
+    btn24 = "âœ… 24h" if sel == 24 else "ðŸ”” 24h"
+    btn48 = "âœ… 48h" if sel == 48 else "ðŸ”” 48h"
+    btn72 = "âœ… 72h" if sel == 72 else "ðŸ”” 72h"
+    btnOff = f"âœ… {off_txt}" if sel == 0 else f"ðŸ”• {off_txt}"
 
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=btn24, callback_data="promp:remind:24"),
          InlineKeyboardButton(text=btn48, callback_data="promp:remind:48"),
          InlineKeyboardButton(text=btn72, callback_data="promp:remind:72"),
          InlineKeyboardButton(text=btnOff, callback_data="promp:remind:0")],
-        [InlineKeyboardButton(text="⬅️ " + _tf(lang,"promp.btn.back","رجوع" if lang=="ar" else "Back"),
+        [InlineKeyboardButton(text="â¬…ï¸ " + _tf(lang,"promp.btn.back","Ø±Ø¬ÙˆØ¹" if lang=="ar" else "Back"),
                               callback_data="promp:open")],
     ])
 
@@ -269,7 +270,7 @@ def _renew_menu_kb(uid: int, lang: str) -> InlineKeyboardMarkup:
          InlineKeyboardButton(text="30d", callback_data=f"promp:adm:renew:{uid}:30"),
          InlineKeyboardButton(text="60d", callback_data=f"promp:adm:renew:{uid}:60"),
          InlineKeyboardButton(text="90d", callback_data=f"promp:adm:renew:{uid}:90")],
-        [InlineKeyboardButton(text=_tf(lang,"promp.renew.custom","مدة مخصصة" if lang=="ar" else "Custom duration"),
+        [InlineKeyboardButton(text=_tf(lang,"promp.renew.custom","Ù…Ø¯Ø© Ù…Ø®ØµØµØ©" if lang=="ar" else "Custom duration"),
                               callback_data=f"promp:adm:renew_custom:{uid}")],
     ])
 
@@ -285,7 +286,7 @@ def _apply_extend_seconds(u: Dict[str, Any], add_seconds: int) -> int:
     sub["expires_at"] = new_expires
     return new_expires
 
-# ===== حالات FSM =====
+# ===== Ø­Ø§Ù„Ø§Øª FSM =====
 class EditProfile(StatesGroup):
     name  = State()
     links = State()
@@ -310,7 +311,7 @@ class RenewAdmin(StatesGroup):
 class ActivateAdmin(StatesGroup):
     wait_dur = State()
 
-# NEW: جمع بيانات طلب التجديد من المروّج
+# NEW: Ø¬Ù…Ø¹ Ø¨ÙŠØ§Ù†Ø§Øª Ø·Ù„Ø¨ Ø§Ù„ØªØ¬Ø¯ÙŠØ¯ Ù…Ù† Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬
 class RenewUser(StatesGroup):
     ask_appid = State()
     ask_game  = State()
@@ -324,17 +325,17 @@ class LiveStart(StatesGroup):
     ask_duration_custom = State()
     ask_display        = State()
 
-# ===== منصات وعرضها =====
+# ===== Ù…Ù†ØµØ§Øª ÙˆØ¹Ø±Ø¶Ù‡Ø§ =====
 _PLAT_ICONS = {
-    "youtube":"▶️","tiktok":"🎵","telegram":"✈️",
-    "instagram":"📸","facebook":"📘","twitch":"🎮",
-    "other":"🧩",
+    "youtube":"â–¶ï¸","tiktok":"ðŸŽµ","telegram":"âœˆï¸",
+    "instagram":"ðŸ“¸","facebook":"ðŸ“˜","twitch":"ðŸŽ®",
+    "other":"ðŸ§©",
 }
-def _plat_icon(p:str)->str: return _PLAT_ICONS.get((p or "").lower(),"🔗")
+def _plat_icon(p:str)->str: return _PLAT_ICONS.get((p or "").lower(),"ðŸ”—")
 
 def _plat_label(lang:str,p:str)->str:
     p=(p or "").lower()
-    fallback_ar={"youtube":"يوتيوب","tiktok":"تيك توك","telegram":"تيليجرام","instagram":"إنستغرام","facebook":"فيسبوك","twitch":"تويتش","other":"أخرى"}
+    fallback_ar={"youtube":"ÙŠÙˆØªÙŠÙˆØ¨","tiktok":"ØªÙŠÙƒ ØªÙˆÙƒ","telegram":"ØªÙŠÙ„ÙŠØ¬Ø±Ø§Ù…","instagram":"Ø¥Ù†Ø³ØªØºØ±Ø§Ù…","facebook":"ÙÙŠØ³Ø¨ÙˆÙƒ","twitch":"ØªÙˆÙŠØªØ´","other":"Ø£Ø®Ø±Ù‰"}
     fallback_en={"youtube":"YouTube","tiktok":"TikTok","telegram":"Telegram","instagram":"Instagram","facebook":"Facebook","twitch":"Twitch","other":"Other"}
     fb = (fallback_ar if lang=="ar" else fallback_en).get(p, p.capitalize() or "Link")
     return _tf(lang, f"plat.{p}", fb)
@@ -345,7 +346,7 @@ def _plat_label_custom(lang: str, platform: str, *, rec: dict | None = None, nam
         label = name or (rec and (rec.get("platform_name") or rec.get("display_platform")))
         if label and str(label).strip():
             return str(label)
-        return _tf(lang, "plat.other", "أخرى" if lang=="ar" else "Other")
+        return _tf(lang, "plat.other", "Ø£Ø®Ø±Ù‰" if lang=="ar" else "Other")
     return _plat_label(lang, p)
 
 def _live_platforms_kb(lang: str) -> InlineKeyboardMarkup:
@@ -354,7 +355,7 @@ def _live_platforms_kb(lang: str) -> InlineKeyboardMarkup:
     for p in platforms:
         kb.add(InlineKeyboardButton(text=f"{_plat_icon(p)} {_plat_label(lang,p)}", callback_data=f"promp:live:plat:{p}"))
     kb.adjust(2)
-    kb.row(InlineKeyboardButton(text=_tf(lang,"promp.btn.back","⬅️ رجوع" if lang=="ar" else "⬅️ Back"), callback_data="promp:open"))
+    kb.row(InlineKeyboardButton(text=_tf(lang,"promp.btn.back","â¬…ï¸ Ø±Ø¬ÙˆØ¹" if lang=="ar" else "â¬…ï¸ Back"), callback_data="promp:open"))
     return kb.as_markup()
 
 def _make_url(platform: str, handle: str) -> str:
@@ -368,7 +369,7 @@ def _make_url(platform: str, handle: str) -> str:
     if p=="twitch":    return f"https://www.twitch.tv/{h.lstrip('@')}"
     return h
 
-# ===== مخزن البث =====
+# ===== Ù…Ø®Ø²Ù† Ø§Ù„Ø¨Ø« =====
 try:
     from utils.promoter_live_store import (
         start_live as live_start,
@@ -403,29 +404,29 @@ def _parse_duration_to_hours(s: str) -> Optional[float]:
         return None
     return val
 
-# ===== لوحة المروّج =====
+# ===== Ù„ÙˆØ­Ø© Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬ =====
 def _panel_kb(lang: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🪪 " + _tf(lang,"promp.btn.profile","معلوماتي / تعديل" if lang=="ar" else "My profile / Edit"), callback_data="promp:profile")],
-        [InlineKeyboardButton(text="🎫 " + _tf(lang,"promp.btn.sub","اشتراكي" if lang=="ar" else "My subscription"), callback_data="promp:sub")],
-        [InlineKeyboardButton(text="🚀 " + _tf(lang,"promp.btn.activate","تفعيل الاشتراك (App ID)" if lang=="ar" else "Activate (App ID)"), callback_data="promp:activate")],
-        [InlineKeyboardButton(text="📤 " + _tf(lang,"promp.btn.proof","رفع إثبات نشاط" if lang=="ar" else "Upload activity proof"), callback_data="promp:proof")],
-        [InlineKeyboardButton(text="🆘 " + _tf(lang,"promp.btn.support","دعم مباشر" if lang=="ar" else "Direct support"), callback_data="promp:support")],
-        [InlineKeyboardButton(text="🎥 " + _tf(lang,"promp.btn.live","بدء بث مباشر" if lang=="ar" else "Start Live"), callback_data="promp:live:start")],
-        [InlineKeyboardButton(text="⬅️ " + _tf(lang,"promp.btn.back","رجوع" if lang=="ar" else "Back"), callback_data="back_to_menu"),
-         InlineKeyboardButton(text="🔄 " + _tf(lang,"promp.btn.refresh","تحديث" if lang=="ar" else "Refresh"), callback_data="promp:open")],
+        [InlineKeyboardButton(text="ðŸªª " + _tf(lang,"promp.btn.profile","Ù…Ø¹Ù„ÙˆÙ…Ø§ØªÙŠ / ØªØ¹Ø¯ÙŠÙ„" if lang=="ar" else "My profile / Edit"), callback_data="promp:profile")],
+        [InlineKeyboardButton(text="ðŸŽ« " + _tf(lang,"promp.btn.sub","Ø§Ø´ØªØ±Ø§ÙƒÙŠ" if lang=="ar" else "My subscription"), callback_data="promp:sub")],
+        [InlineKeyboardButton(text="ðŸš€ " + _tf(lang,"promp.btn.activate","ØªÙØ¹ÙŠÙ„ Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ (App ID)" if lang=="ar" else "Activate (App ID)"), callback_data="promp:activate")],
+        [InlineKeyboardButton(text="ðŸ“¤ " + _tf(lang,"promp.btn.proof","Ø±ÙØ¹ Ø¥Ø«Ø¨Ø§Øª Ù†Ø´Ø§Ø·" if lang=="ar" else "Upload activity proof"), callback_data="promp:proof")],
+        [InlineKeyboardButton(text="ðŸ†˜ " + _tf(lang,"promp.btn.support","Ø¯Ø¹Ù… Ù…Ø¨Ø§Ø´Ø±" if lang=="ar" else "Direct support"), callback_data="promp:support")],
+        [InlineKeyboardButton(text="ðŸŽ¥ " + _tf(lang,"promp.btn.live","Ø¨Ø¯Ø¡ Ø¨Ø« Ù…Ø¨Ø§Ø´Ø±" if lang=="ar" else "Start Live"), callback_data="promp:live:start")],
+        [InlineKeyboardButton(text="â¬…ï¸ " + _tf(lang,"promp.btn.back","Ø±Ø¬ÙˆØ¹" if lang=="ar" else "Back"), callback_data="back_to_menu"),
+         InlineKeyboardButton(text="ðŸ”„ " + _tf(lang,"promp.btn.refresh","ØªØ­Ø¯ÙŠØ«" if lang=="ar" else "Refresh"), callback_data="promp:open")],
     ])
 
 @router.callback_query(F.data.in_({"prom:panel", "promp:open"}))
 async def open_panel(cb: CallbackQuery):
     lang = L(cb.from_user.id)
     if not _is_promoter(cb.from_user.id):
-        return await cb.answer(_tf(lang, "prom.not_approved", "هذه اللوحة للمروّجين الموافق عليهم فقط." if lang=="ar" else "Promoters only."), show_alert=True)
+        return await cb.answer(_tf(lang, "prom.not_approved", "Ù‡Ø°Ù‡ Ø§Ù„Ù„ÙˆØ­Ø© Ù„Ù„Ù…Ø±ÙˆÙ‘Ø¬ÙŠÙ† Ø§Ù„Ù…ÙˆØ§ÙÙ‚ Ø¹Ù„ÙŠÙ‡Ù… ÙÙ‚Ø·." if lang=="ar" else "Promoters only."), show_alert=True)
     d = _load(); u = _u(d, cb.from_user.id)
     await cb.message.answer(_panel_text(lang, u), reply_markup=_panel_kb(lang), parse_mode=ParseMode.HTML, disable_web_page_preview=True)
     await cb.answer()
 
-# ===== ملفي / تعديل =====
+# ===== Ù…Ù„ÙÙŠ / ØªØ¹Ø¯ÙŠÙ„ =====
 @router.callback_query(F.data == "promp:profile")
 async def profile_view(cb: CallbackQuery):
     lang = L(cb.from_user.id)
@@ -437,7 +438,7 @@ async def profile_view(cb: CallbackQuery):
 async def edit_name_start(cb: CallbackQuery, state: FSMContext):
     lang = L(cb.from_user.id)
     await state.set_state(EditProfile.name)
-    await cb.message.answer(_tf(lang,"promp.ask.name","أرسل الاسم الجديد:" if lang=="ar" else "Send new name:"))
+    await cb.message.answer(_tf(lang,"promp.ask.name","Ø£Ø±Ø³Ù„ Ø§Ù„Ø§Ø³Ù… Ø§Ù„Ø¬Ø¯ÙŠØ¯:" if lang=="ar" else "Send new name:"))
     await cb.answer()
 
 @router.message(EditProfile.name, F.text.len() >= 2)
@@ -447,14 +448,14 @@ async def edit_name_save(m: Message, state: FSMContext):
     u["name"] = (m.text or "").strip()
     _save(d)
     await state.clear()
-    await m.answer(_tf(lang,"promp.ok","تم الحفظ ✅" if lang=="ar" else "Saved ✅"))
+    await m.answer(_tf(lang,"promp.ok","ØªÙ… Ø§Ù„Ø­ÙØ¸ âœ…" if lang=="ar" else "Saved âœ…"))
     await m.answer(_profile_text(lang, u), reply_markup=_profile_kb(lang), parse_mode=ParseMode.HTML)
 
 @router.callback_query(F.data == "promp:edit:links")
 async def edit_links_start(cb: CallbackQuery, state: FSMContext):
     lang = L(cb.from_user.id)
     await state.set_state(EditProfile.links)
-    await cb.message.answer(_tf(lang,"promp.ask.links","أرسل الروابط، كل رابط في سطر منفصل:" if lang=="ar" else "Send links, one per line:"))
+    await cb.message.answer(_tf(lang,"promp.ask.links","Ø£Ø±Ø³Ù„ Ø§Ù„Ø±ÙˆØ§Ø¨Ø·ØŒ ÙƒÙ„ Ø±Ø§Ø¨Ø· ÙÙŠ Ø³Ø·Ø± Ù…Ù†ÙØµÙ„:" if lang=="ar" else "Send links, one per line:"))
     await cb.answer()
 
 @router.message(EditProfile.links, F.text)
@@ -465,14 +466,14 @@ async def edit_links_save(m: Message, state: FSMContext):
     u["links"] = links
     _save(d)
     await state.clear()
-    await m.answer(_tf(lang,"promp.ok","تم الحفظ ✅" if lang=="ar" else "Saved ✅"))
+    await m.answer(_tf(lang,"promp.ok","ØªÙ… Ø§Ù„Ø­ÙØ¸ âœ…" if lang=="ar" else "Saved âœ…"))
     await m.answer(_profile_text(lang, u), reply_markup=_profile_kb(lang), parse_mode=ParseMode.HTML)
 
 @router.callback_query(F.data == "promp:edit:tg")
 async def edit_tg_start(cb: CallbackQuery, state: FSMContext):
     lang = L(cb.from_user.id)
     await state.set_state(EditProfile.tg)
-    await cb.message.answer(_tf(lang,"promp.ask.tg","أرسل معرف تيليجرام بالشكل @username:" if lang=="ar" else "Send Telegram @username:"))
+    await cb.message.answer(_tf(lang,"promp.ask.tg","Ø£Ø±Ø³Ù„ Ù…Ø¹Ø±Ù ØªÙŠÙ„ÙŠØ¬Ø±Ø§Ù… Ø¨Ø§Ù„Ø´ÙƒÙ„ @username:" if lang=="ar" else "Send Telegram @username:"))
     await cb.answer()
 
 @router.message(EditProfile.tg, F.text.regexp(r"^@?[A-Za-z0-9_]{5,}$"))
@@ -485,15 +486,15 @@ async def edit_tg_save(m: Message, state: FSMContext):
     u["telegram"] = {"declared": tg, "real": tg_real, "match": bool(tg_real and tg_real.lower() == tg.lower())}
     _save(d)
     await state.clear()
-    await m.answer(_tf(lang,"promp.ok","تم الحفظ ✅" if lang=="ar" else "Saved ✅"))
+    await m.answer(_tf(lang,"promp.ok","ØªÙ… Ø§Ù„Ø­ÙØ¸ âœ…" if lang=="ar" else "Saved âœ…"))
     await m.answer(_profile_text(lang, u), reply_markup=_profile_kb(lang), parse_mode=ParseMode.HTML)
 
 @router.message(EditProfile.tg)
 async def edit_tg_invalid(m: Message):
     lang = L(m.from_user.id)
-    await m.answer(_tf(lang,"prom.err.tg","المعرّف غير صالح. مثال: @MyChannel" if lang=="ar" else "Invalid handle. Example: @MyChannel"))
+    await m.answer(_tf(lang,"prom.err.tg","Ø§Ù„Ù…Ø¹Ø±Ù‘Ù ØºÙŠØ± ØµØ§Ù„Ø­. Ù…Ø«Ø§Ù„: @MyChannel" if lang=="ar" else "Invalid handle. Example: @MyChannel"))
 
-# ===== الاشتراك =====
+# ===== Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ =====
 @router.callback_query(F.data == "promp:sub")
 async def sub_view(cb: CallbackQuery):
     lang = L(cb.from_user.id)
@@ -515,7 +516,7 @@ async def sub_set_remind(cb: CallbackQuery):
     u.setdefault("subscription", {})["remind_before_h"] = max(0, hours)
     _save(d)
 
-    # تحديث نفس الرسالة لإظهار ✅ على الاختيار الحالي
+    # ØªØ­Ø¯ÙŠØ« Ù†ÙØ³ Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ù„Ø¥Ø¸Ù‡Ø§Ø± âœ… Ø¹Ù„Ù‰ Ø§Ù„Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„Ø­Ø§Ù„ÙŠ
     try:
         await cb.message.edit_text(
             _sub_text(lang, u),
@@ -523,17 +524,17 @@ async def sub_set_remind(cb: CallbackQuery):
             parse_mode=ParseMode.HTML
         )
     except Exception:
-        # في حال فشل التعديل (مثلاً بسبب وقت قديم)، أرسل رسالة جديدة كبديل
+        # ÙÙŠ Ø­Ø§Ù„ ÙØ´Ù„ Ø§Ù„ØªØ¹Ø¯ÙŠÙ„ (Ù…Ø«Ù„Ø§Ù‹ Ø¨Ø³Ø¨Ø¨ ÙˆÙ‚Øª Ù‚Ø¯ÙŠÙ…)ØŒ Ø£Ø±Ø³Ù„ Ø±Ø³Ø§Ù„Ø© Ø¬Ø¯ÙŠØ¯Ø© ÙƒØ¨Ø¯ÙŠÙ„
         await cb.message.answer(
             _sub_text(lang, u),
             reply_markup=_sub_kb(lang, hours),
             parse_mode=ParseMode.HTML
         )
 
-    await cb.answer(_tf(lang, "promp.saved", "تم الحفظ ✅" if lang=="ar" else "Saved ✅"), show_alert=False)
+    await cb.answer(_tf(lang, "promp.saved", "ØªÙ… Ø§Ù„Ø­ÙØ¸ âœ…" if lang=="ar" else "Saved âœ…"), show_alert=False)
 
 
-# ============== طلب تجديد — جمع البيانات قبل الإرسال ==============
+# ============== Ø·Ù„Ø¨ ØªØ¬Ø¯ÙŠØ¯ â€” Ø¬Ù…Ø¹ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ù‚Ø¨Ù„ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„ ==============
 @router.callback_query(F.data == "promp:renew")
 async def sub_request_renew_start(cb: CallbackQuery, state: FSMContext):
     lang_user = L(cb.from_user.id)
@@ -544,10 +545,10 @@ async def sub_request_renew_start(cb: CallbackQuery, state: FSMContext):
     await state.set_state(RenewUser.ask_appid)
     await state.update_data(prev_app_id=prev_app_id, prev_game=prev_game)
 
-    hint = f"\n{_tf(lang_user,'promp.current','المحفوظ حاليًا' if lang_user=='ar' else 'Current')}: <code>{prev_app_id or '—'}</code>" if prev_app_id else ""
+    hint = f"\n{_tf(lang_user,'promp.current','Ø§Ù„Ù…Ø­ÙÙˆØ¸ Ø­Ø§Ù„ÙŠÙ‹Ø§' if lang_user=='ar' else 'Current')}: <code>{prev_app_id or 'â€”'}</code>" if prev_app_id else ""
     msg = (
-        "قبل إرسال طلب التجديد، أرسل <b>معرّف الثعبان (App ID)</b> الخاص بك.\n"
-        "أرسل «-» لاستخدام المعرف المحفوظ إن وُجد."
+        "Ù‚Ø¨Ù„ Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ Ø§Ù„ØªØ¬Ø¯ÙŠØ¯ØŒ Ø£Ø±Ø³Ù„ <b>Ù…Ø¹Ø±Ù‘Ù Ø§Ù„Ø«Ø¹Ø¨Ø§Ù† (App ID)</b> Ø§Ù„Ø®Ø§Øµ Ø¨Ùƒ.\n"
+        "Ø£Ø±Ø³Ù„ Â«-Â» Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ù…Ø¹Ø±Ù Ø§Ù„Ù…Ø­ÙÙˆØ¸ Ø¥Ù† ÙˆÙØ¬Ø¯."
         if lang_user == "ar" else
         "Before sending the renewal request, send your <b>Snake/App ID</b>.\n"
         "Send '-' to keep the saved one."
@@ -563,10 +564,10 @@ async def sub_renew_collect_appid(m: Message, state: FSMContext):
 
     app_id = data.get("prev_app_id") if s == "-" else s
     if not app_id or len(app_id) < 2:
-        return await m.reply("⚠️ الرجاء إدخال معرف صالح (على الأقل حرفان)." if lang_user=="ar"
-                             else "⚠️ Please provide a valid ID (at least 2 chars).")
+        return await m.reply("âš ï¸ Ø§Ù„Ø±Ø¬Ø§Ø¡ Ø¥Ø¯Ø®Ø§Ù„ Ù…Ø¹Ø±Ù ØµØ§Ù„Ø­ (Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„ Ø­Ø±ÙØ§Ù†)." if lang_user=="ar"
+                             else "âš ï¸ Please provide a valid ID (at least 2 chars).")
 
-    # خزّن المعرّف
+    # Ø®Ø²Ù‘Ù† Ø§Ù„Ù…Ø¹Ø±Ù‘Ù
     d = _load(); u = _u(d, m.from_user.id)
     u["app_id"] = app_id
     _save(d)
@@ -575,9 +576,9 @@ async def sub_renew_collect_appid(m: Message, state: FSMContext):
     await state.set_state(RenewUser.ask_game)
 
     prev_game = data.get("prev_game") or (u.get("app_name") or "")
-    hint = f"\n{_tf(lang_user,'promp.current','المحفوظ حاليًا' if lang_user=='ar' else 'Current')}: <code>{prev_game or '—'}</code>" if prev_game else ""
-    q = "ما اسم اللعبة المرتبطة بالمعرّف؟ (أرسل «-» لاستخدام المحفوظ)" if lang_user=="ar" else \
-        "What’s the game name for this ID? (send '-' to keep saved)"
+    hint = f"\n{_tf(lang_user,'promp.current','Ø§Ù„Ù…Ø­ÙÙˆØ¸ Ø­Ø§Ù„ÙŠÙ‹Ø§' if lang_user=='ar' else 'Current')}: <code>{prev_game or 'â€”'}</code>" if prev_game else ""
+    q = "Ù…Ø§ Ø§Ø³Ù… Ø§Ù„Ù„Ø¹Ø¨Ø© Ø§Ù„Ù…Ø±ØªØ¨Ø·Ø© Ø¨Ø§Ù„Ù…Ø¹Ø±Ù‘ÙØŸ (Ø£Ø±Ø³Ù„ Â«-Â» Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ù…Ø­ÙÙˆØ¸)" if lang_user=="ar" else \
+        "Whatâ€™s the game name for this ID? (send '-' to keep saved)"
     await m.answer(q + hint, parse_mode=ParseMode.HTML)
 
 @router.message(RenewUser.ask_game, F.text)
@@ -590,9 +591,9 @@ async def sub_renew_collect_game(m: Message, state: FSMContext):
     if game == "-":
         game = (u.get("app_name") or data.get("prev_game") or "").strip()
     if not game:
-        return await m.reply("⚠️ الرجاء كتابة اسم اللعبة." if lang_user=="ar" else "⚠️ Please enter the game name.")
+        return await m.reply("âš ï¸ Ø§Ù„Ø±Ø¬Ø§Ø¡ ÙƒØªØ§Ø¨Ø© Ø§Ø³Ù… Ø§Ù„Ù„Ø¹Ø¨Ø©." if lang_user=="ar" else "âš ï¸ Please enter the game name.")
 
-    # خزّن اسم اللعبة
+    # Ø®Ø²Ù‘Ù† Ø§Ø³Ù… Ø§Ù„Ù„Ø¹Ø¨Ø©
     u["app_name"] = game
     _save(d)
 
@@ -600,58 +601,58 @@ async def sub_renew_collect_game(m: Message, state: FSMContext):
 
     await state.clear()
     await _send_renew_request_to_admins(m.bot, m.from_user.id, lang_user, app_id, game)
-    await m.answer("تم إرسال طلب التجديد إلى الإدارة ✅" if lang_user=="ar" else "Renewal request sent to admins ✅")
+    await m.answer("ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ Ø§Ù„ØªØ¬Ø¯ÙŠØ¯ Ø¥Ù„Ù‰ Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© âœ…" if lang_user=="ar" else "Renewal request sent to admins âœ…")
 
 async def _send_renew_request_to_admins(bot, uid: int, lang_user: str, app_id: str, app_name: str):
     try:
         chat = await bot.get_chat(uid)
-        uname = ("@" + chat.username) if getattr(chat, "username", None) else "—"
+        uname = ("@" + chat.username) if getattr(chat, "username", None) else "â€”"
     except Exception:
-        uname = "—"
+        uname = "â€”"
     mention = f"<a href='tg://user?id={uid}'>{uid}</a>"
 
-    # معلومات الاشتراك
+    # Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ
     d = _load(); u = _u(d, uid)
     sub = u.get("subscription", {}) or {}
     st = (sub.get("status") or "none").lower()
     friendly = {
-        "active": _tf(lang_user,"promp.sub.active","نشط" if lang_user=="ar" else "Active"),
-        "pending": _tf(lang_user,"promp.sub.pending","بانتظار التفعيل" if lang_user=="ar" else "Pending"),
-        "denied": _tf(lang_user,"promp.sub.denied","مرفوض" if lang_user=="ar" else "Denied"),
-        "none": _tf(lang_user,"promp.sub.none","لا يوجد" if lang_user=="ar" else "None"),
+        "active": _tf(lang_user,"promp.sub.active","Ù†Ø´Ø·" if lang_user=="ar" else "Active"),
+        "pending": _tf(lang_user,"promp.sub.pending","Ø¨Ø§Ù†ØªØ¸Ø§Ø± Ø§Ù„ØªÙØ¹ÙŠÙ„" if lang_user=="ar" else "Pending"),
+        "denied": _tf(lang_user,"promp.sub.denied","Ù…Ø±ÙÙˆØ¶" if lang_user=="ar" else "Denied"),
+        "none": _tf(lang_user,"promp.sub.none","Ù„Ø§ ÙŠÙˆØ¬Ø¯" if lang_user=="ar" else "None"),
     }.get(st, st)
     started = _ts_to_str(sub.get("started_at"))
     expires = _ts_to_str(sub.get("expires_at"))
     left_sec = max(0, int(sub.get("expires_at") or 0) - _now())
-    left_human = _format_duration(left_sec, lang_user) if left_sec else "—"
+    left_human = _format_duration(left_sec, lang_user) if left_sec else "â€”"
 
-    head = ("🔁 طلب تجديد للمروّج" if lang_user=="ar" else "🔁 Promoter renewal request")
-    notes = ("ملاحظة: هذا إشعار فقط. استخدم الأزرار بالأسفل لتجديد المدة.\n"
+    head = ("ðŸ” Ø·Ù„Ø¨ ØªØ¬Ø¯ÙŠØ¯ Ù„Ù„Ù…Ø±ÙˆÙ‘Ø¬" if lang_user=="ar" else "ðŸ” Promoter renewal request")
+    notes = ("Ù…Ù„Ø§Ø­Ø¸Ø©: Ù‡Ø°Ø§ Ø¥Ø´Ø¹Ø§Ø± ÙÙ‚Ø·. Ø§Ø³ØªØ®Ø¯Ù… Ø§Ù„Ø£Ø²Ø±Ø§Ø± Ø¨Ø§Ù„Ø£Ø³ÙÙ„ Ù„ØªØ¬Ø¯ÙŠØ¯ Ø§Ù„Ù…Ø¯Ø©.\n"
              if lang_user=="ar" else
              "Note: This is only a request. Use the buttons below to renew.\n")
 
     txt = (
         f"{head}\n"
-        f"👤 {mention} — <code>{uid}</code> · {uname}\n"
-        f"📱 {(_tf(lang_user,'promp.app_id','معرّف التطبيق' if lang_user=='ar' else 'App ID'))}: <code>{app_id}</code>\n"
-        f"🧩 {(_tf(lang_user,'promp.app_name','اسم اللعبة' if lang_user=='ar' else 'Game'))}: <b>{app_name}</b>\n"
-        f"🎫 {(_tf(lang_user,'promp.sub.status','الحالة' if lang_user=='ar' else 'Status'))}: <b>{friendly}</b>\n"
-        f"⏱ {(_tf(lang_user,'promp.sub.started','بدأ في' if lang_user=='ar' else 'Started'))}: <code>{started}</code>\n"
-        f"⌛️ {(_tf(lang_user,'promp.sub.expires','ينتهي في' if lang_user=='ar' else 'Expires'))}: <code>{expires}</code>\n"
-        f"⏳ {(_tf(lang_user,'promp.sub.left','المتبقي' if lang_user=='ar' else 'Left'))}: <b>{left_human}</b>\n\n"
+        f"ðŸ‘¤ {mention} â€” <code>{uid}</code> Â· {uname}\n"
+        f"ðŸ“± {(_tf(lang_user,'promp.app_id','Ù…Ø¹Ø±Ù‘Ù Ø§Ù„ØªØ·Ø¨ÙŠÙ‚' if lang_user=='ar' else 'App ID'))}: <code>{app_id}</code>\n"
+        f"ðŸ§© {(_tf(lang_user,'promp.app_name','Ø§Ø³Ù… Ø§Ù„Ù„Ø¹Ø¨Ø©' if lang_user=='ar' else 'Game'))}: <b>{app_name}</b>\n"
+        f"ðŸŽ« {(_tf(lang_user,'promp.sub.status','Ø§Ù„Ø­Ø§Ù„Ø©' if lang_user=='ar' else 'Status'))}: <b>{friendly}</b>\n"
+        f"â± {(_tf(lang_user,'promp.sub.started','Ø¨Ø¯Ø£ ÙÙŠ' if lang_user=='ar' else 'Started'))}: <code>{started}</code>\n"
+        f"âŒ›ï¸ {(_tf(lang_user,'promp.sub.expires','ÙŠÙ†ØªÙ‡ÙŠ ÙÙŠ' if lang_user=='ar' else 'Expires'))}: <code>{expires}</code>\n"
+        f"â³ {(_tf(lang_user,'promp.sub.left','Ø§Ù„Ù…ØªØ¨Ù‚ÙŠ' if lang_user=='ar' else 'Left'))}: <b>{left_human}</b>\n\n"
         f"{notes}"
     )
 
     kb = _renew_menu_kb(uid, lang_user)
 
-    # أرسل لكل الأدمن
+    # Ø£Ø±Ø³Ù„ Ù„ÙƒÙ„ Ø§Ù„Ø£Ø¯Ù…Ù†
     for admin_id in ADMIN_IDS:
         try:
             await bot.send_message(admin_id, txt, parse_mode=ParseMode.HTML, reply_markup=kb)
         except Exception:
             pass
 
-# ===== تفعيل الاشتراك (App ID) =====
+# ===== ØªÙØ¹ÙŠÙ„ Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ (App ID) =====
 @router.callback_query(F.data == "promp:activate")
 async def activate_start(cb: CallbackQuery, state: FSMContext):
     lang = L(cb.from_user.id)
@@ -660,7 +661,7 @@ async def activate_start(cb: CallbackQuery, state: FSMContext):
     hint = f"\n<code>{preset}</code>" if preset else ""
     await state.set_state(Activate.appid)
     await cb.message.answer(
-        _tf(lang,"promp.ask.appid","أرسل App ID الخاص بالتطبيق:" if lang=="ar" else "Send the App ID:") + hint,
+        _tf(lang,"promp.ask.appid","Ø£Ø±Ø³Ù„ App ID Ø§Ù„Ø®Ø§Øµ Ø¨Ø§Ù„ØªØ·Ø¨ÙŠÙ‚:" if lang=="ar" else "Send the App ID:") + hint,
         parse_mode=ParseMode.HTML
     )
     await cb.answer()
@@ -671,7 +672,7 @@ async def activate_collect_appid(m: Message, state: FSMContext):
     lang = L(m.from_user.id)
     appid = (m.text or "").strip()
 
-    # خزِّن الـ App ID في بروفايل المستخدم أيضًا
+    # Ø®Ø²Ù‘ÙÙ† Ø§Ù„Ù€ App ID ÙÙŠ Ø¨Ø±ÙˆÙØ§ÙŠÙ„ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø£ÙŠØ¶Ù‹Ø§
     d = _load(); u = _u(d, m.from_user.id)
     u["app_id"] = appid; _save(d)
 
@@ -679,14 +680,14 @@ async def activate_collect_appid(m: Message, state: FSMContext):
     await state.set_state(Activate.game)
     ask = _tf(
         lang, "promp.activate.ask_game",
-        "ما هي اللعبة المراد تفعيلها؟ (اكتب اسم اللعبة)" if lang=="ar" else "Which game to activate? (type the game name)"
+        "Ù…Ø§ Ù‡ÙŠ Ø§Ù„Ù„Ø¹Ø¨Ø© Ø§Ù„Ù…Ø±Ø§Ø¯ ØªÙØ¹ÙŠÙ„Ù‡Ø§ØŸ (Ø§ÙƒØªØ¨ Ø§Ø³Ù… Ø§Ù„Ù„Ø¹Ø¨Ø©)" if lang=="ar" else "Which game to activate? (type the game name)"
     )
     await m.answer(ask)
 
 
 @router.message(Activate.game, F.text.len() > 0)
 async def activate_finish(m: Message, state: FSMContext):
-    """بعد جمع App ID + اسم اللعبة نرسل طلب التفعيل للإدارة مع لوحة الموافقة."""
+    """Ø¨Ø¹Ø¯ Ø¬Ù…Ø¹ App ID + Ø§Ø³Ù… Ø§Ù„Ù„Ø¹Ø¨Ø© Ù†Ø±Ø³Ù„ Ø·Ù„Ø¨ Ø§Ù„ØªÙØ¹ÙŠÙ„ Ù„Ù„Ø¥Ø¯Ø§Ø±Ø© Ù…Ø¹ Ù„ÙˆØ­Ø© Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø©."""
     lang = L(m.from_user.id)
     data = await state.get_data()
     appid = (data.get("activate_appid") or "").strip()
@@ -694,45 +695,45 @@ async def activate_finish(m: Message, state: FSMContext):
 
     d = _load(); u = _u(d, m.from_user.id)
 
-    # تجهيز معلومات المروّج
+    # ØªØ¬Ù‡ÙŠØ² Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬
     uid = m.from_user.id
-    uname = ("@" + m.from_user.username) if m.from_user.username else "—"
+    uname = ("@" + m.from_user.username) if m.from_user.username else "â€”"
     mention = f"<a href='tg://user?id={uid}'>{m.from_user.full_name or uid}</a>"
 
     tg_decl = (u.get("telegram", {}) or {}).get("declared") or "-"
     tg_real = ("@" + m.from_user.username) if m.from_user.username else ((u.get("telegram", {}) or {}).get("real") or "-")
-    tg_match = "✅" if (isinstance(tg_real, str) and isinstance(tg_decl, str) and tg_real.lower()==tg_decl.lower()) else "❗️"
+    tg_match = "âœ…" if (isinstance(tg_real, str) and isinstance(tg_decl, str) and tg_real.lower()==tg_decl.lower()) else "â—ï¸"
 
     links_short = _fmt_links_short(_merged_links(u), limit=3)
     name = u.get("name") or m.from_user.full_name or f"User {uid}"
 
-    # نصّ الرسالة للإدارة
-    head = _tf(lang,'promp.adm.activate_req','طلب تفعيل اشتراك مروّج' if lang=='ar' else 'Promoter activation request')
+    # Ù†ØµÙ‘ Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ù„Ù„Ø¥Ø¯Ø§Ø±Ø©
+    head = _tf(lang,'promp.adm.activate_req','Ø·Ù„Ø¨ ØªÙØ¹ÙŠÙ„ Ø§Ø´ØªØ±Ø§Ùƒ Ù…Ø±ÙˆÙ‘Ø¬' if lang=='ar' else 'Promoter activation request')
     txt = (
-        f"🚀 <b>{head}</b>\n"
-        f"👤 {mention} — <code>{uid}</code> · {uname}\n"
-        f"🪪 { _tf(lang,'promp.name','الاسم' if lang=='ar' else 'Name') }: <b>{name}</b>\n"
-        f"✈️ TG: <code>{tg_real}</code> ({_tf(lang,'promp.tg.declared_label','المعلن' if lang=='ar' else 'declared')}: <code>{tg_decl}</code>) {tg_match}\n"
-        f"🔗 { _tf(lang,'promp.links','الروابط' if lang=='ar' else 'Links') }: {links_short}\n"
-        f"📱 { _tf(lang,'promp.app_id','معرّف التطبيق' if lang=='ar' else 'App ID') }: <code>{appid or '-'}</code>\n"
-        f"🧩 { _tf(lang,'promp.app_name','اللعبة' if lang=='ar' else 'Game') }: <b>{game}</b>\n\n"
-        f"{_tf(lang,'promp.renew.notes','ملاحظة: استخدم الأزرار بالأسفل لإتمام التفعيل.' if lang=='ar' else 'Note: use the buttons below to activate.')}\n"
+        f"ðŸš€ <b>{head}</b>\n"
+        f"ðŸ‘¤ {mention} â€” <code>{uid}</code> Â· {uname}\n"
+        f"ðŸªª { _tf(lang,'promp.name','Ø§Ù„Ø§Ø³Ù…' if lang=='ar' else 'Name') }: <b>{name}</b>\n"
+        f"âœˆï¸ TG: <code>{tg_real}</code> ({_tf(lang,'promp.tg.declared_label','Ø§Ù„Ù…Ø¹Ù„Ù†' if lang=='ar' else 'declared')}: <code>{tg_decl}</code>) {tg_match}\n"
+        f"ðŸ”— { _tf(lang,'promp.links','Ø§Ù„Ø±ÙˆØ§Ø¨Ø·' if lang=='ar' else 'Links') }: {links_short}\n"
+        f"ðŸ“± { _tf(lang,'promp.app_id','Ù…Ø¹Ø±Ù‘Ù Ø§Ù„ØªØ·Ø¨ÙŠÙ‚' if lang=='ar' else 'App ID') }: <code>{appid or '-'}</code>\n"
+        f"ðŸ§© { _tf(lang,'promp.app_name','Ø§Ù„Ù„Ø¹Ø¨Ø©' if lang=='ar' else 'Game') }: <b>{game}</b>\n\n"
+        f"{_tf(lang,'promp.renew.notes','Ù…Ù„Ø§Ø­Ø¸Ø©: Ø§Ø³ØªØ®Ø¯Ù… Ø§Ù„Ø£Ø²Ø±Ø§Ø± Ø¨Ø§Ù„Ø£Ø³ÙÙ„ Ù„Ø¥ØªÙ…Ø§Ù… Ø§Ù„ØªÙØ¹ÙŠÙ„.' if lang=='ar' else 'Note: use the buttons below to activate.')}\n"
     )
 
-    # لوحة الإدارة (تفعيل سريع/رفض)
+    # Ù„ÙˆØ­Ø© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© (ØªÙØ¹ÙŠÙ„ Ø³Ø±ÙŠØ¹/Ø±ÙØ¶)
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✅ 30d", callback_data=f"promp:adm:activate:{uid}:30"),
-         InlineKeyboardButton(text="✅ 90d", callback_data=f"promp:adm:activate:{uid}:90")],
+        [InlineKeyboardButton(text="âœ… 30d", callback_data=f"promp:adm:activate:{uid}:30"),
+         InlineKeyboardButton(text="âœ… 90d", callback_data=f"promp:adm:activate:{uid}:90")],
         [InlineKeyboardButton(
-            text=_tf(lang, "promp.renew.custom", "مدة مخصصة" if lang=="ar" else "Custom duration"),
+            text=_tf(lang, "promp.renew.custom", "Ù…Ø¯Ø© Ù…Ø®ØµØµØ©" if lang=="ar" else "Custom duration"),
             callback_data=f"promp:adm:activate_custom:{uid}"
         )],
-        [InlineKeyboardButton(text="❌ " + (_tf(lang,'promp.adm.deny','رفض' if lang=='ar' else 'Deny')),
+        [InlineKeyboardButton(text="âŒ " + (_tf(lang,'promp.adm.deny','Ø±ÙØ¶' if lang=='ar' else 'Deny')),
                               callback_data=f"promp:adm:deny:{uid}")],
     ])
 
 
-    # أرسل لقناة تنبيه إن وُجدت، وإلا لكل إدمن
+    # Ø£Ø±Ø³Ù„ Ù„Ù‚Ù†Ø§Ø© ØªÙ†Ø¨ÙŠÙ‡ Ø¥Ù† ÙˆÙØ¬Ø¯ØªØŒ ÙˆØ¥Ù„Ø§ Ù„ÙƒÙ„ Ø¥Ø¯Ù…Ù†
     sent = False
     try:
         ADMIN_ALERT_CHAT_ID = int(os.getenv("ADMIN_ALERT_CHAT_ID", "0") or 0)
@@ -749,14 +750,14 @@ async def activate_finish(m: Message, state: FSMContext):
                 pass
 
     await state.clear()
-    await m.answer(_tf(lang,"promp.activate.sent","تم استلام البيانات، وسيتم التفعيل بعد مراجعة الإدارة ✅" if lang=="ar" else "App details received; admin will activate soon ✅"))
+    await m.answer(_tf(lang,"promp.activate.sent","ØªÙ… Ø§Ø³ØªÙ„Ø§Ù… Ø§Ù„Ø¨ÙŠØ§Ù†Ø§ØªØŒ ÙˆØ³ÙŠØªÙ… Ø§Ù„ØªÙØ¹ÙŠÙ„ Ø¨Ø¹Ø¯ Ù…Ø±Ø§Ø¬Ø¹Ø© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© âœ…" if lang=="ar" else "App details received; admin will activate soon âœ…"))
 
-# ===== إثبات نشاط =====
+# ===== Ø¥Ø«Ø¨Ø§Øª Ù†Ø´Ø§Ø· =====
 @router.callback_query(F.data == "promp:proof")
 async def proof_start(cb: CallbackQuery, state: FSMContext):
     lang = L(cb.from_user.id)
     await state.set_state(ProofState.wait)
-    await cb.message.answer(_tf(lang,"promp.proof.ask","أرسل صورة/فيديو أو رابط يثبت نشاطك (بث مباشر/فيديو جديد)..." if lang=="ar" else "Send a photo/video/link that proves your activity…"))
+    await cb.message.answer(_tf(lang,"promp.proof.ask","Ø£Ø±Ø³Ù„ ØµÙˆØ±Ø©/ÙÙŠØ¯ÙŠÙˆ Ø£Ùˆ Ø±Ø§Ø¨Ø· ÙŠØ«Ø¨Øª Ù†Ø´Ø§Ø·Ùƒ (Ø¨Ø« Ù…Ø¨Ø§Ø´Ø±/ÙÙŠØ¯ÙŠÙˆ Ø¬Ø¯ÙŠØ¯)..." if lang=="ar" else "Send a photo/video/link that proves your activityâ€¦"))
     await cb.answer()
 
 @router.message(ProofState.wait, F.content_type.in_({ContentType.PHOTO, ContentType.VIDEO, ContentType.TEXT}))
@@ -768,28 +769,28 @@ async def proof_receive(m: Message, state: FSMContext):
     if m.video: item["video"] = m.video.file_id; item["caption"] = m.caption or ""
     if m.text and not (m.text.startswith("/")): item["text"] = m.text
     u.setdefault("activities", []).append(item); _save(d); await state.clear()
-    txt = f"{_tf(lang,'promp.proof.head','📣 إثبات نشاط' if lang=='ar' else '📣 Activity proof')} {_tf(lang,'promp.user_id','المستخدم' if lang=='ar' else 'User')}: <code>{m.from_user.id}</code>\n"
+    txt = f"{_tf(lang,'promp.proof.head','ðŸ“£ Ø¥Ø«Ø¨Ø§Øª Ù†Ø´Ø§Ø·' if lang=='ar' else 'ðŸ“£ Activity proof')} {_tf(lang,'promp.user_id','Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…' if lang=='ar' else 'User')}: <code>{m.from_user.id}</code>\n"
     for admin_id in ADMIN_IDS:
         try:
             if m.photo: await m.bot.send_photo(admin_id, m.photo[-1].file_id, caption=txt, parse_mode=ParseMode.HTML)
             elif m.video: await m.bot.send_video(admin_id, m.video.file_id, caption=txt, parse_mode=ParseMode.HTML)
             else: await m.bot.send_message(admin_id, txt + (m.text or ""), parse_mode=ParseMode.HTML)
         except Exception: pass
-    await m.answer(_tf(lang,"promp.proof.ok","شكرًا! تم إرسال الإثبات للإدارة ✅" if lang=="ar" else "Thanks! Your proof was sent to admins ✅"))
+    await m.answer(_tf(lang,"promp.proof.ok","Ø´ÙƒØ±Ù‹Ø§! ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø¥Ø«Ø¨Ø§Øª Ù„Ù„Ø¥Ø¯Ø§Ø±Ø© âœ…" if lang=="ar" else "Thanks! Your proof was sent to admins âœ…"))
 
-# ====== دعم مباشر ======
+# ====== Ø¯Ø¹Ù… Ù…Ø¨Ø§Ø´Ø± ======
 ACTIVE_SUPPORT: dict[int, int] = {}
 ADMIN_ACTIVE: dict[int, int] = {}
 
 def _claim_kb(uid: int, lang: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text=_tf(lang, "promp.support.claim", "استلام المحادثة ↩️" if lang=="ar" else "Claim chat ↩️"),
+        InlineKeyboardButton(text=_tf(lang, "promp.support.claim", "Ø§Ø³ØªÙ„Ø§Ù… Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø© â†©ï¸" if lang=="ar" else "Claim chat â†©ï¸"),
                              callback_data=f"promp:support:claim:{uid}")
     ]])
 
 def _admin_controls_kb(uid: int, lang: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text=_tf(lang, "promp.support.end", "إنهاء المحادثة 🛑" if lang=="ar" else "End chat 🛑"),
+        InlineKeyboardButton(text=_tf(lang, "promp.support.end", "Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø© ðŸ›‘" if lang=="ar" else "End chat ðŸ›‘"),
                              callback_data=f"promp:support:end:{uid}")
     ]])
 
@@ -802,18 +803,18 @@ async def _clear_state_for(bot, storage, user_id: int):
 async def _end_chat(bot, uid: int, admin_id: int, lang_user: str, lang_admin: str, storage):
     ACTIVE_SUPPORT.pop(uid, None); ADMIN_ACTIVE.pop(admin_id, None)
     await _clear_state_for(bot, storage, uid); await _clear_state_for(bot, storage, admin_id)
-    try: await bot.send_message(uid, _tf(lang_user, "promp.support.closed_user", "تم إنهاء المحادثة." if lang_user=="ar" else "Chat ended."))
+    try: await bot.send_message(uid, _tf(lang_user, "promp.support.closed_user", "ØªÙ… Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø©." if lang_user=="ar" else "Chat ended."))
     except Exception: pass
-    try: await bot.send_message(admin_id, _tf(lang_admin, "promp.support.closed_admin", "تم إنهاء المحادثة مع المستخدم." if lang_admin=="ar" else "Chat with the user was ended."))
+    try: await bot.send_message(admin_id, _tf(lang_admin, "promp.support.closed_admin", "ØªÙ… Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø© Ù…Ø¹ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…." if lang_admin=="ar" else "Chat with the user was ended."))
     except Exception: pass
 
 @router.callback_query(F.data == "promp:support")
 async def support_start(cb: CallbackQuery, state: FSMContext):
     lang = L(cb.from_user.id)
     if cb.from_user.id in ADMIN_IDS:
-        return await cb.answer(_tf(lang, "promp.support.self_forbidden","لا يمكنك بدء محادثة دعم من حساب الأدمن." if lang=="ar" else "You can't start support from an admin account."), show_alert=True)
+        return await cb.answer(_tf(lang, "promp.support.self_forbidden","Ù„Ø§ ÙŠÙ…ÙƒÙ†Ùƒ Ø¨Ø¯Ø¡ Ù…Ø­Ø§Ø¯Ø«Ø© Ø¯Ø¹Ù… Ù…Ù† Ø­Ø³Ø§Ø¨ Ø§Ù„Ø£Ø¯Ù…Ù†." if lang=="ar" else "You can't start support from an admin account."), show_alert=True)
     await state.set_state(SupportUser.chatting)
-    await cb.message.answer(_tf(lang, "promp.support.ask","أرسل رسالتك للدعم الآن… أرسل /cancel للإلغاء." if lang=="ar" else "Send your support message now… Type /cancel to cancel."))
+    await cb.message.answer(_tf(lang, "promp.support.ask","Ø£Ø±Ø³Ù„ Ø±Ø³Ø§Ù„ØªÙƒ Ù„Ù„Ø¯Ø¹Ù… Ø§Ù„Ø¢Ù†â€¦ Ø£Ø±Ø³Ù„ /cancel Ù„Ù„Ø¥Ù„ØºØ§Ø¡." if lang=="ar" else "Send your support message nowâ€¦ Type /cancel to cancel."))
     await cb.answer()
 
 @router.message(SupportUser.chatting, F.text == "/cancel")
@@ -823,9 +824,9 @@ async def support_cancel_user(m: Message, state: FSMContext):
     await state.clear()
     if admin_id:
         ADMIN_ACTIVE.pop(admin_id, None); ACTIVE_SUPPORT.pop(uid, None)
-        try: await m.bot.send_message(admin_id, _tf(lang, "promp.support.user_left", "المستخدم أنهى المحادثة." if lang=="ar" else "User ended the chat."))
+        try: await m.bot.send_message(admin_id, _tf(lang, "promp.support.user_left", "Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø£Ù†Ù‡Ù‰ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø©." if lang=="ar" else "User ended the chat."))
         except Exception: pass
-    await m.answer(_tf(lang, "promp.cancel", "تم الإلغاء." if lang=="ar" else "Cancelled."))
+    await m.answer(_tf(lang, "promp.cancel", "ØªÙ… Ø§Ù„Ø¥Ù„ØºØ§Ø¡." if lang=="ar" else "Cancelled."))
 
 @router.message(SupportUser.chatting)
 async def support_user_message(m: Message, state: FSMContext):
@@ -840,19 +841,19 @@ async def support_user_message(m: Message, state: FSMContext):
         return
     recipients = [a for a in ADMIN_IDS if a != uid]
     if not recipients:
-        await m.answer(_tf(lang_user, "promp.support.no_admins", "لا يوجد أعضاء دعم متاحون حاليًا." if lang_user=="ar" else "No support agents available right now."))
+        await m.answer(_tf(lang_user, "promp.support.no_admins", "Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø£Ø¹Ø¶Ø§Ø¡ Ø¯Ø¹Ù… Ù…ØªØ§Ø­ÙˆÙ† Ø­Ø§Ù„ÙŠÙ‹Ø§." if lang_user=="ar" else "No support agents available right now."))
         return
     for a in recipients:
         adm_lang = L(a)
-        head = (f"🆘 <b>{_tf(adm_lang,'promp.support.head','رسالة دعم من مروّج' if adm_lang=='ar' else 'Support message from promoter')}</b>\n"
-                f"{_tf(adm_lang,'promp.user_id','المستخدم' if adm_lang=='ar' else 'User')}: <code>{uid}</code>")
+        head = (f"ðŸ†˜ <b>{_tf(adm_lang,'promp.support.head','Ø±Ø³Ø§Ù„Ø© Ø¯Ø¹Ù… Ù…Ù† Ù…Ø±ÙˆÙ‘Ø¬' if adm_lang=='ar' else 'Support message from promoter')}</b>\n"
+                f"{_tf(adm_lang,'promp.user_id','Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…' if adm_lang=='ar' else 'User')}: <code>{uid}</code>")
         try:
             await m.bot.send_message(a, head, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
             copy_kwargs = dict(parse_mode=ParseMode.HTML, reply_markup=_claim_kb(uid, adm_lang))
             if m.caption: copy_kwargs["caption"] = m.caption
             await m.copy_to(a, **copy_kwargs)
         except Exception: pass
-    await m.answer(_tf(lang_user, "promp.support.wait_admin", "تم إرسال رسالتك. بانتظار انضمام أحد أعضاء الدعم…" if lang_user=="ar" else "Message sent. Waiting for a support agent…"))
+    await m.answer(_tf(lang_user, "promp.support.wait_admin", "ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø±Ø³Ø§Ù„ØªÙƒ. Ø¨Ø§Ù†ØªØ¸Ø§Ø± Ø§Ù†Ø¶Ù…Ø§Ù… Ø£Ø­Ø¯ Ø£Ø¹Ø¶Ø§Ø¡ Ø§Ù„Ø¯Ø¹Ù…â€¦" if lang_user=="ar" else "Message sent. Waiting for a support agentâ€¦"))
 
 @router.callback_query(F.data.startswith("promp:adm:activate_custom:"))
 async def adm_activate_custom_start(cb: CallbackQuery, state: FSMContext):
@@ -866,7 +867,7 @@ async def adm_activate_custom_start(cb: CallbackQuery, state: FSMContext):
     ask = _tf(
         L(cb.from_user.id),
         "promp.activate.custom.ask",
-        "أدخل مدة التفعيل مثل: 30d أو 12h (يمكن كتابة رقم بالأيام فقط مثل 45):" if L(cb.from_user.id)=="ar"
+        "Ø£Ø¯Ø®Ù„ Ù…Ø¯Ø© Ø§Ù„ØªÙØ¹ÙŠÙ„ Ù…Ø«Ù„: 30d Ø£Ùˆ 12h (ÙŠÙ…ÙƒÙ† ÙƒØªØ§Ø¨Ø© Ø±Ù‚Ù… Ø¨Ø§Ù„Ø£ÙŠØ§Ù… ÙÙ‚Ø· Ù…Ø«Ù„ 45):" if L(cb.from_user.id)=="ar"
         else "Enter activation duration, e.g., 30d or 12h (you can also type days only like 45):"
     )
     await cb.message.answer(ask)
@@ -890,15 +891,15 @@ async def adm_activate_custom_value(m: Message, state: FSMContext):
         elif s.endswith("d"):
             seconds = int(float(s[:-1]) * 24 * 3600)
         else:
-            # اعتبرها أيام
+            # Ø§Ø¹ØªØ¨Ø±Ù‡Ø§ Ø£ÙŠØ§Ù…
             seconds = int(float(s)) * 24 * 3600
     except Exception:
         return await m.reply(_tf(L(m.from_user.id), "promp.renew.custom.invalid",
-                                 "قيمة غير صالحة. جرّب مثل 30d أو 12h." if L(m.from_user.id)=="ar" else "Invalid value. Try 30d or 12h."))
+                                 "Ù‚ÙŠÙ…Ø© ØºÙŠØ± ØµØ§Ù„Ø­Ø©. Ø¬Ø±Ù‘Ø¨ Ù…Ø«Ù„ 30d Ø£Ùˆ 12h." if L(m.from_user.id)=="ar" else "Invalid value. Try 30d or 12h."))
 
     if seconds <= 0:
         return await m.reply(_tf(L(m.from_user.id), "promp.renew.custom.invalid",
-                                 "قيمة غير صالحة. جرّب مثل 30d أو 12h." if L(m.from_user.id)=="ar" else "Invalid value. Try 30d or 12h."))
+                                 "Ù‚ÙŠÙ…Ø© ØºÙŠØ± ØµØ§Ù„Ø­Ø©. Ø¬Ø±Ù‘Ø¨ Ù…Ø«Ù„ 30d Ø£Ùˆ 12h." if L(m.from_user.id)=="ar" else "Invalid value. Try 30d or 12h."))
 
     d = _load()
     u = d.get("users", {}).get(str(uid))
@@ -906,7 +907,7 @@ async def adm_activate_custom_value(m: Message, state: FSMContext):
         await state.clear()
         return await m.reply(_tf(L(m.from_user.id), "common.not_found", "Not found."))
 
-    # تفعيل بالمدة المخصصة
+    # ØªÙØ¹ÙŠÙ„ Ø¨Ø§Ù„Ù…Ø¯Ø© Ø§Ù„Ù…Ø®ØµØµØ©
     start = _now()
     expires = start + seconds
     sub = u.setdefault("subscription", {})
@@ -914,19 +915,19 @@ async def adm_activate_custom_value(m: Message, state: FSMContext):
     _save(d)
     await state.clear()
 
-    # إخطار المستخدم
+    # Ø¥Ø®Ø·Ø§Ø± Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…
     try:
         lang_user = L(int(uid))
         await m.bot.send_message(
             int(uid),
-            _tf(lang_user, "promp.sub.activated", "تم تفعيل اشتراكك ✅" if lang_user=="ar" else "Your subscription is active ✅")
-            + f"\n{_tf(lang_user, 'promp.sub.expires', 'ينتهي في' if lang_user=='ar' else 'Expires at')}: {_ts_to_str(expires)}"
+            _tf(lang_user, "promp.sub.activated", "ØªÙ… ØªÙØ¹ÙŠÙ„ Ø§Ø´ØªØ±Ø§ÙƒÙƒ âœ…" if lang_user=="ar" else "Your subscription is active âœ…")
+            + f"\n{_tf(lang_user, 'promp.sub.expires', 'ÙŠÙ†ØªÙ‡ÙŠ ÙÙŠ' if lang_user=='ar' else 'Expires at')}: {_ts_to_str(expires)}"
         )
     except Exception:
         pass
 
-    # تأكيد للأدمن
-    await m.reply(_tf(L(m.from_user.id), "common.done", "Done ✅"))
+    # ØªØ£ÙƒÙŠØ¯ Ù„Ù„Ø£Ø¯Ù…Ù†
+    await m.reply(_tf(L(m.from_user.id), "common.done", "Done âœ…"))
 
 @router.callback_query(F.data.startswith("promp:support:claim:"))
 async def support_claim(cb: CallbackQuery, state: FSMContext):
@@ -934,23 +935,23 @@ async def support_claim(cb: CallbackQuery, state: FSMContext):
         return await cb.answer(_tf(L(cb.from_user.id),'common.admins_only','Admins only.'), show_alert=True)
     lang_admin = L(cb.from_user.id); uid = int(cb.data.split(":")[-1])
     if uid == cb.from_user.id:
-        return await cb.answer(_tf(lang_admin, "promp.support.self_claim", "لا يمكنك استلام محادثة مع نفسك." if lang_admin=="ar" else "You can't claim a chat with yourself."), show_alert=True)
+        return await cb.answer(_tf(lang_admin, "promp.support.self_claim", "Ù„Ø§ ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ø³ØªÙ„Ø§Ù… Ù…Ø­Ø§Ø¯Ø«Ø© Ù…Ø¹ Ù†ÙØ³Ùƒ." if lang_admin=="ar" else "You can't claim a chat with yourself."), show_alert=True)
     if uid in ACTIVE_SUPPORT:
         other = ACTIVE_SUPPORT[uid]
         if other == cb.from_user.id:
-            return await cb.answer(_tf(lang_admin, "promp.support.already_yours", "هذه الجلسة لديك بالفعل." if lang_admin=="ar" else "Already yours."), show_alert=True)
+            return await cb.answer(_tf(lang_admin, "promp.support.already_yours", "Ù‡Ø°Ù‡ Ø§Ù„Ø¬Ù„Ø³Ø© Ù„Ø¯ÙŠÙƒ Ø¨Ø§Ù„ÙØ¹Ù„." if lang_admin=="ar" else "Already yours."), show_alert=True)
         else:
-            return await cb.answer(_tf(lang_admin, "promp.support.already_taken", "تم استلام الجلسة من أدمن آخر." if lang_admin=="ar" else "Already taken."), show_alert=True)
+            return await cb.answer(_tf(lang_admin, "promp.support.already_taken", "ØªÙ… Ø§Ø³ØªÙ„Ø§Ù… Ø§Ù„Ø¬Ù„Ø³Ø© Ù…Ù† Ø£Ø¯Ù…Ù† Ø¢Ø®Ø±." if lang_admin=="ar" else "Already taken."), show_alert=True)
     ACTIVE_SUPPORT[uid] = cb.from_user.id; ADMIN_ACTIVE[cb.from_user.id] = uid
     await state.set_state(SupportAdmin.chatting); await state.update_data(with_uid=uid)
     lang_user = L(uid)
-    try: await cb.bot.send_message(uid, _tf(lang_user, "promp.support.agent_joined", "انضمّ أحد أعضاء الدعم للمحادثة." if lang_user=="ar" else "A support agent joined the chat."))
+    try: await cb.bot.send_message(uid, _tf(lang_user, "promp.support.agent_joined", "Ø§Ù†Ø¶Ù…Ù‘ Ø£Ø­Ø¯ Ø£Ø¹Ø¶Ø§Ø¡ Ø§Ù„Ø¯Ø¹Ù… Ù„Ù„Ù…Ø­Ø§Ø¯Ø«Ø©." if lang_user=="ar" else "A support agent joined the chat."))
     except Exception: pass
     try:
-        await cb.message.answer(_tf(lang_admin, "promp.support.claimed", f"تم استلام الجلسة مع المستخدم <code>{uid}</code>." if lang_admin=="ar" else f"Chat with <code>{uid}</code> claimed."),
+        await cb.message.answer(_tf(lang_admin, "promp.support.claimed", f"ØªÙ… Ø§Ø³ØªÙ„Ø§Ù… Ø§Ù„Ø¬Ù„Ø³Ø© Ù…Ø¹ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… <code>{uid}</code>." if lang_admin=="ar" else f"Chat with <code>{uid}</code> claimed."),
                                 reply_markup=_admin_controls_kb(uid, lang_admin), parse_mode=ParseMode.HTML)
     except Exception: pass
-    await cb.answer(_tf(lang_admin, "promp.support.you_are_live", "أنت الآن في محادثة مباشرة. أرسل رسالتك." if lang_admin=="ar" else "You're live. Send your messages."), show_alert=False)
+    await cb.answer(_tf(lang_admin, "promp.support.you_are_live", "Ø£Ù†Øª Ø§Ù„Ø¢Ù† ÙÙŠ Ù…Ø­Ø§Ø¯Ø«Ø© Ù…Ø¨Ø§Ø´Ø±Ø©. Ø£Ø±Ø³Ù„ Ø±Ø³Ø§Ù„ØªÙƒ." if lang_admin=="ar" else "You're live. Send your messages."), show_alert=False)
 
 @router.callback_query(F.data.startswith("promp:support:end:"))
 async def support_end_btn(cb: CallbackQuery, state: FSMContext):
@@ -958,7 +959,7 @@ async def support_end_btn(cb: CallbackQuery, state: FSMContext):
         return await cb.answer(_tf(L(cb.from_user.id),'common.admins_only','Admins only.'), show_alert=True)
     uid = int(cb.data.split(":")[-1]); admin_id = cb.from_user.id
     if ACTIVE_SUPPORT.get(uid) != admin_id:
-        return await cb.answer(_tf(L(cb.from_user.id),'promp.support.not_yours','هذه الجلسة ليست لك.' if L(cb.from_user.id)=="ar" else "This session is not yours."), show_alert=True)
+        return await cb.answer(_tf(L(cb.from_user.id),'promp.support.not_yours','Ù‡Ø°Ù‡ Ø§Ù„Ø¬Ù„Ø³Ø© Ù„ÙŠØ³Øª Ù„Ùƒ.' if L(cb.from_user.id)=="ar" else "This session is not yours."), show_alert=True)
     await _end_chat(cb.bot, uid, admin_id, L(uid), L(admin_id), state.storage)
     await cb.answer(_tf(L(cb.from_user.id),'common.ok','OK'))
 
@@ -968,14 +969,14 @@ async def support_admin_message(m: Message, state: FSMContext):
     data = await state.get_data(); uid = data.get("with_uid")
     if not uid: return
     if uid == m.from_user.id:
-        await m.answer(_tf(L(m.from_user.id), "promp.support.self_echo", "هذه محادثة مع نفسك؛ الرسائل لن تُوجَّه." if L(m.from_user.id)=="ar" else "This would echo to yourself; use another account."))
+        await m.answer(_tf(L(m.from_user.id), "promp.support.self_echo", "Ù‡Ø°Ù‡ Ù…Ø­Ø§Ø¯Ø«Ø© Ù…Ø¹ Ù†ÙØ³ÙƒØ› Ø§Ù„Ø±Ø³Ø§Ø¦Ù„ Ù„Ù† ØªÙÙˆØ¬Ù‘ÙŽÙ‡." if L(m.from_user.id)=="ar" else "This would echo to yourself; use another account."))
         return
     if (m.text or "").strip().lower() in {"/end", "/cancel"}:
         await _end_chat(m.bot, uid, m.from_user.id, L(uid), L(m.from_user.id), state.storage); return
     try: await m.copy_to(uid, caption=m.caption, parse_mode=ParseMode.HTML)
     except Exception: pass
 
-# ===== حمايات عامة =====
+# ===== Ø­Ù…Ø§ÙŠØ§Øª Ø¹Ø§Ù…Ø© =====
 @router.message(EditProfile.name)
 @router.message(EditProfile.links)
 @router.message(EditProfile.tg)
@@ -991,7 +992,7 @@ async def guard_text(_m: Message):
 
 # =====================  LIVE STREAMS  =====================
 
-# زر البث العام للجميع
+# Ø²Ø± Ø§Ù„Ø¨Ø« Ø§Ù„Ø¹Ø§Ù… Ù„Ù„Ø¬Ù…ÙŠØ¹
 @router.callback_query(F.data == "promp:live")
 async def live_public_entry(cb: CallbackQuery, state: FSMContext):
     lang = L(cb.from_user.id)
@@ -999,7 +1000,7 @@ async def live_public_entry(cb: CallbackQuery, state: FSMContext):
     await cb.message.answer(text, reply_markup=kb, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
     await cb.answer()
 
-# بدء البث من داخل لوحة المروّج
+# Ø¨Ø¯Ø¡ Ø§Ù„Ø¨Ø« Ù…Ù† Ø¯Ø§Ø®Ù„ Ù„ÙˆØ­Ø© Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬
 @router.callback_query(F.data == "promp:live:start")
 async def live_start_entry(cb: CallbackQuery, state: FSMContext):
     lang = L(cb.from_user.id)
@@ -1015,25 +1016,25 @@ async def live_start_entry(cb: CallbackQuery, state: FSMContext):
         url = _make_url(platform, mine.get("handle",""))
         ends = _ts_to_str(mine.get("expires_at"))
         txt = (
-            f"🎥 <b>{_tf(lang,'promp.live.now','بثك الآن' if lang=='ar' else 'Your live now')}</b>\n"
+            f"ðŸŽ¥ <b>{_tf(lang,'promp.live.now','Ø¨Ø«Ùƒ Ø§Ù„Ø¢Ù†' if lang=='ar' else 'Your live now')}</b>\n"
             f"{_plat_icon(platform)} <a href='{url}'>{plat_human}</a>\n"
-            f"🔗 <code>{mine.get('handle','')}</code>\n"
-            f"📝 {(mine.get('title') or '—')}\n"
-            f"⏱ <code>{_ts_to_str(mine.get('started_at'))}</code>\n"
-            f"⌛️ <code>{_tf(lang,'promp.live.ends','ينتهي' if lang=='ar' else 'Ends')}: {ends}</code>"
+            f"ðŸ”— <code>{mine.get('handle','')}</code>\n"
+            f"ðŸ“ {(mine.get('title') or 'â€”')}\n"
+            f"â± <code>{_ts_to_str(mine.get('started_at'))}</code>\n"
+            f"âŒ›ï¸ <code>{_tf(lang,'promp.live.ends','ÙŠÙ†ØªÙ‡ÙŠ' if lang=='ar' else 'Ends')}: {ends}</code>"
         )
         kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="🔴 "+_tf(lang,"promp.live.end","إنهاء البث" if lang=="ar" else "End live"), callback_data=f"promp:live:end:{mine['id']}")],
-            [InlineKeyboardButton(text="⬅️ "+_tf(lang,"promp.btn.back","رجوع" if lang=="ar" else "Back"), callback_data="promp:open")],
+            [InlineKeyboardButton(text="ðŸ”´ "+_tf(lang,"promp.live.end","Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¨Ø«" if lang=="ar" else "End live"), callback_data=f"promp:live:end:{mine['id']}")],
+            [InlineKeyboardButton(text="â¬…ï¸ "+_tf(lang,"promp.btn.back","Ø±Ø¬ÙˆØ¹" if lang=="ar" else "Back"), callback_data="promp:open")],
         ])
         await cb.message.answer(txt, reply_markup=kb, parse_mode=ParseMode.HTML, disable_web_page_preview=False)
         return await cb.answer()
 
     await state.set_state(LiveStart.pick_platform)
-    await cb.message.answer(_tf(lang,"promp.live.pick","اختر المنصة:" if lang=="ar" else "Pick a platform:"), reply_markup=_live_platforms_kb(lang))
+    await cb.message.answer(_tf(lang,"promp.live.pick","Ø§Ø®ØªØ± Ø§Ù„Ù…Ù†ØµØ©:" if lang=="ar" else "Pick a platform:"), reply_markup=_live_platforms_kb(lang))
     await cb.answer()
 
-# اختيار المنصة
+# Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„Ù…Ù†ØµØ©
 @router.callback_query(F.data.regexp(r"^promp:live:plat:(\w+)$"))
 async def live_pick_platform(cb: CallbackQuery, state: FSMContext):
     lang = L(cb.from_user.id)
@@ -1043,15 +1044,15 @@ async def live_pick_platform(cb: CallbackQuery, state: FSMContext):
         await state.update_data(platform="other")
         await state.set_state(LiveStart.ask_platform_name)
         ask = _tf(lang, "promp.live.ask_other_name",
-                  "اكتب اسم المنصّة (مثال: Trovo / Kick / …)" if lang=="ar"
-                  else "Type the platform name (e.g., Trovo / Kick / …)")
+                  "Ø§ÙƒØªØ¨ Ø§Ø³Ù… Ø§Ù„Ù…Ù†ØµÙ‘Ø© (Ù…Ø«Ø§Ù„: Trovo / Kick / â€¦)" if lang=="ar"
+                  else "Type the platform name (e.g., Trovo / Kick / â€¦)")
         await cb.message.answer(f"{_plat_icon('other')} <b>{_plat_label_custom(lang,'other')}</b>\n{ask}", parse_mode=ParseMode.HTML)
         return await cb.answer()
 
     await state.update_data(platform=plat)
     await state.set_state(LiveStart.ask_handle)
     hint = _tf(lang,"promp.live.ask_handle",
-               "أرسل اسم المستخدم أو رابط القناة/البث (مثال: @myuser أو https://…)" if lang=="ar"
+               "Ø£Ø±Ø³Ù„ Ø§Ø³Ù… Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø£Ùˆ Ø±Ø§Ø¨Ø· Ø§Ù„Ù‚Ù†Ø§Ø©/Ø§Ù„Ø¨Ø« (Ù…Ø«Ø§Ù„: @myuser Ø£Ùˆ https://â€¦)" if lang=="ar"
                else "Send the @handle or full channel/live URL:")
     await cb.message.answer(f"{_plat_icon(plat)} <b>{_plat_label(lang,plat)}</b>\n{hint}", parse_mode=ParseMode.HTML)
     await cb.answer()
@@ -1063,11 +1064,11 @@ async def live_other_platform_name(m: Message, state: FSMContext):
     await state.update_data(platform_name=name)
     await state.set_state(LiveStart.ask_handle)
     hint = _tf(lang, "promp.live.ask_other_url",
-               "أرسل رابط البث الكامل (مثال: https://example.com/…)" if lang=="ar"
-               else "Send the full live URL (e.g., https://example.com/…)")
+               "Ø£Ø±Ø³Ù„ Ø±Ø§Ø¨Ø· Ø§Ù„Ø¨Ø« Ø§Ù„ÙƒØ§Ù…Ù„ (Ù…Ø«Ø§Ù„: https://example.com/â€¦)" if lang=="ar"
+               else "Send the full live URL (e.g., https://example.com/â€¦)")
     await m.answer(hint)
 
-# استقبال المعرّف/الرابط
+# Ø§Ø³ØªÙ‚Ø¨Ø§Ù„ Ø§Ù„Ù…Ø¹Ø±Ù‘Ù/Ø§Ù„Ø±Ø§Ø¨Ø·
 @router.message(LiveStart.ask_handle, F.text.len() >= 3)
 async def live_set_handle(m: Message, state: FSMContext):
     lang = L(m.from_user.id)
@@ -1079,19 +1080,19 @@ async def live_set_handle(m: Message, state: FSMContext):
         if not (handle.startswith("http://") or handle.startswith("https://")):
             return await m.answer(
                 _tf(lang, "promp.live.other.url_required",
-                    "⚠️ رجاءً أرسل رابطًا كاملاً يبدأ بـ http:// أو https://"
+                    "âš ï¸ Ø±Ø¬Ø§Ø¡Ù‹ Ø£Ø±Ø³Ù„ Ø±Ø§Ø¨Ø·Ù‹Ø§ ÙƒØ§Ù…Ù„Ø§Ù‹ ÙŠØ¨Ø¯Ø£ Ø¨Ù€ http:// Ø£Ùˆ https://"
                     if lang=="ar" else
-                    "⚠️ Please send a full URL starting with http:// or https://")
+                    "âš ï¸ Please send a full URL starting with http:// or https://")
             )
 
     await state.update_data(handle=handle)
     await state.set_state(LiveStart.ask_title)
     await m.answer(_tf(lang, "promp.live.ask_title",
-                       "أرسل عنوانًا للبث (اختياري) — أرسل «-» لتخطي."
+                       "Ø£Ø±Ø³Ù„ Ø¹Ù†ÙˆØ§Ù†Ù‹Ø§ Ù„Ù„Ø¨Ø« (Ø§Ø®ØªÙŠØ§Ø±ÙŠ) â€” Ø£Ø±Ø³Ù„ Â«-Â» Ù„ØªØ®Ø·ÙŠ."
                        if lang=="ar" else
-                       "Send a title (optional) — send '-' to skip."))
+                       "Send a title (optional) â€” send '-' to skip."))
 
-# استقبال العنوان → اختيار المدة
+# Ø§Ø³ØªÙ‚Ø¨Ø§Ù„ Ø§Ù„Ø¹Ù†ÙˆØ§Ù† â†’ Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„Ù…Ø¯Ø©
 @router.message(LiveStart.ask_title, F.text)
 async def live_ask_duration(m: Message, state: FSMContext):
     lang = L(m.from_user.id)
@@ -1106,36 +1107,36 @@ async def live_ask_duration(m: Message, state: FSMContext):
         [InlineKeyboardButton(text="4h",  callback_data="promp:live:dur:4h"),
          InlineKeyboardButton(text="8h",  callback_data="promp:live:dur:8h"),
          InlineKeyboardButton(text="12h", callback_data="promp:live:dur:12h")],
-        [InlineKeyboardButton(text=_tf(lang,"promp.live.dur.custom","مدة مخصّصة" if lang=="ar" else "Custom duration"), callback_data="promp:live:dur:custom")],
-        [InlineKeyboardButton(text=_tf(lang,"promp.btn.back","رجوع" if lang=="ar" else "Back"), callback_data="promp:open")],
+        [InlineKeyboardButton(text=_tf(lang,"promp.live.dur.custom","Ù…Ø¯Ø© Ù…Ø®ØµÙ‘ØµØ©" if lang=="ar" else "Custom duration"), callback_data="promp:live:dur:custom")],
+        [InlineKeyboardButton(text=_tf(lang,"promp.btn.back","Ø±Ø¬ÙˆØ¹" if lang=="ar" else "Back"), callback_data="promp:open")],
     ])
     await state.set_state(LiveStart.ask_duration)
-    msg = _tf(lang,"promp.live.dur.ask","اختر مدة البث (من 30 دقيقة حتى 24 ساعة):" if lang=="ar" else "Choose live duration (30m to 24h):")
+    msg = _tf(lang,"promp.live.dur.ask","Ø§Ø®ØªØ± Ù…Ø¯Ø© Ø§Ù„Ø¨Ø« (Ù…Ù† 30 Ø¯Ù‚ÙŠÙ‚Ø© Ø­ØªÙ‰ 24 Ø³Ø§Ø¹Ø©):" if lang=="ar" else "Choose live duration (30m to 24h):")
     await m.answer(msg, reply_markup=kb)
 
-# المدّة الجاهزة
+# Ø§Ù„Ù…Ø¯Ù‘Ø© Ø§Ù„Ø¬Ø§Ù‡Ø²Ø©
 @router.callback_query(F.data.regexp(r"^promp:live:dur:([0-9]+(?:\.[0-9]+)?[hm])$"))
 async def live_pick_duration(cb: CallbackQuery, state: FSMContext):
     lang = L(cb.from_user.id)
     token = cb.data.split(":")[-1]
     hours = _parse_duration_to_hours(token)
     if hours is None:
-        return await cb.answer(_tf(lang,"promp.live.dur.invalid","المدّة يجب أن تكون بين 30 دقيقة و24 ساعة." if lang=="ar" else "Duration must be between 30 minutes and 24 hours."), show_alert=True)
+        return await cb.answer(_tf(lang,"promp.live.dur.invalid","Ø§Ù„Ù…Ø¯Ù‘Ø© ÙŠØ¬Ø¨ Ø£Ù† ØªÙƒÙˆÙ† Ø¨ÙŠÙ† 30 Ø¯Ù‚ÙŠÙ‚Ø© Ùˆ24 Ø³Ø§Ø¹Ø©." if lang=="ar" else "Duration must be between 30 minutes and 24 hours."), show_alert=True)
     await state.update_data(ttl_hours=hours)
 
     d = _load(); u = _u(d, cb.from_user.id)
     suggested = (u.get("name") or cb.from_user.full_name or f"User {cb.from_user.id}")
     await state.set_state(LiveStart.ask_display)
-    ask = _tf(lang,"promp.live.ask_display","اكتب الاسم الذي سيظهر للمستخدمين (أرسل «-» لاستخدام الافتراضي)" if lang=="ar" else "Send the display name (send '-' to use default)")
+    ask = _tf(lang,"promp.live.ask_display","Ø§ÙƒØªØ¨ Ø§Ù„Ø§Ø³Ù… Ø§Ù„Ø°ÙŠ Ø³ÙŠØ¸Ù‡Ø± Ù„Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙŠÙ† (Ø£Ø±Ø³Ù„ Â«-Â» Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠ)" if lang=="ar" else "Send the display name (send '-' to use default)")
     await cb.message.answer(f"{ask}\n<code>{suggested}</code>", parse_mode=ParseMode.HTML)
     await cb.answer()
 
-# المدّة المخصّصة
+# Ø§Ù„Ù…Ø¯Ù‘Ø© Ø§Ù„Ù…Ø®ØµÙ‘ØµØ©
 @router.callback_query(F.data == "promp:live:dur:custom")
 async def live_duration_custom(cb: CallbackQuery, state: FSMContext):
     lang = L(cb.from_user.id)
     await state.set_state(LiveStart.ask_duration_custom)
-    ask = _tf(lang,"promp.live.dur.custom.ask","أرسل المدة مثل: 30m, 1h, 1.5h, 90m (المسموح 30m–24h)." if lang=="ar" else "Send duration like: 30m, 1h, 1.5h, 90m (allowed 30m–24h).")
+    ask = _tf(lang,"promp.live.dur.custom.ask","Ø£Ø±Ø³Ù„ Ø§Ù„Ù…Ø¯Ø© Ù…Ø«Ù„: 30m, 1h, 1.5h, 90m (Ø§Ù„Ù…Ø³Ù…ÙˆØ­ 30mâ€“24h)." if lang=="ar" else "Send duration like: 30m, 1h, 1.5h, 90m (allowed 30mâ€“24h).")
     await cb.message.answer(ask)
     await cb.answer()
 
@@ -1144,15 +1145,15 @@ async def live_duration_custom_value(m: Message, state: FSMContext):
     lang = L(m.from_user.id)
     hours = _parse_duration_to_hours(m.text or "")
     if hours is None:
-        return await m.answer(_tf(lang,"promp.live.dur.custom.invalid","قيمة غير صالحة. استخدم 30m..24h مثل 30m/1h/1.5h/90m." if lang=="ar" else "Invalid value. Use 30m..24h, e.g., 30m/1h/1.5h/90m."))
+        return await m.answer(_tf(lang,"promp.live.dur.custom.invalid","Ù‚ÙŠÙ…Ø© ØºÙŠØ± ØµØ§Ù„Ø­Ø©. Ø§Ø³ØªØ®Ø¯Ù… 30m..24h Ù…Ø«Ù„ 30m/1h/1.5h/90m." if lang=="ar" else "Invalid value. Use 30m..24h, e.g., 30m/1h/1.5h/90m."))
     await state.update_data(ttl_hours=hours)
     d = _load(); u = _u(d, m.from_user.id)
     suggested = (u.get("name") or m.from_user.full_name or f"User {m.from_user.id}")
     await state.set_state(LiveStart.ask_display)
-    ask = _tf(lang,"promp.live.ask_display","اكتب الاسم الذي سيظهر للمستخدمين (أرسل «-» لاستخدام الافتراضي)" if lang=="ar" else "Send the display name (send '-' to use default)")
+    ask = _tf(lang,"promp.live.ask_display","Ø§ÙƒØªØ¨ Ø§Ù„Ø§Ø³Ù… Ø§Ù„Ø°ÙŠ Ø³ÙŠØ¸Ù‡Ø± Ù„Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙŠÙ† (Ø£Ø±Ø³Ù„ Â«-Â» Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠ)" if lang=="ar" else "Send the display name (send '-' to use default)")
     await m.answer(f"{ask}\n<code>{suggested}</code>", parse_mode=ParseMode.HTML)
 
-# استقبال اسم العرض → تشغيل البث
+# Ø§Ø³ØªÙ‚Ø¨Ø§Ù„ Ø§Ø³Ù… Ø§Ù„Ø¹Ø±Ø¶ â†’ ØªØ´ØºÙŠÙ„ Ø§Ù„Ø¨Ø«
 @router.message(LiveStart.ask_display, F.text)
 async def live_do_start(m: Message, state: FSMContext):
     data = await state.get_data()
@@ -1166,11 +1167,11 @@ async def live_do_start(m: Message, state: FSMContext):
     d = _load(); u = _u(d, m.from_user.id)
     display_name = (u.get("name") or m.from_user.full_name or f"User {m.from_user.id}") if (disp == "-" or not disp) else disp
 
-    # حفظ الرابط تلقائيًا في auto_links لظهوره للمستخدمين
+    # Ø­ÙØ¸ Ø§Ù„Ø±Ø§Ø¨Ø· ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‹Ø§ ÙÙŠ auto_links Ù„Ø¸Ù‡ÙˆØ±Ù‡ Ù„Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙŠÙ†
     url = _make_url(platform, handle or "")
     if _is_http_url(url):
         _add_auto_link(u, url)
-        _save(d)  # احفظ فورًا قبل الإرسال
+        _save(d)  # Ø§Ø­ÙØ¸ ÙÙˆØ±Ù‹Ø§ Ù‚Ø¨Ù„ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„
 
     rec = live_start(
         m.from_user.id,
@@ -1186,31 +1187,31 @@ async def live_do_start(m: Message, state: FSMContext):
     lang = L(m.from_user.id)
     plat_human = _plat_label_custom(lang, platform, rec=rec, name=platform_name)
     txt = (
-        f"🎥 <b>{_tf(lang,'promp.live.started','تم تشغيل البث ✅' if lang=='ar' else 'Live started ✅')}</b>\n"
-        f"👤 {display_name}\n{_plat_icon(platform)} <a href='{url}'>{plat_human}</a>\n"
-        f"📝 {(title or '—')}\n"
-        f"⏱ <code>{_ts_to_str(rec.get('started_at'))}</code>\n"
-        f"⌛️ <code>{_tf(lang,'promp.live.ends','ينتهي' if lang=='ar' else 'Ends')}: {_ts_to_str(rec.get('expires_at'))}</code>"
+        f"ðŸŽ¥ <b>{_tf(lang,'promp.live.started','ØªÙ… ØªØ´ØºÙŠÙ„ Ø§Ù„Ø¨Ø« âœ…' if lang=='ar' else 'Live started âœ…')}</b>\n"
+        f"ðŸ‘¤ {display_name}\n{_plat_icon(platform)} <a href='{url}'>{plat_human}</a>\n"
+        f"ðŸ“ {(title or 'â€”')}\n"
+        f"â± <code>{_ts_to_str(rec.get('started_at'))}</code>\n"
+        f"âŒ›ï¸ <code>{_tf(lang,'promp.live.ends','ÙŠÙ†ØªÙ‡ÙŠ' if lang=='ar' else 'Ends')}: {_ts_to_str(rec.get('expires_at'))}</code>"
     )
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔴 "+(_tf(lang,"promp.live.end","إنهاء البث" if lang=="ar" else "End live")), callback_data=f"promp:live:end:{rec['id']}")],
-        [InlineKeyboardButton(text="⬅️ "+(_tf(lang,"promp.btn.back","رجوع" if lang=="ar" else "Back")), callback_data="promp:open")],
+        [InlineKeyboardButton(text="ðŸ”´ "+(_tf(lang,"promp.live.end","Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¨Ø«" if lang=="ar" else "End live")), callback_data=f"promp:live:end:{rec['id']}")],
+        [InlineKeyboardButton(text="â¬…ï¸ "+(_tf(lang,"promp.btn.back","Ø±Ø¬ÙˆØ¹" if lang=="ar" else "Back")), callback_data="promp:open")],
     ])
     await m.answer(txt, reply_markup=kb, parse_mode=ParseMode.HTML, disable_web_page_preview=False)
 
     adm_txt = (
-        f"📣 LIVE\n"
+        f"ðŸ“£ LIVE\n"
         f"UID: <code>{m.from_user.id}</code>\n"
-        f"👤 {display_name}\n"
-        f"{_plat_icon(platform)} {plat_human} — <code>{handle}</code>\n"
-        f"📝 {(title or '—')}\n"
-        f"⌛️ {_tf(L(m.from_user.id),'promp.live.ends','ينتهي' if lang=='ar' else 'Ends')}: {_ts_to_str(rec.get('expires_at'))}"
+        f"ðŸ‘¤ {display_name}\n"
+        f"{_plat_icon(platform)} {plat_human} â€” <code>{handle}</code>\n"
+        f"ðŸ“ {(title or 'â€”')}\n"
+        f"âŒ›ï¸ {_tf(L(m.from_user.id),'promp.live.ends','ÙŠÙ†ØªÙ‡ÙŠ' if lang=='ar' else 'Ends')}: {_ts_to_str(rec.get('expires_at'))}"
     )
     for admin_id in ADMIN_IDS:
         try:
             kb_admin = InlineKeyboardMarkup(inline_keyboard=[[
                 InlineKeyboardButton(
-                    text="🔴 " + _tf(L(admin_id), "promp.live.end", "إنهاء البث" if L(admin_id)=="ar" else "End live"),
+                    text="ðŸ”´ " + _tf(L(admin_id), "promp.live.end", "Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¨Ø«" if L(admin_id)=="ar" else "End live"),
                     callback_data=f"promp:live:end:{rec['id']}"
                 ),
             ]])
@@ -1224,7 +1225,7 @@ async def live_do_start(m: Message, state: FSMContext):
         except Exception:
             pass
 
-# إنهاء البث
+# Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¨Ø«
 @router.callback_query(F.data.regexp(r"^promp:live:end:(.+)$"))
 async def live_end_handler(cb: CallbackQuery):
     lang_admin = L(cb.from_user.id)
@@ -1234,7 +1235,7 @@ async def live_end_handler(cb: CallbackQuery):
     if not rec:
         return await cb.answer(
             _tf(lang_admin, "promp.live.not_found",
-                "البث غير موجود أو منتهٍ." if lang_admin=="ar" else "Live not found or already ended."),
+                "Ø§Ù„Ø¨Ø« ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯ Ø£Ùˆ Ù…Ù†ØªÙ‡Ù." if lang_admin=="ar" else "Live not found or already ended."),
             show_alert=True
         )
 
@@ -1244,12 +1245,12 @@ async def live_end_handler(cb: CallbackQuery):
             lang_user = L(uid)
             plat = (rec.get("platform") or "").lower()
             handle = rec.get("handle") or ""
-            title = rec.get("title") or "—"
+            title = rec.get("title") or "â€”"
             plat_human = _plat_label_custom(lang_user, plat, rec=rec)
             msg_user = (
-                f"🔴 { _tf(lang_user,'promp.live.ended.by_admin','تم إنهاء البث من قبل الإدارة.' if lang_user=='ar' else 'Your live was ended by the admin.') }\n"
-                f"{_plat_icon(plat)} {plat_human} — <code>{handle}</code>\n"
-                f"📝 {title}"
+                f"ðŸ”´ { _tf(lang_user,'promp.live.ended.by_admin','ØªÙ… Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¨Ø« Ù…Ù† Ù‚Ø¨Ù„ Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©.' if lang_user=='ar' else 'Your live was ended by the admin.') }\n"
+                f"{_plat_icon(plat)} {plat_human} â€” <code>{handle}</code>\n"
+                f"ðŸ“ {title}"
             )
             await cb.bot.send_message(uid, msg_user, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
         except Exception:
@@ -1257,13 +1258,13 @@ async def live_end_handler(cb: CallbackQuery):
 
     await cb.answer(
         _tf(lang_admin, "promp.live.ended",
-            "تم إنهاء البث." if lang_admin=="ar" else "Live ended."),
+            "ØªÙ… Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¨Ø«." if lang_admin=="ar" else "Live ended."),
         show_alert=True
     )
 
-# =========== القائمة العامة ===========
+# =========== Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø¹Ø§Ù…Ø© ===========
 def _truncate(s: str, n: int) -> str:
-    s=(s or "").strip(); return s if len(s)<=n else s[:n-1]+"…"
+    s=(s or "").strip(); return s if len(s)<=n else s[:n-1]+"â€¦"
 
 def _group_by_promoter(items: list[dict]) -> list[dict]:
     grouped: dict[int, dict] = {}
@@ -1275,7 +1276,7 @@ def _group_by_promoter(items: list[dict]) -> list[dict]:
     out=[]
     for g in grouped.values():
         plats = {str(x.get("platform","")).lower() for x in g["streams"]}
-        g["icons"] = "".join(_PLAT_ICONS.get(p,"🔗") for p in plats)
+        g["icons"] = "".join(_PLAT_ICONS.get(p,"ðŸ”—") for p in plats)
         g["streams"].sort(key=lambda x:int(x.get("started_at",0)), reverse=True)
         g["since_ts"] = min(int(x.get("started_at",0) or 0) for x in g["streams"]) if g["streams"] else _now()
         out.append(g)
@@ -1288,37 +1289,37 @@ def _render_public_list(lang: str, _platform_ignored: str, page: int):
     per_page=6; total=len(groups); pages=max(1,(total+per_page-1)//per_page); page=max(1,min(page,pages))
     start=(page-1)*per_page; shown=groups[start:start+per_page]
 
-    title=_tf(lang,"promp.live.title","بث مباشر للمروّجين" if lang=="ar" else "Promoters Live")
-    head=f"🎥 <b>{title}</b>\n{_tf(lang,'promp.live.count','المباشر الآن' if lang=='ar' else 'Live now')}: <b>{total}</b>\n"
+    title=_tf(lang,"promp.live.title","Ø¨Ø« Ù…Ø¨Ø§Ø´Ø± Ù„Ù„Ù…Ø±ÙˆÙ‘Ø¬ÙŠÙ†" if lang=="ar" else "Promoters Live")
+    head=f"ðŸŽ¥ <b>{title}</b>\n{_tf(lang,'promp.live.count','Ø§Ù„Ù…Ø¨Ø§Ø´Ø± Ø§Ù„Ø¢Ù†' if lang=='ar' else 'Live now')}: <b>{total}</b>\n"
 
     if total==0:
         kb=InlineKeyboardMarkup(inline_keyboard=[[
-            InlineKeyboardButton(text="🔄 "+_tf(lang,"promp.btn.refresh","تحديث" if lang=="ar" else "Refresh"), callback_data="promp:live"),
+            InlineKeyboardButton(text="ðŸ”„ "+_tf(lang,"promp.btn.refresh","ØªØ­Ø¯ÙŠØ«" if lang=="ar" else "Refresh"), callback_data="promp:live"),
         ],[
-            InlineKeyboardButton(text=_tf(lang,"promp.btn.back","رجوع" if lang=="ar" else "Back"), callback_data="back_to_menu")
+            InlineKeyboardButton(text=_tf(lang,"promp.btn.back","Ø±Ø¬ÙˆØ¹" if lang=="ar" else "Back"), callback_data="back_to_menu")
         ]])
-        return head+"\n"+(_tf(lang,"promp.live.none","لا يوجد بث مباشر حاليًا." if lang=="ar" else "No live streams right now.")), kb
+        return head+"\n"+(_tf(lang,"promp.live.none","Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø¨Ø« Ù…Ø¨Ø§Ø´Ø± Ø­Ø§Ù„ÙŠÙ‹Ø§." if lang=="ar" else "No live streams right now.")), kb
 
     kb=InlineKeyboardBuilder()
     for g in shown:
         name=_truncate(g["name"],22)
         since_short=_duration_short(max(0,_now()-int(g.get("since_ts",_now()))), lang)
-        icons=g["icons"] or "🔴"
-        btn_txt = f"👤 {name} · ⏱ {since_short} · {icons}"
+        icons=g["icons"] or "ðŸ”´"
+        btn_txt = f"ðŸ‘¤ {name} Â· â± {since_short} Â· {icons}"
         kb.row(InlineKeyboardButton(text=btn_txt, callback_data=f"promp:live:view:{g['user_id']}:all:{page}"))
 
     nav=[]
-    if page>1: nav.append(InlineKeyboardButton(text="« "+_tf(lang,"promp.nav.prev","السابق" if lang=="ar" else "Prev"), callback_data=f"promp:live:list:all:{page-1}"))
+    if page>1: nav.append(InlineKeyboardButton(text="Â« "+_tf(lang,"promp.nav.prev","Ø§Ù„Ø³Ø§Ø¨Ù‚" if lang=="ar" else "Prev"), callback_data=f"promp:live:list:all:{page-1}"))
     nav.append(InlineKeyboardButton(text=f"{page}/{pages}", callback_data="noop"))
-    if page<pages: nav.append(InlineKeyboardButton(text=_tf(lang,"promp.nav.next","التالي" if lang=="ar" else "Next")+" »", callback_data=f"promp:live:list:all:{page+1}"))
+    if page<pages: nav.append(InlineKeyboardButton(text=_tf(lang,"promp.nav.next","Ø§Ù„ØªØ§Ù„ÙŠ" if lang=="ar" else "Next")+" Â»", callback_data=f"promp:live:list:all:{page+1}"))
     kb.row(*nav)
     kb.row(
-        InlineKeyboardButton(text="🔄 "+_tf(lang,"promp.btn.refresh","تحديث" if lang=="ar" else "Refresh"), callback_data=f"promp:live:list:all:{page}"),
-        InlineKeyboardButton(text="⬅️ "+_tf(lang,"promp.btn.back","رجوع" if lang=="ar" else "Back"), callback_data="back_to_menu")
+        InlineKeyboardButton(text="ðŸ”„ "+_tf(lang,"promp.btn.refresh","ØªØ­Ø¯ÙŠØ«" if lang=="ar" else "Refresh"), callback_data=f"promp:live:list:all:{page}"),
+        InlineKeyboardButton(text="â¬…ï¸ "+_tf(lang,"promp.btn.back","Ø±Ø¬ÙˆØ¹" if lang=="ar" else "Back"), callback_data="back_to_menu")
     )
     return head, kb.as_markup()
 
-# استبدل الدالة كاملة
+# Ø§Ø³ØªØ¨Ø¯Ù„ Ø§Ù„Ø¯Ø§Ù„Ø© ÙƒØ§Ù…Ù„Ø©
 def _render_promoter_detail(lang: str, uid: int, platform_ctx: str, page_ctx: int):
     items, _, _ = live_list_active(None, page=1, per_page=200)
     items = [r for r in items if int(r.get("user_id") or 0) == uid]
@@ -1326,32 +1327,32 @@ def _render_promoter_detail(lang: str, uid: int, platform_ctx: str, page_ctx: in
     store = _load()
     u = store.get("users", {}).get(str(uid)) or {}
 
-    # نعتمد فقط على الروابط القادمة من اللايف بنفسه (وليس روابط البروفايل)
+    # Ù†Ø¹ØªÙ…Ø¯ ÙÙ‚Ø· Ø¹Ù„Ù‰ Ø§Ù„Ø±ÙˆØ§Ø¨Ø· Ø§Ù„Ù‚Ø§Ø¯Ù…Ø© Ù…Ù† Ø§Ù„Ù„Ø§ÙŠÙ Ø¨Ù†ÙØ³Ù‡ (ÙˆÙ„ÙŠØ³ Ø±ÙˆØ§Ø¨Ø· Ø§Ù„Ø¨Ø±ÙˆÙØ§ÙŠÙ„)
     live_links = _collect_live_links(items)
     links_short = _fmt_links_short(live_links, limit=3)
 
     if not items:
         txt = _tf(
             lang, "promp.live.none_for_user",
-            "هذا المروّج ليس على البث الآن." if lang == "ar" else "This promoter is not live now."
+            "Ù‡Ø°Ø§ Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬ Ù„ÙŠØ³ Ø¹Ù„Ù‰ Ø§Ù„Ø¨Ø« Ø§Ù„Ø¢Ù†." if lang == "ar" else "This promoter is not live now."
         )
         kb = InlineKeyboardMarkup(inline_keyboard=[[
             InlineKeyboardButton(
-                text="⬅️ " + _tf(lang, "promp.btn.back", "رجوع" if lang == "ar" else "Back"),
+                text="â¬…ï¸ " + _tf(lang, "promp.btn.back", "Ø±Ø¬ÙˆØ¹" if lang == "ar" else "Back"),
                 callback_data=f"promp:live:list:{platform_ctx}:{page_ctx}"
             )
         ]])
         return txt, kb
 
     name = items[0].get("display_name") or u.get("name") or f"#{uid}"
-    title_lbl = _tf(lang, "promp.live.details", "تفاصيل البث" if lang == "ar" else "Live details")
-    pro_hdr   = _tf(lang, "promp.live.promoter", "المروّج" if lang == "ar" else "Promoter")
-    ends_lbl  = _tf(lang, "promp.live.ends", "ينتهي" if lang == "ar" else "Ends")
-    open_lbl  = _tf(lang, "promp.live.open", "فتح البث" if lang == "ar" else "Open stream")
-    invalid_link_lbl = _tf(lang, "promp.live.invalid_link", "رابط غير صالح" if lang == "ar" else "Invalid link")
-    links_lbl = _tf(lang, "promp.links", "الروابط" if lang == "ar" else "Links")
+    title_lbl = _tf(lang, "promp.live.details", "ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ø¨Ø«" if lang == "ar" else "Live details")
+    pro_hdr   = _tf(lang, "promp.live.promoter", "Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬" if lang == "ar" else "Promoter")
+    ends_lbl  = _tf(lang, "promp.live.ends", "ÙŠÙ†ØªÙ‡ÙŠ" if lang == "ar" else "Ends")
+    open_lbl  = _tf(lang, "promp.live.open", "ÙØªØ­ Ø§Ù„Ø¨Ø«" if lang == "ar" else "Open stream")
+    invalid_link_lbl = _tf(lang, "promp.live.invalid_link", "Ø±Ø§Ø¨Ø· ØºÙŠØ± ØµØ§Ù„Ø­" if lang == "ar" else "Invalid link")
+    links_lbl = _tf(lang, "promp.links", "Ø§Ù„Ø±ÙˆØ§Ø¨Ø·" if lang == "ar" else "Links")
 
-    txt_lines = [f"👤 <b>{name}</b>", f"🎥 <b>{title_lbl}</b>"]
+    txt_lines = [f"ðŸ‘¤ <b>{name}</b>", f"ðŸŽ¥ <b>{title_lbl}</b>"]
     kb = InlineKeyboardBuilder()
 
     for r in items:
@@ -1360,43 +1361,43 @@ def _render_promoter_detail(lang: str, uid: int, platform_ctx: str, page_ctx: in
         url = _make_url(p, raw_handle)
         started = int(r.get("started_at") or 0)
         since = _since_phrase(started, lang)
-        stream_title = r.get("title") or "—"
+        stream_title = r.get("title") or "â€”"
         ends = _ts_to_str(r.get("expires_at"))
         plat_human = _plat_label_custom(lang, p, rec=r)
 
         txt_lines.append(
             f"{_plat_icon(p)} <b>{plat_human}</b>\n"
-            f"📝 {stream_title}\n"
-            f"⏱ {since}\n"
-            f"⌛️ {ends_lbl}: {ends}"
+            f"ðŸ“ {stream_title}\n"
+            f"â± {since}\n"
+            f"âŒ›ï¸ {ends_lbl}: {ends}"
         )
 
         if _is_http_url(url):
-            kb.row(InlineKeyboardButton(text=f"{_plat_icon(p)} {open_lbl} – {plat_human}", url=url))
+            kb.row(InlineKeyboardButton(text=f"{_plat_icon(p)} {open_lbl} â€“ {plat_human}", url=url))
         else:
-            # لا نضع زر URL إن لم يكن صالحًا، ونذكر القيمة كنص فقط
-            txt_lines.append(f"🔗 <code>{raw_handle or '—'}</code>")
+            # Ù„Ø§ Ù†Ø¶Ø¹ Ø²Ø± URL Ø¥Ù† Ù„Ù… ÙŠÙƒÙ† ØµØ§Ù„Ø­Ù‹Ø§ØŒ ÙˆÙ†Ø°ÙƒØ± Ø§Ù„Ù‚ÙŠÙ…Ø© ÙƒÙ†Øµ ÙÙ‚Ø·
+            txt_lines.append(f"ðŸ”— <code>{raw_handle or 'â€”'}</code>")
             kb.row(InlineKeyboardButton(text=f"{_plat_icon(p)} {invalid_link_lbl}", callback_data="noop"))
 
-    # بطاقة المروّج — بدون تيليجرام (خصوصية) وبروابط اللايف فقط
-    txt_lines.append("\n" + f"🪪 <b>{pro_hdr}</b>")
+    # Ø¨Ø·Ø§Ù‚Ø© Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬ â€” Ø¨Ø¯ÙˆÙ† ØªÙŠÙ„ÙŠØ¬Ø±Ø§Ù… (Ø®ØµÙˆØµÙŠØ©) ÙˆØ¨Ø±ÙˆØ§Ø¨Ø· Ø§Ù„Ù„Ø§ÙŠÙ ÙÙ‚Ø·
+    txt_lines.append("\n" + f"ðŸªª <b>{pro_hdr}</b>")
     if live_links:
-        txt_lines.append(f"🔗 {links_lbl}: {links_short}")
+        txt_lines.append(f"ðŸ”— {links_lbl}: {links_short}")
 
     kb.row(InlineKeyboardButton(
-        text="⬅️ " + _tf(lang, "promp.btn.back", "رجوع" if lang == "ar" else "Back"),
+        text="â¬…ï¸ " + _tf(lang, "promp.btn.back", "Ø±Ø¬ÙˆØ¹" if lang == "ar" else "Back"),
         callback_data=f"promp:live:list:{platform_ctx}:{page_ctx}"
     ))
     kb.row(InlineKeyboardButton(
-        text="🔄 " + _tf(lang, "promp.btn.refresh", "تحديث" if lang == "ar" else "Refresh"),
+        text="ðŸ”„ " + _tf(lang, "promp.btn.refresh", "ØªØ­Ø¯ÙŠØ«" if lang == "ar" else "Refresh"),
         callback_data=f"promp:live:view:{uid}:{platform_ctx}:{page_ctx}"
     ))
 
     return "\n\n".join(txt_lines), kb.as_markup()
 
-# ضعها مع بقية الـ helpers
+# Ø¶Ø¹Ù‡Ø§ Ù…Ø¹ Ø¨Ù‚ÙŠØ© Ø§Ù„Ù€ helpers
 def _collect_live_links(items: list[dict]) -> list[str]:
-    """يرجع فقط الروابط http/https المرسلة وقت فتح اللايف (من handle إن كان URL)."""
+    """ÙŠØ±Ø¬Ø¹ ÙÙ‚Ø· Ø§Ù„Ø±ÙˆØ§Ø¨Ø· http/https Ø§Ù„Ù…Ø±Ø³Ù„Ø© ÙˆÙ‚Øª ÙØªØ­ Ø§Ù„Ù„Ø§ÙŠÙ (Ù…Ù† handle Ø¥Ù† ÙƒØ§Ù† URL)."""
     out, seen = [], set()
     for r in items:
         h = (r.get("handle") or "").strip()
@@ -1420,3 +1421,4 @@ async def live_public_view_promoter(cb: CallbackQuery):
 @router.callback_query(F.data == "noop")
 async def _noop(cb: CallbackQuery):
     await cb.answer()
+

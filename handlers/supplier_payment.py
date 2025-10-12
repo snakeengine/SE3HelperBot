@@ -1,3 +1,4 @@
+﻿from utils.admins import get_admin_ids, is_admin, get_owner_ids
 # handlers/supplier_payment.py
 from __future__ import annotations
 
@@ -12,7 +13,7 @@ from aiogram.types import (
     InlineKeyboardButton,
 )
 from lang import t, get_user_lang
-# نافذة السماح المؤقتة للإيصالات
+# Ù†Ø§ÙØ°Ø© Ø§Ù„Ø³Ù…Ø§Ø­ Ø§Ù„Ù…Ø¤Ù‚ØªØ© Ù„Ù„Ø¥ÙŠØµØ§Ù„Ø§Øª
 try:
     from utils.receipt_gate import open_window as _open_receipt_window, close_window as _close_receipt_window
 except Exception:
@@ -21,17 +22,17 @@ except Exception:
 
 router = Router(name="supplier_payment")
 
-# ===== إعدادات عامة =====
+# ===== Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø¹Ø§Ù…Ø© =====
 _admin_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
-ADMIN_IDS = [int(x) for x in str(_admin_env).split(",") if str(x).strip().isdigit()]
+ADMIN_IDS = get_admin_ids()
 if not ADMIN_IDS:
-    ADMIN_IDS = [7360982123]
+    ADMIN_IDS = get_admin_ids()
 
 DEV_HANDLE   = os.getenv("DEV_HANDLE", "@DevSE2")
 BINANCE_ID   = os.getenv("BINANCE_ID", "846769489")
 SUPPLIER_FEE = int(os.getenv("SUPPLIER_FEE", "300"))
 
-# ترقية/إلغاء المورد (اختياري – لو الملف غير موجود نكمل بدون خطأ)
+# ØªØ±Ù‚ÙŠØ©/Ø¥Ù„ØºØ§Ø¡ Ø§Ù„Ù…ÙˆØ±Ø¯ (Ø§Ø®ØªÙŠØ§Ø±ÙŠ â€“ Ù„Ùˆ Ø§Ù„Ù…Ù„Ù ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯ Ù†ÙƒÙ…Ù„ Ø¨Ø¯ÙˆÙ† Ø®Ø·Ø£)
 try:
     from utils.suppliers import set_supplier as _set_supplier
 except Exception:
@@ -44,8 +45,8 @@ def _is_admin(uid: int) -> bool:
 
 def _tr(lang: str, key: str, en: str, ar: str) -> str:
     """
-    ترجمة بمفتاح موجود مسبقًا مع قيمة احتياطية.
-    لا نغيّر المفاتيح القديمة؛ فقط نوفّر نصًا افتراضيًا لو المفتاح ناقص.
+    ØªØ±Ø¬Ù…Ø© Ø¨Ù…ÙØªØ§Ø­ Ù…ÙˆØ¬ÙˆØ¯ Ù…Ø³Ø¨Ù‚Ù‹Ø§ Ù…Ø¹ Ù‚ÙŠÙ…Ø© Ø§Ø­ØªÙŠØ§Ø·ÙŠØ©.
+    Ù„Ø§ Ù†ØºÙŠÙ‘Ø± Ø§Ù„Ù…ÙØ§ØªÙŠØ­ Ø§Ù„Ù‚Ø¯ÙŠÙ…Ø©Ø› ÙÙ‚Ø· Ù†ÙˆÙÙ‘Ø± Ù†ØµÙ‹Ø§ Ø§ÙØªØ±Ø§Ø¶ÙŠÙ‹Ø§ Ù„Ùˆ Ø§Ù„Ù…ÙØªØ§Ø­ Ù†Ø§Ù‚Øµ.
     """
     try:
         v = t(lang, key)
@@ -56,39 +57,39 @@ def _tr(lang: str, key: str, en: str, ar: str) -> str:
     return ar if (lang or "ar").startswith("ar") else en
 
 
-# ================= واجهة المستخدم: رسالة الدفع =================
+# ================= ÙˆØ§Ø¬Ù‡Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…: Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ø¯ÙØ¹ =================
 async def prompt_user_payment(bot, user_id: int, lang: str | None = None):
     """
-    يرسل رسالة الدفع للمستخدم مع زر 'تم الدفع ✅'.
-    يعتمد على pay_title, pay_intro, pay_after_note, btn_i_paid
-    ويستبدل {amount} و {binance}.
+    ÙŠØ±Ø³Ù„ Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ø¯ÙØ¹ Ù„Ù„Ù…Ø³ØªØ®Ø¯Ù… Ù…Ø¹ Ø²Ø± 'ØªÙ… Ø§Ù„Ø¯ÙØ¹ âœ…'.
+    ÙŠØ¹ØªÙ…Ø¯ Ø¹Ù„Ù‰ pay_title, pay_intro, pay_after_note, btn_i_paid
+    ÙˆÙŠØ³ØªØ¨Ø¯Ù„ {amount} Ùˆ {binance}.
     """
     lang = lang or get_user_lang(user_id) or "en"
 
     title = _tr(
         lang, "pay_title",
         "Supplier payment",
-        "دفع تفعيل المورد"
+        "Ø¯ÙØ¹ ØªÙØ¹ÙŠÙ„ Ø§Ù„Ù…ÙˆØ±Ø¯"
     )
     body_template = _tr(
         lang, "pay_intro",
         "To activate your supplier account, send <b>${amount}</b> in USDT to Binance ID <code>{binance}</code>, "
         "then tap the button below.",
-        "لتفعيل حساب المورد، أرسل <b>{amount}$</b> USDT إلى معرف باينانس <code>{binance}</code> "
-        "ثم اضغط الزر بالأسفل."
+        "Ù„ØªÙØ¹ÙŠÙ„ Ø­Ø³Ø§Ø¨ Ø§Ù„Ù…ÙˆØ±Ø¯ØŒ Ø£Ø±Ø³Ù„ <b>{amount}$</b> USDT Ø¥Ù„Ù‰ Ù…Ø¹Ø±Ù Ø¨Ø§ÙŠÙ†Ø§Ù†Ø³ <code>{binance}</code> "
+        "Ø«Ù… Ø§Ø¶ØºØ· Ø§Ù„Ø²Ø± Ø¨Ø§Ù„Ø£Ø³ÙÙ„."
     )
     tail = _tr(
         lang, "pay_after_note",
         "After payment, verification is manual and may take some time.",
-        "بعد التحويل، يتم التحقق يدويًا وقد يستغرق بعض الوقت."
+        "Ø¨Ø¹Ø¯ Ø§Ù„ØªØ­ÙˆÙŠÙ„ØŒ ÙŠØªÙ… Ø§Ù„ØªØ­Ù‚Ù‚ ÙŠØ¯ÙˆÙŠÙ‹Ø§ ÙˆÙ‚Ø¯ ÙŠØ³ØªØºØ±Ù‚ Ø¨Ø¹Ø¶ Ø§Ù„ÙˆÙ‚Øª."
     )
     body = body_template.format(amount=SUPPLIER_FEE, binance=BINANCE_ID)
 
-    text = f"💳 <b>{title}</b>\n{body}\n\n{tail}"
+    text = f"ðŸ’³ <b>{title}</b>\n{body}\n\n{tail}"
 
     kb = InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(
-            text=_tr(lang, "btn_i_paid", "I paid ✅", "تم الدفع ✅"),
+            text=_tr(lang, "btn_i_paid", "I paid âœ…", "ØªÙ… Ø§Ù„Ø¯ÙØ¹ âœ…"),
             callback_data="supplier_paid"
         )
     ]])
@@ -96,7 +97,7 @@ async def prompt_user_payment(bot, user_id: int, lang: str | None = None):
     await bot.send_message(user_id, text, reply_markup=kb, disable_web_page_preview=True)
 
 
-# ============= دالة عامة يمكن استدعاؤها من أي ملف =============
+# ============= Ø¯Ø§Ù„Ø© Ø¹Ø§Ù…Ø© ÙŠÙ…ÙƒÙ† Ø§Ø³ØªØ¯Ø¹Ø§Ø¤Ù‡Ø§ Ù…Ù† Ø£ÙŠ Ù…Ù„Ù =============
 async def supplier_paid_done(
     bot,
     user_id: int,
@@ -106,49 +107,49 @@ async def supplier_paid_done(
     lang: str | None = None
 ):
     """
-    عند ضغط المستخدم 'تم الدفع' أو استدعاؤها يدويًا:
-      - تشكر المستخدم.
-      - ترسل إشعارًا للأدمن مع أزرار التحقق.
+    Ø¹Ù†Ø¯ Ø¶ØºØ· Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… 'ØªÙ… Ø§Ù„Ø¯ÙØ¹' Ø£Ùˆ Ø§Ø³ØªØ¯Ø¹Ø§Ø¤Ù‡Ø§ ÙŠØ¯ÙˆÙŠÙ‹Ø§:
+      - ØªØ´ÙƒØ± Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù….
+      - ØªØ±Ø³Ù„ Ø¥Ø´Ø¹Ø§Ø±Ù‹Ø§ Ù„Ù„Ø£Ø¯Ù…Ù† Ù…Ø¹ Ø£Ø²Ø±Ø§Ø± Ø§Ù„ØªØ­Ù‚Ù‚.
     """
     lang = lang or get_user_lang(user_id) or "en"
 
-    # إشعار المستخدم
+    # Ø¥Ø´Ø¹Ø§Ø± Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…
     ack = _tr(
         lang,
         "supplier_paid_ack",
         "Thanks! We've notified the developer. You'll be upgraded after manual verification.",
-        "شكرًا! تم إبلاغ المطوّر وسيتم ترقيتك بعد التحقق اليدوي."
+        "Ø´ÙƒØ±Ù‹Ø§! ØªÙ… Ø¥Ø¨Ù„Ø§Øº Ø§Ù„Ù…Ø·ÙˆÙ‘Ø± ÙˆØ³ÙŠØªÙ… ØªØ±Ù‚ÙŠØªÙƒ Ø¨Ø¹Ø¯ Ø§Ù„ØªØ­Ù‚Ù‚ Ø§Ù„ÙŠØ¯ÙˆÙŠ."
     )
     try:
         await bot.send_message(user_id, ack)
     except Exception:
         pass
 
-    # إشعار الأدمن
+    # Ø¥Ø´Ø¹Ø§Ø± Ø§Ù„Ø£Ø¯Ù…Ù†
     uname = f"@{username}" if username else ""
     title = _tr(
         lang,
         "supplier_payment_notice_title",
-        "🪙 Supplier Payment Notice",
-        "🪙 إشعار دفع مورد"
+        "ðŸª™ Supplier Payment Notice",
+        "ðŸª™ Ø¥Ø´Ø¹Ø§Ø± Ø¯ÙØ¹ Ù…ÙˆØ±Ø¯"
     )
     body  = (
         f"<b>{title}</b>\n"
-        f"{_tr(lang,'supplier_paid_user','User','المستخدم')} {first_name or ''} ({uname}) "
-        f"{_tr(lang,'supplier_paid_confirms','confirms paying the $300 supplier fee.','يؤكد دفع رسوم المورد $300.')}\n\n"
+        f"{_tr(lang,'supplier_paid_user','User','Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…')} {first_name or ''} ({uname}) "
+        f"{_tr(lang,'supplier_paid_confirms','confirms paying the $300 supplier fee.','ÙŠØ¤ÙƒØ¯ Ø¯ÙØ¹ Ø±Ø³ÙˆÙ… Ø§Ù„Ù…ÙˆØ±Ø¯ $300.')}\n\n"
         f"UserID: <code>{user_id}</code>\n"
         f"Binance ID: <code>{BINANCE_ID}</code>\n\n"
-        f"{_tr(lang,'supplier_paid_footer','Please verify and upgrade.','يرجى التحقق والترقية.')}"
+        f"{_tr(lang,'supplier_paid_footer','Please verify and upgrade.','ÙŠØ±Ø¬Ù‰ Ø§Ù„ØªØ­Ù‚Ù‚ ÙˆØ§Ù„ØªØ±Ù‚ÙŠØ©.')}"
     )
 
     kb_admin = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text=_tr(lang,"adm_btn_confirm","Confirm ✅","تأكيد الدفع ✅"), callback_data=f"suppverify:confirm:{user_id}"),
-            InlineKeyboardButton(text=_tr(lang,"adm_btn_reject","Not paid ⛔","لم يتم الدفع ⛔"),   callback_data=f"suppverify:reject:{user_id}"),
+            InlineKeyboardButton(text=_tr(lang,"adm_btn_confirm","Confirm âœ…","ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ø¯ÙØ¹ âœ…"), callback_data=f"suppverify:confirm:{user_id}"),
+            InlineKeyboardButton(text=_tr(lang,"adm_btn_reject","Not paid â›”","Ù„Ù… ÙŠØªÙ… Ø§Ù„Ø¯ÙØ¹ â›”"),   callback_data=f"suppverify:reject:{user_id}"),
         ],
         [
-            InlineKeyboardButton(text=_tr(lang,"adm_btn_ask_receipt","Ask receipt 🧾","طلب إيصال 🧾"), callback_data=f"suppverify:askreceipt:{user_id}"),
-            InlineKeyboardButton(text=_tr(lang,"adm_btn_contact","Contact user 🗣️","تواصل مع المستخدم 🗣️"), callback_data=f"suppverify:contact:{user_id}"),
+            InlineKeyboardButton(text=_tr(lang,"adm_btn_ask_receipt","Ask receipt ðŸ§¾","Ø·Ù„Ø¨ Ø¥ÙŠØµØ§Ù„ ðŸ§¾"), callback_data=f"suppverify:askreceipt:{user_id}"),
+            InlineKeyboardButton(text=_tr(lang,"adm_btn_contact","Contact user ðŸ—£ï¸","ØªÙˆØ§ØµÙ„ Ù…Ø¹ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… ðŸ—£ï¸"), callback_data=f"suppverify:contact:{user_id}"),
         ],
     ])
 
@@ -159,7 +160,7 @@ async def supplier_paid_done(
             pass
 
 
-# =============== المستخدم ضغط زر "تم الدفع ✅" ===============
+# =============== Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø¶ØºØ· Ø²Ø± "ØªÙ… Ø§Ù„Ø¯ÙØ¹ âœ…" ===============
 @router.callback_query(F.data == "supplier_paid")
 async def _fallback_supplier_paid(cb: CallbackQuery):
     await supplier_paid_done(
@@ -176,11 +177,11 @@ async def _fallback_supplier_paid(cb: CallbackQuery):
     await cb.answer("OK")
 
 
-# =============== كولباكات الأدمن للتحقق ===============
+# =============== ÙƒÙˆÙ„Ø¨Ø§ÙƒØ§Øª Ø§Ù„Ø£Ø¯Ù…Ù† Ù„Ù„ØªØ­Ù‚Ù‚ ===============
 @router.callback_query(F.data.regexp(r"^suppverify:(confirm|reject|askreceipt|contact):\d+$"))
 async def admin_verify_actions(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
-        return await cb.answer(_tr("en", "admins_only", "Admins only.", "خاص بالأدمن."), show_alert=True)
+        return await cb.answer(_tr("en", "admins_only", "Admins only.", "Ø®Ø§Øµ Ø¨Ø§Ù„Ø£Ø¯Ù…Ù†."), show_alert=True)
 
     _, action, uid_s = cb.data.split(":")
     target_uid = int(uid_s)
@@ -189,7 +190,7 @@ async def admin_verify_actions(cb: CallbackQuery):
     user_lang  = get_user_lang(target_uid) or "en"
 
     if action == "confirm":
-        # أغلق نافذة السماح إن كانت مفتوحة
+        # Ø£ØºÙ„Ù‚ Ù†Ø§ÙØ°Ø© Ø§Ù„Ø³Ù…Ø§Ø­ Ø¥Ù† ÙƒØ§Ù†Øª Ù…ÙØªÙˆØ­Ø©
         _close_receipt_window(target_uid)
 
         if _set_supplier:
@@ -201,15 +202,15 @@ async def admin_verify_actions(cb: CallbackQuery):
         msg_user = _tr(
             user_lang,
             "supplier_verify_ok_user",
-            f"✅ Payment verified. You're now a supplier. The developer {DEV_HANDLE} will contact you to finalize access. Use /start to see supplier tools.",
-            f"✅ تم التحقق من الدفع. تم ترقيتك كمورّد. سيتواصل معك المطوّر {DEV_HANDLE} لإتمام الوصول. استخدم /start لرؤية أدوات المورد."
+            f"âœ… Payment verified. You're now a supplier. The developer {DEV_HANDLE} will contact you to finalize access. Use /start to see supplier tools.",
+            f"âœ… ØªÙ… Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ø¯ÙØ¹. ØªÙ… ØªØ±Ù‚ÙŠØªÙƒ ÙƒÙ…ÙˆØ±Ù‘Ø¯. Ø³ÙŠØªÙˆØ§ØµÙ„ Ù…Ø¹Ùƒ Ø§Ù„Ù…Ø·ÙˆÙ‘Ø± {DEV_HANDLE} Ù„Ø¥ØªÙ…Ø§Ù… Ø§Ù„ÙˆØµÙˆÙ„. Ø§Ø³ØªØ®Ø¯Ù… /start Ù„Ø±Ø¤ÙŠØ© Ø£Ø¯ÙˆØ§Øª Ø§Ù„Ù…ÙˆØ±Ø¯."
         )
         try:
             await cb.message.bot.send_message(target_uid, msg_user, disable_web_page_preview=True)
         except Exception:
             pass
 
-        done = _tr(admin_lang, "supplier_verify_ok_admin", "Confirmed ✅", "تم التأكيد ✅")
+        done = _tr(admin_lang, "supplier_verify_ok_admin", "Confirmed âœ…", "ØªÙ… Ø§Ù„ØªØ£ÙƒÙŠØ¯ âœ…")
         try:
             await cb.message.edit_text(cb.message.text + f"\n\n{done}", disable_web_page_preview=True)
         except Exception:
@@ -222,10 +223,10 @@ async def admin_verify_actions(cb: CallbackQuery):
         return await cb.answer("OK")
 
     if action == "reject":
-        # أغلق نافذة السماح إن كانت مفتوحة
+        # Ø£ØºÙ„Ù‚ Ù†Ø§ÙØ°Ø© Ø§Ù„Ø³Ù…Ø§Ø­ Ø¥Ù† ÙƒØ§Ù†Øª Ù…ÙØªÙˆØ­Ø©
         _close_receipt_window(target_uid)
 
-        # ⬇️ ألغي اعتماد المورد لو كان مفعَّلًا
+        # â¬‡ï¸ Ø£Ù„ØºÙŠ Ø§Ø¹ØªÙ…Ø§Ø¯ Ø§Ù„Ù…ÙˆØ±Ø¯ Ù„Ùˆ ÙƒØ§Ù† Ù…ÙØ¹Ù‘ÙŽÙ„Ù‹Ø§
         if _set_supplier:
             try:
                 _set_supplier(target_uid, False)
@@ -235,8 +236,8 @@ async def admin_verify_actions(cb: CallbackQuery):
         msg_user = _tr(
             user_lang,
             "supplier_verify_reject_user",
-            f"⛔ We couldn't verify your payment. If you already paid, please send the receipt or contact {DEV_HANDLE}.",
-            f"⛔ تعذّر التحقق من الدفع. إن كنت دفعت بالفعل، الرجاء إرسال إيصال التحويل أو التواصل مع {DEV_HANDLE}."
+            f"â›” We couldn't verify your payment. If you already paid, please send the receipt or contact {DEV_HANDLE}.",
+            f"â›” ØªØ¹Ø°Ù‘Ø± Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ø¯ÙØ¹. Ø¥Ù† ÙƒÙ†Øª Ø¯ÙØ¹Øª Ø¨Ø§Ù„ÙØ¹Ù„ØŒ Ø§Ù„Ø±Ø¬Ø§Ø¡ Ø¥Ø±Ø³Ø§Ù„ Ø¥ÙŠØµØ§Ù„ Ø§Ù„ØªØ­ÙˆÙŠÙ„ Ø£Ùˆ Ø§Ù„ØªÙˆØ§ØµÙ„ Ù…Ø¹ {DEV_HANDLE}."
         )
 
         try:
@@ -244,7 +245,7 @@ async def admin_verify_actions(cb: CallbackQuery):
         except Exception:
             pass
 
-        note = _tr(admin_lang, "supplier_verify_reject_admin", "Marked as not paid.", "تم وضع الحالة: لم يتم الدفع.")
+        note = _tr(admin_lang, "supplier_verify_reject_admin", "Marked as not paid.", "ØªÙ… ÙˆØ¶Ø¹ Ø§Ù„Ø­Ø§Ù„Ø©: Ù„Ù… ÙŠØªÙ… Ø§Ù„Ø¯ÙØ¹.")
         try:
             await cb.message.edit_text(cb.message.text + f"\n\n{note}", disable_web_page_preview=True)
         except Exception:
@@ -257,43 +258,43 @@ async def admin_verify_actions(cb: CallbackQuery):
         return await cb.answer("OK")
 
     if action == "askreceipt":
-        # اسمح للمستخدم بإرسال صورة/مستند/نص لمدة 60 دقيقة (يمكن تعديلها)
+        # Ø§Ø³Ù…Ø­ Ù„Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø¨Ø¥Ø±Ø³Ø§Ù„ ØµÙˆØ±Ø©/Ù…Ø³ØªÙ†Ø¯/Ù†Øµ Ù„Ù…Ø¯Ø© 60 Ø¯Ù‚ÙŠÙ‚Ø© (ÙŠÙ…ÙƒÙ† ØªØ¹Ø¯ÙŠÙ„Ù‡Ø§)
         _open_receipt_window(target_uid, types=("photo", "document", "text"), ttl=3600)
 
         ask = _tr(
             user_lang,
             "supplier_verify_askreceipt_user",
             "Please send the payment receipt (screenshot or TxID).",
-            "يرجى إرسال إيصال الدفع (لقطة شاشة أو TxID)."
+            "ÙŠØ±Ø¬Ù‰ Ø¥Ø±Ø³Ø§Ù„ Ø¥ÙŠØµØ§Ù„ Ø§Ù„Ø¯ÙØ¹ (Ù„Ù‚Ø·Ø© Ø´Ø§Ø´Ø© Ø£Ùˆ TxID)."
         )
         try:
             await cb.message.bot.send_message(target_uid, ask)
         except Exception:
             pass
 
-        done = _tr(admin_lang, "supplier_verify_askreceipt_admin", "Receipt requested from the user.", "تم طلب الإيصال من المستخدم.")
+        done = _tr(admin_lang, "supplier_verify_askreceipt_admin", "Receipt requested from the user.", "ØªÙ… Ø·Ù„Ø¨ Ø§Ù„Ø¥ÙŠØµØ§Ù„ Ù…Ù† Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù….")
         return await cb.answer(done, show_alert=False)
 
     if action == "contact":
-        open_chat_text = _tr(admin_lang, "supplier_verify_contact_open", "Open chat", "فتح المحادثة")
+        open_chat_text = _tr(admin_lang, "supplier_verify_contact_open", "Open chat", "ÙØªØ­ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø©")
         kb = InlineKeyboardMarkup(inline_keyboard=[[
             InlineKeyboardButton(text=open_chat_text, url=f"tg://user?id={target_uid}")
         ]])
-        info = _tr(admin_lang, "supplier_verify_contact_info", "You can contact the user directly.", "يمكنك التواصل مع المستخدم مباشرة.")
+        info = _tr(admin_lang, "supplier_verify_contact_info", "You can contact the user directly.", "ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„ØªÙˆØ§ØµÙ„ Ù…Ø¹ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ù…Ø¨Ø§Ø´Ø±Ø©.")
         await cb.message.answer(info, reply_markup=kb, disable_web_page_preview=True)
         return await cb.answer("OK")
 
 
-# =============== إلغاء المورد ===============
+# =============== Ø¥Ù„ØºØ§Ø¡ Ø§Ù„Ù…ÙˆØ±Ø¯ ===============
 @router.message(Command("unsupplier"))
 async def cmd_unsupplier(msg: Message):
-    """أمر أدمن: /unsupplier <user_id>"""
+    """Ø£Ù…Ø± Ø£Ø¯Ù…Ù†: /unsupplier <user_id>"""
     if not _is_admin(msg.from_user.id):
-        return await msg.answer(_tr("en", "admins_only", "Admins only.", "خاص بالأدمن."))
+        return await msg.answer(_tr("en", "admins_only", "Admins only.", "Ø®Ø§Øµ Ø¨Ø§Ù„Ø£Ø¯Ù…Ù†."))
 
     parts = (msg.text or "").strip().split(maxsplit=1)
     if len(parts) < 2 or not parts[1].strip().lstrip("-").isdigit():
-        return await msg.answer("Usage: /unsupplier <user_id>\nمثال: /unsupplier 123456789")
+        return await msg.answer("Usage: /unsupplier <user_id>\nÙ…Ø«Ø§Ù„: /unsupplier 123456789")
 
     target_uid = int(parts[1].strip())
 
@@ -306,7 +307,7 @@ async def cmd_unsupplier(msg: Message):
     admin_lang = get_user_lang(msg.from_user.id) or "en"
     user_lang  = get_user_lang(target_uid) or "en"
 
-    # إشعار المستخدم
+    # Ø¥Ø´Ø¹Ø§Ø± Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…
     try:
         await msg.bot.send_message(
             target_uid,
@@ -314,28 +315,28 @@ async def cmd_unsupplier(msg: Message):
                 user_lang,
                 "supplier_demoted_user",
                 "Your supplier status has been removed. You are now a regular user. Use /start to refresh your menu.",
-                "تم إلغاء اعتمادك كمورّد. تم تحويلك إلى مستخدم عادي. استخدم /start لتحديث قائمتك."
+                "ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø§Ø¹ØªÙ…Ø§Ø¯Ùƒ ÙƒÙ…ÙˆØ±Ù‘Ø¯. ØªÙ… ØªØ­ÙˆÙŠÙ„Ùƒ Ø¥Ù„Ù‰ Ù…Ø³ØªØ®Ø¯Ù… Ø¹Ø§Ø¯ÙŠ. Ø§Ø³ØªØ®Ø¯Ù… /start Ù„ØªØ­Ø¯ÙŠØ« Ù‚Ø§Ø¦Ù…ØªÙƒ."
             )
         )
     except Exception:
         pass
 
-    # رد للأدمن
+    # Ø±Ø¯ Ù„Ù„Ø£Ø¯Ù…Ù†
     await msg.answer(
         _tr(
             admin_lang,
             "supplier_demoted_admin",
-            f"Removed supplier status for {target_uid} ✅",
-            f"تم إلغاء اعتماد المورد للمعرّف {target_uid} ✅"
+            f"Removed supplier status for {target_uid} âœ…",
+            f"ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø§Ø¹ØªÙ…Ø§Ø¯ Ø§Ù„Ù…ÙˆØ±Ø¯ Ù„Ù„Ù…Ø¹Ø±Ù‘Ù {target_uid} âœ…"
         )
     )
 
 
 @router.callback_query(F.data.regexp(r"^suppverify:demote:\d+$"))
 async def admin_demote_cb(cb: CallbackQuery):
-    """زر كولباك اختياري لإلغاء المورد من بطاقة الأدمن."""
+    """Ø²Ø± ÙƒÙˆÙ„Ø¨Ø§Ùƒ Ø§Ø®ØªÙŠØ§Ø±ÙŠ Ù„Ø¥Ù„ØºØ§Ø¡ Ø§Ù„Ù…ÙˆØ±Ø¯ Ù…Ù† Ø¨Ø·Ø§Ù‚Ø© Ø§Ù„Ø£Ø¯Ù…Ù†."""
     if not _is_admin(cb.from_user.id):
-        return await cb.answer(_tr("en", "admins_only", "Admins only.", "خاص بالأدمن."), show_alert=True)
+        return await cb.answer(_tr("en", "admins_only", "Admins only.", "Ø®Ø§Øµ Ø¨Ø§Ù„Ø£Ø¯Ù…Ù†."), show_alert=True)
 
     target_uid = int(cb.data.split(":")[2])
 
@@ -348,7 +349,7 @@ async def admin_demote_cb(cb: CallbackQuery):
     admin_lang = get_user_lang(cb.from_user.id) or "en"
     user_lang  = get_user_lang(target_uid) or "en"
 
-    # إشعار المستخدم
+    # Ø¥Ø´Ø¹Ø§Ø± Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…
     try:
         await cb.message.bot.send_message(
             target_uid,
@@ -356,15 +357,15 @@ async def admin_demote_cb(cb: CallbackQuery):
                 user_lang,
                 "supplier_demoted_user",
                 "Your supplier status has been removed. You are now a regular user. Use /start to refresh your menu.",
-                "تم إلغاء اعتمادك كمورّد. تم تحويلك إلى مستخدم عادي. استخدم /start لتحديث قائمتك."
+                "ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø§Ø¹ØªÙ…Ø§Ø¯Ùƒ ÙƒÙ…ÙˆØ±Ù‘Ø¯. ØªÙ… ØªØ­ÙˆÙŠÙ„Ùƒ Ø¥Ù„Ù‰ Ù…Ø³ØªØ®Ø¯Ù… Ø¹Ø§Ø¯ÙŠ. Ø§Ø³ØªØ®Ø¯Ù… /start Ù„ØªØ­Ø¯ÙŠØ« Ù‚Ø§Ø¦Ù…ØªÙƒ."
             )
         )
     except Exception:
         pass
 
-    # تحديث رسالة الأدمن
+    # ØªØ­Ø¯ÙŠØ« Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ø£Ø¯Ù…Ù†
     try:
-        note = _tr(admin_lang, "supplier_demoted_admin_short", "✅ Supplier access removed.", "✅ تم إلغاء اعتماد المورد.")
+        note = _tr(admin_lang, "supplier_demoted_admin_short", "âœ… Supplier access removed.", "âœ… ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø§Ø¹ØªÙ…Ø§Ø¯ Ø§Ù„Ù…ÙˆØ±Ø¯.")
         await cb.message.edit_text(cb.message.text + f"\n\n{note}", disable_web_page_preview=True)
     except Exception:
         pass
@@ -374,3 +375,4 @@ async def admin_demote_cb(cb: CallbackQuery):
         pass
 
     await cb.answer("OK")
+

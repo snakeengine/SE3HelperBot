@@ -1,4 +1,5 @@
-﻿# admin/promo_panel_ui.py
+﻿from utils.admins import get_admin_ids, is_admin, get_owner_ids
+# admin/promo_panel_ui.py
 from __future__ import annotations
 import os, time
 from aiogram import Router, F
@@ -15,7 +16,7 @@ from handlers.promo_flow_extras import admin_menu_kb  # نعيد استخدام 
 router = Router(name="admin.promo_panel_ui")
 
 # ───────────── صلاحيات ─────────────
-ADMIN_IDS = [int(x) for x in (os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID","")).replace(";",",").split(",") if x.strip().isdigit()]
+ADMIN_IDS = get_admin_ids()
 def _is_admin(i: int) -> bool: return i in set(ADMIN_IDS or [])
 
 def _reset_after_unban(uid: int):
@@ -337,3 +338,4 @@ async def note_save(msg: Message, state: FSMContext):
     update_request(uid, admin_notes=notes)
     await msg.reply("✅ تم حفظ الملاحظة.", parse_mode=None)
     await state.clear()
+

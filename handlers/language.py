@@ -1,3 +1,4 @@
+﻿from utils.admins import get_admin_ids, is_admin, get_owner_ids
 # handlers/language.py
 from __future__ import annotations
 
@@ -17,7 +18,7 @@ from handlers.persistent_menu import make_bottom_kb
 
 router = Router()
 
-# ===== إعدادات اللغات =====
+# ===== Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ù„ØºØ§Øª =====
 SUPPORTED_LOCALES = ("en", "ar")
 DEFAULT_LOCALE = "en"
 
@@ -25,15 +26,15 @@ SHOW_MENU_ON_LANG_CHANGE = (os.getenv("SHOW_MENU_ON_LANG_CHANGE") or "0").strip(
     "0", "false", "no", "off", ""
 }
 
-# ===== تحميل قائمة الأدمن من .env =====
+# ===== ØªØ­Ù…ÙŠÙ„ Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø£Ø¯Ù…Ù† Ù…Ù† .env =====
 _admin_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
-ADMIN_IDS = [int(x) for x in str(_admin_env).split(",") if str(x).strip().isdigit()]
+ADMIN_IDS = get_admin_ids()
 if not ADMIN_IDS:
-    ADMIN_IDS = [7360982123]
+    ADMIN_IDS = get_admin_ids()
 
-# ===== ترجمة آمنة مع fallback محلي =====
+# ===== ØªØ±Ø¬Ù…Ø© Ø¢Ù…Ù†Ø© Ù…Ø¹ fallback Ù…Ø­Ù„ÙŠ =====
 def _tt(lang: str, key: str, fb: str) -> str:
-    """إذا كانت الترجمة مفقودة/فارغة/ترجع نفس المفتاح -> استخدم fb."""
+    """Ø¥Ø°Ø§ ÙƒØ§Ù†Øª Ø§Ù„ØªØ±Ø¬Ù…Ø© Ù…ÙÙ‚ÙˆØ¯Ø©/ÙØ§Ø±ØºØ©/ØªØ±Ø¬Ø¹ Ù†ÙØ³ Ø§Ù„Ù…ÙØªØ§Ø­ -> Ø§Ø³ØªØ®Ø¯Ù… fb."""
     try:
         v = t(lang, key)
         if isinstance(v, str):
@@ -47,35 +48,35 @@ def _tt(lang: str, key: str, fb: str) -> str:
 def _loc(lang: str, ar: str, en: str) -> str:
     return ar if lang == "ar" else en
 
-# ===== أوامر البوت حسب اللغة (مع fallbacks) =====
+# ===== Ø£ÙˆØ§Ù…Ø± Ø§Ù„Ø¨ÙˆØª Ø­Ø³Ø¨ Ø§Ù„Ù„ØºØ© (Ù…Ø¹ fallbacks) =====
 def _public_commands(lang: str) -> List[BotCommand]:
     lang = lang if lang in SUPPORTED_LOCALES else DEFAULT_LOCALE
     pairs: List[Tuple[str, str]] = [
-        ("start",    _tt(lang, "cmd_start",    _loc(lang, "ابدأ البوت", "Start the bot"))),
-        ("sections", _tt(lang, "cmd_sections", _loc(lang, "الأقسام السريعة", "Quick sections"))),
-        ("rewards",  _tt(lang, "cmd_rewards",  _loc(lang, "الجوائز", "Open rewards"))),
-        ("help",     _tt(lang, "cmd_help",     _loc(lang, "المساعدة والقائمة", "Help & menu"))),
-        ("about",    _tt(lang, "cmd_about",    _loc(lang, "عن الخدمة", "About"))),
-        ("alerts",   _tt(lang, "cmd_alerts",   _loc(lang, "التنبيهات", "Alerts"))),
-        ("report",   _tt(lang, "cmd_report",   _loc(lang, "الإبلاغ والدعم", "Report / Support"))),
-        ("language", _tt(lang, "cmd_language", _loc(lang, "تغيير اللغة", "Change language"))),
+        ("start",    _tt(lang, "cmd_start",    _loc(lang, "Ø§Ø¨Ø¯Ø£ Ø§Ù„Ø¨ÙˆØª", "Start the bot"))),
+        ("sections", _tt(lang, "cmd_sections", _loc(lang, "Ø§Ù„Ø£Ù‚Ø³Ø§Ù… Ø§Ù„Ø³Ø±ÙŠØ¹Ø©", "Quick sections"))),
+        ("rewards",  _tt(lang, "cmd_rewards",  _loc(lang, "Ø§Ù„Ø¬ÙˆØ§Ø¦Ø²", "Open rewards"))),
+        ("help",     _tt(lang, "cmd_help",     _loc(lang, "Ø§Ù„Ù…Ø³Ø§Ø¹Ø¯Ø© ÙˆØ§Ù„Ù‚Ø§Ø¦Ù…Ø©", "Help & menu"))),
+        ("about",    _tt(lang, "cmd_about",    _loc(lang, "Ø¹Ù† Ø§Ù„Ø®Ø¯Ù…Ø©", "About"))),
+        ("alerts",   _tt(lang, "cmd_alerts",   _loc(lang, "Ø§Ù„ØªÙ†Ø¨ÙŠÙ‡Ø§Øª", "Alerts"))),
+        ("report",   _tt(lang, "cmd_report",   _loc(lang, "Ø§Ù„Ø¥Ø¨Ù„Ø§Øº ÙˆØ§Ù„Ø¯Ø¹Ù…", "Report / Support"))),
+        ("language", _tt(lang, "cmd_language", _loc(lang, "ØªØºÙŠÙŠØ± Ø§Ù„Ù„ØºØ©", "Change language"))),
     ]
-    # تجاهل أي عنصر وصفه فاضي بعد الفلترة
+    # ØªØ¬Ø§Ù‡Ù„ Ø£ÙŠ Ø¹Ù†ØµØ± ÙˆØµÙÙ‡ ÙØ§Ø¶ÙŠ Ø¨Ø¹Ø¯ Ø§Ù„ÙÙ„ØªØ±Ø©
     return [BotCommand(command=c, description=d) for c, d in pairs if c and d and d.strip()]
 
 def _admin_extra_commands(lang: str) -> List[BotCommand]:
     lang = lang if lang in SUPPORTED_LOCALES else DEFAULT_LOCALE
-    desc = _tt(lang, "cmd_admin_center", _loc(lang, "لوحة الإدارة", "Admin center"))
+    desc = _tt(lang, "cmd_admin_center", _loc(lang, "Ù„ÙˆØ­Ø© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©", "Admin center"))
     return [BotCommand(command="admin", description=desc)] if desc.strip() else []
 
 async def update_user_commands(bot, chat_id: int, lang: str) -> None:
-    """يضبط أوامر هذه الدردشة فقط، ويتجاهل الوصف الفارغ بدون أن يكرّش."""
+    """ÙŠØ¶Ø¨Ø· Ø£ÙˆØ§Ù…Ø± Ù‡Ø°Ù‡ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© ÙÙ‚Ø·ØŒ ÙˆÙŠØªØ¬Ø§Ù‡Ù„ Ø§Ù„ÙˆØµÙ Ø§Ù„ÙØ§Ø±Øº Ø¨Ø¯ÙˆÙ† Ø£Ù† ÙŠÙƒØ±Ù‘Ø´."""
     is_admin = int(chat_id) in ADMIN_IDS
     cmds = _public_commands(lang)
     if is_admin:
         cmds += _admin_extra_commands(lang)
 
-    # امسح أوامر هذه المحادثة ثم اضبط الجديدة
+    # Ø§Ù…Ø³Ø­ Ø£ÙˆØ§Ù…Ø± Ù‡Ø°Ù‡ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø© Ø«Ù… Ø§Ø¶Ø¨Ø· Ø§Ù„Ø¬Ø¯ÙŠØ¯Ø©
     try:
         await bot.delete_my_commands(scope=BotCommandScopeChat(chat_id=chat_id))
     except Exception:
@@ -84,11 +85,11 @@ async def update_user_commands(bot, chat_id: int, lang: str) -> None:
     try:
         await bot.set_my_commands(commands=cmds, scope=BotCommandScopeChat(chat_id=chat_id))
     except Exception as e:
-        # سجل الخطأ فقط بدون تعطيل التفاعل
+        # Ø³Ø¬Ù„ Ø§Ù„Ø®Ø·Ø£ ÙÙ‚Ø· Ø¨Ø¯ÙˆÙ† ØªØ¹Ø·ÙŠÙ„ Ø§Ù„ØªÙØ§Ø¹Ù„
         import logging
         logging.getLogger(__name__).warning(f"set_my_commands failed: {e}")
 
-# ===== لوحات المفاتيح =====
+# ===== Ù„ÙˆØ­Ø§Øª Ø§Ù„Ù…ÙØ§ØªÙŠØ­ =====
 def language_keyboard(display_lang: str, selected_lang: str) -> InlineKeyboardMarkup:
     display_lang = display_lang if display_lang in SUPPORTED_LOCALES else DEFAULT_LOCALE
     selected_lang = selected_lang if selected_lang in SUPPORTED_LOCALES else DEFAULT_LOCALE
@@ -96,19 +97,19 @@ def language_keyboard(display_lang: str, selected_lang: str) -> InlineKeyboardMa
     rows = [
         [
             InlineKeyboardButton(
-                text=("✅ " if selected_lang == "en" else "") + _tt(display_lang, "btn_lang_en", "English"),
+                text=("âœ… " if selected_lang == "en" else "") + _tt(display_lang, "btn_lang_en", "English"),
                 callback_data="set_lang_en"
             ),
             InlineKeyboardButton(
-                text=("✅ " if selected_lang == "ar" else "") + _tt(display_lang, "btn_lang_ar", "العربية"),
+                text=("âœ… " if selected_lang == "ar" else "") + _tt(display_lang, "btn_lang_ar", "Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©"),
                 callback_data="set_lang_ar"
             ),
         ],
-        [InlineKeyboardButton(text=_tt(display_lang, "back_to_menu", _loc(display_lang, "رجوع", "Back")), callback_data="back_to_menu")],
+        [InlineKeyboardButton(text=_tt(display_lang, "back_to_menu", _loc(display_lang, "Ø±Ø¬ÙˆØ¹", "Back")), callback_data="back_to_menu")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
-# ===== مساعد: تعديل ذكي مع fallback =====
+# ===== Ù…Ø³Ø§Ø¹Ø¯: ØªØ¹Ø¯ÙŠÙ„ Ø°ÙƒÙŠ Ù…Ø¹ fallback =====
 async def smart_edit(message: Message, text: str, reply_markup: InlineKeyboardMarkup | None = None):
     try:
         if message.text is not None:
@@ -124,12 +125,12 @@ async def smart_edit(message: Message, text: str, reply_markup: InlineKeyboardMa
             return await message.answer(text, reply_markup=reply_markup, parse_mode="HTML", disable_web_page_preview=True)
         raise
 
-# ===== الأوامر/الكولباكات =====
+# ===== Ø§Ù„Ø£ÙˆØ§Ù…Ø±/Ø§Ù„ÙƒÙˆÙ„Ø¨Ø§ÙƒØ§Øª =====
 @router.message(Command("language"))
 async def language_command(message: Message):
     lang = get_user_lang(message.from_user.id) or DEFAULT_LOCALE
     await message.answer(
-        _tt(lang, "choose_language", _loc(lang, "اختر لغتك:", "Choose your language:")),
+        _tt(lang, "choose_language", _loc(lang, "Ø§Ø®ØªØ± Ù„ØºØªÙƒ:", "Choose your language:")),
         reply_markup=language_keyboard(display_lang=lang, selected_lang=lang),
         parse_mode="HTML",
         disable_web_page_preview=True
@@ -141,7 +142,7 @@ async def change_lang(callback: CallbackQuery):
     lang = get_user_lang(user_id) or DEFAULT_LOCALE
     await smart_edit(
         callback.message,
-        _tt(lang, "choose_language", _loc(lang, "اختر لغتك:", "Choose your language:")),
+        _tt(lang, "choose_language", _loc(lang, "Ø§Ø®ØªØ± Ù„ØºØªÙƒ:", "Choose your language:")),
         language_keyboard(display_lang=lang, selected_lang=lang),
     )
     await callback.answer()
@@ -156,16 +157,17 @@ async def set_language_callback(callback: CallbackQuery):
 
     await smart_edit(
         callback.message,
-        _tt(new_lang, "language_changed", _loc(new_lang, "تم تغيير اللغة ✅", "Language changed ✅")),
+        _tt(new_lang, "language_changed", _loc(new_lang, "ØªÙ… ØªØºÙŠÙŠØ± Ø§Ù„Ù„ØºØ© âœ…", "Language changed âœ…")),
         language_keyboard(display_lang=new_lang, selected_lang=new_lang),
     )
 
     if SHOW_MENU_ON_LANG_CHANGE:
         await callback.message.answer(
-            _tt(new_lang, "menu.keyboard_ready", _loc(new_lang, "تم تجهيز القائمة بالأسفل ⬇️", "Menu ready ⬇️")),
+            _tt(new_lang, "menu.keyboard_ready", _loc(new_lang, "ØªÙ… ØªØ¬Ù‡ÙŠØ² Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© Ø¨Ø§Ù„Ø£Ø³ÙÙ„ â¬‡ï¸", "Menu ready â¬‡ï¸")),
             reply_markup=make_bottom_kb(new_lang),
             parse_mode="HTML",
             disable_web_page_preview=True
         )
 
     await callback.answer()
+

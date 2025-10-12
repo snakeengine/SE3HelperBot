@@ -1,3 +1,4 @@
+﻿from utils.admins import get_admin_ids, is_admin, get_owner_ids
 # handlers_supplier.py
 from __future__ import annotations
 
@@ -17,7 +18,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from lang import t, get_user_lang
 
-# اختياري: عند القبول نضيفه لقائمة المورّدين العمومية utils/suppliers.py
+# Ø§Ø®ØªÙŠØ§Ø±ÙŠ: Ø¹Ù†Ø¯ Ø§Ù„Ù‚Ø¨ÙˆÙ„ Ù†Ø¶ÙŠÙÙ‡ Ù„Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ù…ÙˆØ±Ù‘Ø¯ÙŠÙ† Ø§Ù„Ø¹Ù…ÙˆÙ…ÙŠØ© utils/suppliers.py
 try:
     from utils.suppliers import set_supplier, is_supplier
 except Exception:
@@ -28,12 +29,12 @@ except Exception:
 
 router = Router(name="supplier_apply")
 
-# ========= الإعدادات / المسارات =========
+# ========= Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª / Ø§Ù„Ù…Ø³Ø§Ø±Ø§Øª =========
 DATA_DIR = "data"
-APPS_FILE = os.path.join(DATA_DIR, "supplier_apps.json")   # تخزين الطلبات
+APPS_FILE = os.path.join(DATA_DIR, "supplier_apps.json")   # ØªØ®Ø²ÙŠÙ† Ø§Ù„Ø·Ù„Ø¨Ø§Øª
 os.makedirs(DATA_DIR, exist_ok=True)
 
-# ADMIN IDS من البيئة (توافق مع باقي المشروع)
+# ADMIN IDS Ù…Ù† Ø§Ù„Ø¨ÙŠØ¦Ø© (ØªÙˆØ§ÙÙ‚ Ù…Ø¹ Ø¨Ø§Ù‚ÙŠ Ø§Ù„Ù…Ø´Ø±ÙˆØ¹)
 def _load_admin_ids() -> list[int]:
     raw = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
     out: list[int] = []
@@ -52,7 +53,7 @@ try:
 except Exception:
     AUDIT_CHAT_ID = None
 
-# ========= أدوات I/O =========
+# ========= Ø£Ø¯ÙˆØ§Øª I/O =========
 def _safe_load() -> Dict[str, Any]:
     try:
         with open(APPS_FILE, "r", encoding="utf-8") as f:
@@ -94,7 +95,7 @@ def _set_status(user_id: int, status: str) -> None:
     db[str(user_id)] = rec
     _safe_save(db)
 
-# ========= مفاتيح الترجمة الآمنة =========
+# ========= Ù…ÙØ§ØªÙŠØ­ Ø§Ù„ØªØ±Ø¬Ù…Ø© Ø§Ù„Ø¢Ù…Ù†Ø© =========
 def _tr(lang: str, key: str, default: str) -> str:
     try:
         s = t(lang, key)
@@ -104,25 +105,25 @@ def _tr(lang: str, key: str, default: str) -> str:
         pass
     return default
 
-# ========= لوحات =========
+# ========= Ù„ÙˆØ­Ø§Øª =========
 def _confirm_kb(lang: str) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.row(
-        InlineKeyboardButton(text=_tr(lang, "apply.btn.submit", "✅ إرسال"), callback_data="sapply:confirm"),
-        InlineKeyboardButton(text=_tr(lang, "apply.btn.cancel", "❌ إلغاء"), callback_data="sapply:cancel"),
+        InlineKeyboardButton(text=_tr(lang, "apply.btn.submit", "âœ… Ø¥Ø±Ø³Ø§Ù„"), callback_data="sapply:confirm"),
+        InlineKeyboardButton(text=_tr(lang, "apply.btn.cancel", "âŒ Ø¥Ù„ØºØ§Ø¡"), callback_data="sapply:cancel"),
     )
     return kb.as_markup()
 
 def _admin_kb(user_id: int, lang: str) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.row(
-        InlineKeyboardButton(text=_tr(lang, "admin.btn.approve", "✅ موافقة"), callback_data=f"sapply:approve:{user_id}"),
-        InlineKeyboardButton(text=_tr(lang, "admin.btn.reject", "❌ رفض"),   callback_data=f"sapply:reject:{user_id}"),
+        InlineKeyboardButton(text=_tr(lang, "admin.btn.approve", "âœ… Ù…ÙˆØ§ÙÙ‚Ø©"), callback_data=f"sapply:approve:{user_id}"),
+        InlineKeyboardButton(text=_tr(lang, "admin.btn.reject", "âŒ Ø±ÙØ¶"),   callback_data=f"sapply:reject:{user_id}"),
     )
-    kb.row(InlineKeyboardButton(text=_tr(lang, "admin.btn.ask", "✍️ طلب توضيح"), callback_data=f"sapply:ask:{user_id}"))
+    kb.row(InlineKeyboardButton(text=_tr(lang, "admin.btn.ask", "âœï¸ Ø·Ù„Ø¨ ØªÙˆØ¶ÙŠØ­"), callback_data=f"sapply:ask:{user_id}"))
     return kb.as_markup()
 
-# ========= الحالات =========
+# ========= Ø§Ù„Ø­Ø§Ù„Ø§Øª =========
 class SupplierApply(StatesGroup):
     FULL_NAME   = State()
     COUNTRY_CITY= State()
@@ -134,69 +135,69 @@ class SupplierApply(StatesGroup):
 class AdminAsk(StatesGroup):
     WAITING_QUESTION = State()
 
-# ========= أدوات مساعدة =========
+# ========= Ø£Ø¯ÙˆØ§Øª Ù…Ø³Ø§Ø¹Ø¯Ø© =========
 def _preview_text(lang: str, data: Dict[str, Any]) -> str:
     return (
-        f"🧾 <b>{_tr(lang,'apply.preview_title','مراجعة الطلب')}</b>\n\n"
-        f"• {_tr(lang,'apply.q1','الاسم الكامل')}: <b>{data.get('full_name','-')}</b>\n"
-        f"• {_tr(lang,'apply.q2','الدولة/المدينة')}: <b>{data.get('country_city','-')}</b>\n"
-        f"• {_tr(lang,'apply.q3','وسيلة الاتصال')}: <code>{data.get('contact','-')}</code>\n"
-        f"• {_tr(lang,'apply.q4','خبرة أندرويد')}: <b>{data.get('android_exp','-')}</b>\n"
-        f"• {_tr(lang,'apply.q5','أعمال/روابط')}: <b>{data.get('portfolio','-')}</b>\n\n"
-        f"{_tr(lang,'apply.confirm','هل تريد إرسال الطلب؟')}"
+        f"ðŸ§¾ <b>{_tr(lang,'apply.preview_title','Ù…Ø±Ø§Ø¬Ø¹Ø© Ø§Ù„Ø·Ù„Ø¨')}</b>\n\n"
+        f"â€¢ {_tr(lang,'apply.q1','Ø§Ù„Ø§Ø³Ù… Ø§Ù„ÙƒØ§Ù…Ù„')}: <b>{data.get('full_name','-')}</b>\n"
+        f"â€¢ {_tr(lang,'apply.q2','Ø§Ù„Ø¯ÙˆÙ„Ø©/Ø§Ù„Ù…Ø¯ÙŠÙ†Ø©')}: <b>{data.get('country_city','-')}</b>\n"
+        f"â€¢ {_tr(lang,'apply.q3','ÙˆØ³ÙŠÙ„Ø© Ø§Ù„Ø§ØªØµØ§Ù„')}: <code>{data.get('contact','-')}</code>\n"
+        f"â€¢ {_tr(lang,'apply.q4','Ø®Ø¨Ø±Ø© Ø£Ù†Ø¯Ø±ÙˆÙŠØ¯')}: <b>{data.get('android_exp','-')}</b>\n"
+        f"â€¢ {_tr(lang,'apply.q5','Ø£Ø¹Ù…Ø§Ù„/Ø±ÙˆØ§Ø¨Ø·')}: <b>{data.get('portfolio','-')}</b>\n\n"
+        f"{_tr(lang,'apply.confirm','Ù‡Ù„ ØªØ±ÙŠØ¯ Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø·Ù„Ø¨ØŸ')}"
     )
 
 async def _notify_admins(bot, text: str, kb: Optional[InlineKeyboardMarkup] = None):
-    # أرسل للإداريين
+    # Ø£Ø±Ø³Ù„ Ù„Ù„Ø¥Ø¯Ø§Ø±ÙŠÙŠÙ†
     for uid in ADMIN_IDS:
         try:
             await bot.send_message(uid, text, parse_mode=ParseMode.HTML, reply_markup=kb)
         except Exception:
             pass
-    # قناة تدقيق اختيارية
+    # Ù‚Ù†Ø§Ø© ØªØ¯Ù‚ÙŠÙ‚ Ø§Ø®ØªÙŠØ§Ø±ÙŠØ©
     if AUDIT_CHAT_ID:
         try:
             await bot.send_message(AUDIT_CHAT_ID, text, parse_mode=ParseMode.HTML)
         except Exception:
             pass
 
-# ========= المسار العام =========
+# ========= Ø§Ù„Ù…Ø³Ø§Ø± Ø§Ù„Ø¹Ø§Ù… =========
 @router.message(Command("apply_supplier"))
 async def cmd_apply(message: Message, state: FSMContext):
     lang = get_user_lang(message.from_user.id) or "en"
     await message.answer(
-        f"🧾 {_tr(lang,'apply.welcome','مرحبا! قدّم طلب الانضمام كمورّد.')}\n\n"
-        f"{_tr(lang,'apply.note','أجب عن الأسئلة التالية بدقة.')}"
+        f"ðŸ§¾ {_tr(lang,'apply.welcome','Ù…Ø±Ø­Ø¨Ø§! Ù‚Ø¯Ù‘Ù… Ø·Ù„Ø¨ Ø§Ù„Ø§Ù†Ø¶Ù…Ø§Ù… ÙƒÙ…ÙˆØ±Ù‘Ø¯.')}\n\n"
+        f"{_tr(lang,'apply.note','Ø£Ø¬Ø¨ Ø¹Ù† Ø§Ù„Ø£Ø³Ø¦Ù„Ø© Ø§Ù„ØªØ§Ù„ÙŠØ© Ø¨Ø¯Ù‚Ø©.')}"
     )
-    await message.answer(_tr(lang, "apply.q1", "ما اسمك الكامل؟"))
+    await message.answer(_tr(lang, "apply.q1", "Ù…Ø§ Ø§Ø³Ù…Ùƒ Ø§Ù„ÙƒØ§Ù…Ù„ØŸ"))
     await state.set_state(SupplierApply.FULL_NAME)
 
 @router.message(SupplierApply.FULL_NAME)
 async def q1(message: Message, state: FSMContext):
     lang = get_user_lang(message.from_user.id) or "en"
     await state.update_data(full_name=(message.text or "").strip())
-    await message.answer(_tr(lang, "apply.q2", "ما الدولة/المدينة؟"))
+    await message.answer(_tr(lang, "apply.q2", "Ù…Ø§ Ø§Ù„Ø¯ÙˆÙ„Ø©/Ø§Ù„Ù…Ø¯ÙŠÙ†Ø©ØŸ"))
     await state.set_state(SupplierApply.COUNTRY_CITY)
 
 @router.message(SupplierApply.COUNTRY_CITY)
 async def q2(message: Message, state: FSMContext):
     lang = get_user_lang(message.from_user.id) or "en"
     await state.update_data(country_city=(message.text or "").strip())
-    await message.answer(_tr(lang, "apply.q3", "ضع وسيلة اتصال (تيليجرام/واتساب/بريد)."))
+    await message.answer(_tr(lang, "apply.q3", "Ø¶Ø¹ ÙˆØ³ÙŠÙ„Ø© Ø§ØªØµØ§Ù„ (ØªÙŠÙ„ÙŠØ¬Ø±Ø§Ù…/ÙˆØ§ØªØ³Ø§Ø¨/Ø¨Ø±ÙŠØ¯)."))
     await state.set_state(SupplierApply.CONTACT)
 
 @router.message(SupplierApply.CONTACT)
 async def q3(message: Message, state: FSMContext):
     lang = get_user_lang(message.from_user.id) or "en"
     await state.update_data(contact=(message.text or "").strip())
-    await message.answer(_tr(lang, "apply.q4", "اذكر خبرتك مع أندرويد (سنوات/مجالات)."))
+    await message.answer(_tr(lang, "apply.q4", "Ø§Ø°ÙƒØ± Ø®Ø¨Ø±ØªÙƒ Ù…Ø¹ Ø£Ù†Ø¯Ø±ÙˆÙŠØ¯ (Ø³Ù†ÙˆØ§Øª/Ù…Ø¬Ø§Ù„Ø§Øª)."))
     await state.set_state(SupplierApply.ANDROID_EXP)
 
 @router.message(SupplierApply.ANDROID_EXP)
 async def q4(message: Message, state: FSMContext):
     lang = get_user_lang(message.from_user.id) or "en"
     await state.update_data(android_exp=(message.text or "").strip())
-    await message.answer(_tr(lang, "apply.q5", "ارفق روابط لأعمال سابقة/بورتفوليو (إن وجدت)."))
+    await message.answer(_tr(lang, "apply.q5", "Ø§Ø±ÙÙ‚ Ø±ÙˆØ§Ø¨Ø· Ù„Ø£Ø¹Ù…Ø§Ù„ Ø³Ø§Ø¨Ù‚Ø©/Ø¨ÙˆØ±ØªÙÙˆÙ„ÙŠÙˆ (Ø¥Ù† ÙˆØ¬Ø¯Øª)."))
     await state.set_state(SupplierApply.PORTFOLIO)
 
 @router.message(SupplierApply.PORTFOLIO)
@@ -213,33 +214,33 @@ async def confirm_submit(cb: CallbackQuery, state: FSMContext):
 
     if cb.data == "sapply:cancel":
         await cb.message.edit_reply_markup()
-        await cb.message.answer(_tr(lang, "apply.cancelled", "تم إلغاء الطلب."))
+        await cb.message.answer(_tr(lang, "apply.cancelled", "ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø§Ù„Ø·Ù„Ø¨."))
         await state.clear()
         return await cb.answer()
 
-    # إرسال الطلب
+    # Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø·Ù„Ø¨
     payload = await state.get_data()
     await state.clear()
 
     _upsert_application(cb.from_user.id, lang, payload)
 
     text_admin = (
-        f"🆕 <b>{_tr(lang,'admin.new_title','طلب مورّد جديد')}</b>\n\n"
+        f"ðŸ†• <b>{_tr(lang,'admin.new_title','Ø·Ù„Ø¨ Ù…ÙˆØ±Ù‘Ø¯ Ø¬Ø¯ÙŠØ¯')}</b>\n\n"
         f"<b>ID:</b> <code>{cb.from_user.id}</code>\n"
         f"<b>Name:</b> {payload.get('full_name','-')}\n"
         f"<b>Country/City:</b> {payload.get('country_city','-')}\n"
         f"<b>Contact:</b> {payload.get('contact','-')}\n"
         f"<b>Android Exp:</b> {payload.get('android_exp','-')}\n"
         f"<b>Portfolio:</b> {payload.get('portfolio','-')}\n"
-        f"<b>Status:</b> {_tr(lang,'status.pending','قيد المراجعة')}"
+        f"<b>Status:</b> {_tr(lang,'status.pending','Ù‚ÙŠØ¯ Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©')}"
     )
     await _notify_admins(cb.bot, text_admin, kb=_admin_kb(cb.from_user.id, lang))
 
     await cb.message.edit_reply_markup()
-    await cb.message.answer(_tr(lang, "apply.saved", "تم استلام طلبك وسيتم الرد قريباً."))
+    await cb.message.answer(_tr(lang, "apply.saved", "ØªÙ… Ø§Ø³ØªÙ„Ø§Ù… Ø·Ù„Ø¨Ùƒ ÙˆØ³ÙŠØªÙ… Ø§Ù„Ø±Ø¯ Ù‚Ø±ÙŠØ¨Ø§Ù‹."))
     await cb.answer()
 
-# ========= مسار الأدمن =========
+# ========= Ù…Ø³Ø§Ø± Ø§Ù„Ø£Ø¯Ù…Ù† =========
 def _is_admin(uid: int) -> bool:
     return uid in ADMIN_IDS
 
@@ -247,7 +248,7 @@ def _is_admin(uid: int) -> bool:
 async def admin_approve(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
         lang = get_user_lang(cb.from_user.id) or "en"
-        return await cb.answer(_tr(lang, "sec.admin.only_admin", "للمشرفين فقط."), show_alert=True)
+        return await cb.answer(_tr(lang, "sec.admin.only_admin", "Ù„Ù„Ù…Ø´Ø±ÙÙŠÙ† ÙÙ‚Ø·."), show_alert=True)
 
     try:
         user_id = int(cb.data.split(":")[2])
@@ -259,7 +260,7 @@ async def admin_approve(cb: CallbackQuery):
         return await cb.answer("Not found", show_alert=True)
 
     _set_status(user_id, "approved")
-    # أضفه كمورّد (عام)
+    # Ø£Ø¶ÙÙ‡ ÙƒÙ…ÙˆØ±Ù‘Ø¯ (Ø¹Ø§Ù…)
     try:
         set_supplier(user_id, True)
     except Exception:
@@ -267,18 +268,18 @@ async def admin_approve(cb: CallbackQuery):
 
     lang_u = app.get("lang") or get_user_lang(user_id) or "en"
     try:
-        await cb.bot.send_message(user_id, _tr(lang_u, "admin.approved.user", "✅ تم قبول طلبك كمورّد."))
+        await cb.bot.send_message(user_id, _tr(lang_u, "admin.approved.user", "âœ… ØªÙ… Ù‚Ø¨ÙˆÙ„ Ø·Ù„Ø¨Ùƒ ÙƒÙ…ÙˆØ±Ù‘Ø¯."))
     except Exception:
         pass
 
-    await cb.message.answer(_tr(lang_u, "admin.done", "تم."))  # ملاحظة للأدمن
-    await cb.answer(_tr(lang_u, "common.approved", "تمت الموافقة."))
+    await cb.message.answer(_tr(lang_u, "admin.done", "ØªÙ…."))  # Ù…Ù„Ø§Ø­Ø¸Ø© Ù„Ù„Ø£Ø¯Ù…Ù†
+    await cb.answer(_tr(lang_u, "common.approved", "ØªÙ…Øª Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø©."))
 
 @router.callback_query(F.data.startswith("sapply:reject:"))
 async def admin_reject(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
         lang = get_user_lang(cb.from_user.id) or "en"
-        return await cb.answer(_tr(lang, "sec.admin.only_admin", "للمشرفين فقط."), show_alert=True)
+        return await cb.answer(_tr(lang, "sec.admin.only_admin", "Ù„Ù„Ù…Ø´Ø±ÙÙŠÙ† ÙÙ‚Ø·."), show_alert=True)
 
     try:
         user_id = int(cb.data.split(":")[2])
@@ -292,18 +293,18 @@ async def admin_reject(cb: CallbackQuery):
     _set_status(user_id, "rejected")
     lang_u = app.get("lang") or get_user_lang(user_id) or "en"
     try:
-        await cb.bot.send_message(user_id, _tr(lang_u, "admin.rejected.user", "❌ نأسف، تم رفض الطلب."))
+        await cb.bot.send_message(user_id, _tr(lang_u, "admin.rejected.user", "âŒ Ù†Ø£Ø³ÙØŒ ØªÙ… Ø±ÙØ¶ Ø§Ù„Ø·Ù„Ø¨."))
     except Exception:
         pass
 
-    await cb.message.answer(_tr(lang_u, "admin.done", "تم."))
-    await cb.answer(_tr(lang_u, "common.rejected", "تم الرفض."))
+    await cb.message.answer(_tr(lang_u, "admin.done", "ØªÙ…."))
+    await cb.answer(_tr(lang_u, "common.rejected", "ØªÙ… Ø§Ù„Ø±ÙØ¶."))
 
 @router.callback_query(F.data.startswith("sapply:ask:"))
 async def admin_ask_start(cb: CallbackQuery, state: FSMContext):
     if not _is_admin(cb.from_user.id):
         lang = get_user_lang(cb.from_user.id) or "en"
-        return await cb.answer(_tr(lang, "sec.admin.only_admin", "للمشرفين فقط."), show_alert=True)
+        return await cb.answer(_tr(lang, "sec.admin.only_admin", "Ù„Ù„Ù…Ø´Ø±ÙÙŠÙ† ÙÙ‚Ø·."), show_alert=True)
     try:
         user_id = int(cb.data.split(":")[2])
     except Exception:
@@ -316,7 +317,7 @@ async def admin_ask_start(cb: CallbackQuery, state: FSMContext):
     lang_admin = get_user_lang(cb.from_user.id) or "en"
     await state.set_state(AdminAsk.WAITING_QUESTION)
     await state.update_data(ask_user_id=user_id)
-    await cb.message.answer(_tr(lang_admin, "admin.ask.prompt", "أرسل سؤالك ليُرسل للمتقدّم."))
+    await cb.message.answer(_tr(lang_admin, "admin.ask.prompt", "Ø£Ø±Ø³Ù„ Ø³Ø¤Ø§Ù„Ùƒ Ù„ÙŠÙØ±Ø³Ù„ Ù„Ù„Ù…ØªÙ‚Ø¯Ù‘Ù…."))
     await cb.answer()
 
 @router.message(AdminAsk.WAITING_QUESTION)
@@ -330,15 +331,16 @@ async def admin_send_question(message: Message, state: FSMContext):
     lang_u = get_user_lang(target_user) or "en"
     q = (message.text or "").strip()
     if not q:
-        return await message.answer("…")
+        return await message.answer("â€¦")
 
     try:
         await message.bot.send_message(
             target_user,
-            _tr(lang_u, "admin.ask.user", "📩 يوجد استفسار من الإدارة:\n{q}").format(q=q),
+            _tr(lang_u, "admin.ask.user", "ðŸ“© ÙŠÙˆØ¬Ø¯ Ø§Ø³ØªÙØ³Ø§Ø± Ù…Ù† Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©:\n{q}").format(q=q),
             parse_mode=ParseMode.HTML
         )
-        await message.answer(_tr(lang_u, "admin.done", "تم."))
+        await message.answer(_tr(lang_u, "admin.done", "ØªÙ…."))
     except Exception:
-        await message.answer("⚠️ Failed to send.")
+        await message.answer("âš ï¸ Failed to send.")
     await state.clear()
+

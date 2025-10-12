@@ -1,3 +1,4 @@
+﻿from utils.admins import get_admin_ids, is_admin, get_owner_ids
 # handlers/promo_flow_extras.py
 from __future__ import annotations
 
@@ -20,20 +21,17 @@ class RegState(StatesGroup):
 
 router = Router(name="promo_flow_extras")
 
-# ───────────────────────────── Admins ─────────────────────────────
-ADMIN_IDS = [
-    int(x) for x in (os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID",""))
-    .replace(";",",").split(",") if x.strip().isdigit()
-]
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Admins â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ADMIN_IDS = get_admin_ids()
 def _is_admin(i: int) -> bool: return i in set(ADMIN_IDS or [])
 
 
-# تقبّل uid أو كود لغة
+# ØªÙ‚Ø¨Ù‘Ù„ uid Ø£Ùˆ ÙƒÙˆØ¯ Ù„ØºØ©
 def _L(x, ar: str, en: str) -> str:
     lang = get_user_lang(x) if isinstance(x, int) else (x or "en")
     return ar if str(lang).startswith("ar") else en
 
-# ───────────────────────────── Helpers ─────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 GAMES = ["8BP", "Carrom", "Soccer"]
 
 def _row_buttons(options: list[str], prefix: str, columns: int = 3):
@@ -48,36 +46,36 @@ def _now() -> int: return int(time.time())
 def _is_locked(rec: dict) -> bool:
     return bool(rec.get("locked")) or str(rec.get("status")) in {"ready_for_activation","activated"}
 
-# الخطط المتاحة للتفعيل
+# Ø§Ù„Ø®Ø·Ø· Ø§Ù„Ù…ØªØ§Ø­Ø© Ù„Ù„ØªÙØ¹ÙŠÙ„
 PLANS = {
-    "3d":"3 أيام","10d":"10 أيام","30d":"30 يوم","90d":"90 يوم","180d":"180 يوم",
+    "3d":"3 Ø£ÙŠØ§Ù…","10d":"10 Ø£ÙŠØ§Ù…","30d":"30 ÙŠÙˆÙ…","90d":"90 ÙŠÙˆÙ…","180d":"180 ÙŠÙˆÙ…",
 }
 
 def activation_kb(uid: int, game: str):
     kb = InlineKeyboardBuilder()
     kb.row(
-        InlineKeyboardButton(text="✅ تفعيل 3 أيام",  callback_data=f"admin:activate:{uid}:{game}:3d"),
-        InlineKeyboardButton(text="✅ تفعيل 10 أيام", callback_data=f"admin:activate:{uid}:{game}:10d"),
-        InlineKeyboardButton(text="✅ تفعيل 30 يوم",  callback_data=f"admin:activate:{uid}:{game}:30d"),
+        InlineKeyboardButton(text="âœ… ØªÙØ¹ÙŠÙ„ 3 Ø£ÙŠØ§Ù…",  callback_data=f"admin:activate:{uid}:{game}:3d"),
+        InlineKeyboardButton(text="âœ… ØªÙØ¹ÙŠÙ„ 10 Ø£ÙŠØ§Ù…", callback_data=f"admin:activate:{uid}:{game}:10d"),
+        InlineKeyboardButton(text="âœ… ØªÙØ¹ÙŠÙ„ 30 ÙŠÙˆÙ…",  callback_data=f"admin:activate:{uid}:{game}:30d"),
     )
     kb.row(
-        InlineKeyboardButton(text="✅ تفعيل 90 يوم",  callback_data=f"admin:activate:{uid}:{game}:90d"),
-        InlineKeyboardButton(text="✅ تفعيل 180 يوم", callback_data=f"admin:activate:{uid}:{game}:180d"),
-        InlineKeyboardButton(text="❌ رفض",           callback_data=f"admin:promo:reject:{uid}"),
+        InlineKeyboardButton(text="âœ… ØªÙØ¹ÙŠÙ„ 90 ÙŠÙˆÙ…",  callback_data=f"admin:activate:{uid}:{game}:90d"),
+        InlineKeyboardButton(text="âœ… ØªÙØ¹ÙŠÙ„ 180 ÙŠÙˆÙ…", callback_data=f"admin:activate:{uid}:{game}:180d"),
+        InlineKeyboardButton(text="âŒ Ø±ÙØ¶",           callback_data=f"admin:promo:reject:{uid}"),
     )
     return kb.as_markup()
 
 def _user_chat_kb(uid: int):
     kb = InlineKeyboardBuilder()
     kb.row(
-        InlineKeyboardButton(text=_L(uid, "🔒 إنهاء المحادثة", "🔒 End chat"),
+        InlineKeyboardButton(text=_L(uid, "ðŸ”’ Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø©", "ðŸ”’ End chat"),
                              callback_data="user:chat:close"),
-        InlineKeyboardButton(text=_L(uid, "✅ تمّ / شكراً", "✅ Done / Thanks"),
+        InlineKeyboardButton(text=_L(uid, "âœ… ØªÙ…Ù‘ / Ø´ÙƒØ±Ø§Ù‹", "âœ… Done / Thanks"),
                              callback_data="user:chat:done"),
     )
     return kb.as_markup()
 
-USER_ACK_COOLDOWN = 45  # ثواني بين كل رسالة تأكيد للمستخدم كي لا نُزعجه
+USER_ACK_COOLDOWN = 45  # Ø«ÙˆØ§Ù†ÙŠ Ø¨ÙŠÙ† ÙƒÙ„ Ø±Ø³Ø§Ù„Ø© ØªØ£ÙƒÙŠØ¯ Ù„Ù„Ù…Ø³ØªØ®Ø¯Ù… ÙƒÙŠ Ù„Ø§ Ù†ÙØ²Ø¹Ø¬Ù‡
 
 async def _safe_edit_rm(cb: CallbackQuery):
     try: await cb.message.edit_reply_markup(None)
@@ -97,10 +95,10 @@ def _fmt_eta(seconds: int, lang: str) -> str:
     m = (seconds % 3600) // 60
     if (lang or "en").startswith("ar"):
         parts = []
-        if h: parts.append(f"{h} ساعة")
-        if m: parts.append(f"{m} دقيقة")
-        if not parts: parts = ["أقل من دقيقة"]
-        return " و ".join(parts)
+        if h: parts.append(f"{h} Ø³Ø§Ø¹Ø©")
+        if m: parts.append(f"{m} Ø¯Ù‚ÙŠÙ‚Ø©")
+        if not parts: parts = ["Ø£Ù‚Ù„ Ù…Ù† Ø¯Ù‚ÙŠÙ‚Ø©"]
+        return " Ùˆ ".join(parts)
     else:
         parts = []
         if h: parts.append(f"{h}h")
@@ -115,67 +113,67 @@ def _cooldown_left(rec: dict) -> int:
     left = REAPPLY_COOLDOWN_SECS - max(0, _now() - t0)
     return max(0, left)
 
-# ───────────────────────────── لوحة أدمن للمراجعة ─────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Ù„ÙˆØ­Ø© Ø£Ø¯Ù…Ù† Ù„Ù„Ù…Ø±Ø§Ø¬Ø¹Ø© â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def admin_menu_kb(uid: int):
     kb = InlineKeyboardBuilder()
     kb.row(
-        InlineKeyboardButton(text="✅ Approve",     callback_data=f"admin:promo:approve:{uid}"),
-        InlineKeyboardButton(text="✍️ Ask details", callback_data=f"admin:promo:ask:{uid}"),
+        InlineKeyboardButton(text="âœ… Approve",     callback_data=f"admin:promo:approve:{uid}"),
+        InlineKeyboardButton(text="âœï¸ Ask details", callback_data=f"admin:promo:ask:{uid}"),
     )
     kb.row(
-        InlineKeyboardButton(text="💬 Open chat",   callback_data=f"admin:promo:chat:{uid}"),
-        InlineKeyboardButton(text="🔒 Close chat",  callback_data=f"admin:promo:closechat:{uid}"),
+        InlineKeyboardButton(text="ðŸ’¬ Open chat",   callback_data=f"admin:promo:chat:{uid}"),
+        InlineKeyboardButton(text="ðŸ”’ Close chat",  callback_data=f"admin:promo:closechat:{uid}"),
     )
     kb.row(
-        InlineKeyboardButton(text="⛔ Ban",          callback_data=f"admin:promo:ban:{uid}"),
-        InlineKeyboardButton(text="✅ Unban",        callback_data=f"admin:promo:unban:{uid}"),
+        InlineKeyboardButton(text="â›” Ban",          callback_data=f"admin:promo:ban:{uid}"),
+        InlineKeyboardButton(text="âœ… Unban",        callback_data=f"admin:promo:unban:{uid}"),
     )
     kb.row(
-        InlineKeyboardButton(text="🧊 Freeze",       callback_data=f"admin:promo:freeze:{uid}"),
-        InlineKeyboardButton(text="♻️ Unfreeze",     callback_data=f"admin:promo:unfreeze:{uid}"),
+        InlineKeyboardButton(text="ðŸ§Š Freeze",       callback_data=f"admin:promo:freeze:{uid}"),
+        InlineKeyboardButton(text="â™»ï¸ Unfreeze",     callback_data=f"admin:promo:unfreeze:{uid}"),
     )
     kb.row(
-        InlineKeyboardButton(text="❌ Reject",      callback_data=f"admin:promo:reject:{uid}"),
+        InlineKeyboardButton(text="âŒ Reject",      callback_data=f"admin:promo:reject:{uid}"),
     )
     return kb.as_markup()
 
-# ───────────────────────────── SMART CHAT: قوالب + سجل + أزرار سريعة ─────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ SMART CHAT: Ù‚ÙˆØ§Ù„Ø¨ + Ø³Ø¬Ù„ + Ø£Ø²Ø±Ø§Ø± Ø³Ø±ÙŠØ¹Ø© â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 SMART_TEMPLATES = {
     "ask_url": {
-        "ar":"📎 أرسل رابط المنشور/الفيديو (عام).",
-        "en":"📎 Please send the public post/video URL.",
+        "ar":"ðŸ“Ž Ø£Ø±Ø³Ù„ Ø±Ø§Ø¨Ø· Ø§Ù„Ù…Ù†Ø´ÙˆØ±/Ø§Ù„ÙÙŠØ¯ÙŠÙˆ (Ø¹Ø§Ù…).",
+        "en":"ðŸ“Ž Please send the public post/video URL.",
     },
     "ask_shot": {
-        "ar":"🖼️ أرسل لقطة شاشة تُظهر عدد المشاهدات والتاريخ.",
-        "en":"🖼️ Send a screenshot showing views & date.",
+        "ar":"ðŸ–¼ï¸ Ø£Ø±Ø³Ù„ Ù„Ù‚Ø·Ø© Ø´Ø§Ø´Ø© ØªÙØ¸Ù‡Ø± Ø¹Ø¯Ø¯ Ø§Ù„Ù…Ø´Ø§Ù‡Ø¯Ø§Øª ÙˆØ§Ù„ØªØ§Ø±ÙŠØ®.",
+        "en":"ðŸ–¼ï¸ Send a screenshot showing views & date.",
     },
     "ask_id": {
-        "ar":"🔢 أرسل Snake ID (أرقام فقط).",
-        "en":"🔢 Send your Snake ID (digits only).",
+        "ar":"ðŸ”¢ Ø£Ø±Ø³Ù„ Snake ID (Ø£Ø±Ù‚Ø§Ù… ÙÙ‚Ø·).",
+        "en":"ðŸ”¢ Send your Snake ID (digits only).",
     },
     "busy": {
-        "ar":"⌛ حاضر، سأتواصل معك قريبًا.",
-        "en":"⌛ Got it — I’ll be with you shortly.",
+        "ar":"âŒ› Ø­Ø§Ø¶Ø±ØŒ Ø³Ø£ØªÙˆØ§ØµÙ„ Ù…Ø¹Ùƒ Ù‚Ø±ÙŠØ¨Ù‹Ø§.",
+        "en":"âŒ› Got it â€” Iâ€™ll be with you shortly.",
     },
     "thanks": {
-        "ar":"✅ استلمت رسالتك، شكرًا لك.",
-        "en":"✅ Received, thank you.",
+        "ar":"âœ… Ø§Ø³ØªÙ„Ù…Øª Ø±Ø³Ø§Ù„ØªÙƒØŒ Ø´ÙƒØ±Ù‹Ø§ Ù„Ùƒ.",
+        "en":"âœ… Received, thank you.",
     },
     "close": {
-        "ar":"🔒 تم إغلاق المحادثة. إن احتجت شيئًا افتح تذكرة جديدة.",
-        "en":"🔒 Chat closed. If you need anything, open a new ticket.",
+        "ar":"ðŸ”’ ØªÙ… Ø¥ØºÙ„Ø§Ù‚ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø©. Ø¥Ù† Ø§Ø­ØªØ¬Øª Ø´ÙŠØ¦Ù‹Ø§ Ø§ÙØªØ­ ØªØ°ÙƒØ±Ø© Ø¬Ø¯ÙŠØ¯Ø©.",
+        "en":"ðŸ”’ Chat closed. If you need anything, open a new ticket.",
     },
 }
 
 def _block_reason_txt(uid: int, kind: str, reason: str | None):
     if kind == "ban":
         return _L(uid,
-            f"❌ تم حظر حسابك عن المشاركة.{f' السبب: {reason}' if reason else ''}",
-            f"❌ You are banned from participating.{f' Reason: {reason}' if reason else ''}")
+            f"âŒ ØªÙ… Ø­Ø¸Ø± Ø­Ø³Ø§Ø¨Ùƒ Ø¹Ù† Ø§Ù„Ù…Ø´Ø§Ø±ÙƒØ©.{f' Ø§Ù„Ø³Ø¨Ø¨: {reason}' if reason else ''}",
+            f"âŒ You are banned from participating.{f' Reason: {reason}' if reason else ''}")
     else:
         return _L(uid,
-            f"🧊 تم تجميد حسابك مؤقتًا.{f' السبب: {reason}' if reason else ''}",
-            f"🧊 Your account is temporarily frozen.{f' Reason: {reason}' if reason else ''}")
+            f"ðŸ§Š ØªÙ… ØªØ¬Ù…ÙŠØ¯ Ø­Ø³Ø§Ø¨Ùƒ Ù…Ø¤Ù‚ØªÙ‹Ø§.{f' Ø§Ù„Ø³Ø¨Ø¨: {reason}' if reason else ''}",
+            f"ðŸ§Š Your account is temporarily frozen.{f' Reason: {reason}' if reason else ''}")
 
 def _t(uid: int, key: str) -> str:
     lang = get_user_lang(uid) or "en"
@@ -184,14 +182,14 @@ def _t(uid: int, key: str) -> str:
 def _chat_kb(uid: int):
     kb = InlineKeyboardBuilder()
     kb.row(
-        InlineKeyboardButton(text="🔗 URL",      callback_data=f"admin:chat:quick:{uid}:ask_url"),
-        InlineKeyboardButton(text="🖼️ Shot",     callback_data=f"admin:chat:quick:{uid}:ask_shot"),
-        InlineKeyboardButton(text="🆔 ID",       callback_data=f"admin:chat:quick:{uid}:ask_id"),
+        InlineKeyboardButton(text="ðŸ”— URL",      callback_data=f"admin:chat:quick:{uid}:ask_url"),
+        InlineKeyboardButton(text="ðŸ–¼ï¸ Shot",     callback_data=f"admin:chat:quick:{uid}:ask_shot"),
+        InlineKeyboardButton(text="ðŸ†” ID",       callback_data=f"admin:chat:quick:{uid}:ask_id"),
     )
     kb.row(
-        InlineKeyboardButton(text="✅ Thanks",    callback_data=f"admin:chat:quick:{uid}:thanks"),
-        InlineKeyboardButton(text="⌛ Busy",      callback_data=f"admin:chat:quick:{uid}:busy"),
-        InlineKeyboardButton(text="🔒 Close",     callback_data=f"admin:chat:close:{uid}"),
+        InlineKeyboardButton(text="âœ… Thanks",    callback_data=f"admin:chat:quick:{uid}:thanks"),
+        InlineKeyboardButton(text="âŒ› Busy",      callback_data=f"admin:chat:quick:{uid}:busy"),
+        InlineKeyboardButton(text="ðŸ”’ Close",     callback_data=f"admin:chat:close:{uid}"),
     )
     return kb.as_markup()
 
@@ -206,8 +204,8 @@ def _push_history(uid: int, role: str, content: str | None, kind: str = "text", 
 def _admin_chat_kb(uid: int):
     kb = InlineKeyboardBuilder()
     kb.row(
-        InlineKeyboardButton(text="✍️ Ask details", callback_data=f"admin:promo:ask:{uid}"),
-        InlineKeyboardButton(text="🔒 Close chat",  callback_data=f"admin:promo:closechat:{uid}"),
+        InlineKeyboardButton(text="âœï¸ Ask details", callback_data=f"admin:promo:ask:{uid}"),
+        InlineKeyboardButton(text="ðŸ”’ Close chat",  callback_data=f"admin:promo:closechat:{uid}"),
     )
     return kb.as_markup()
 
@@ -224,37 +222,37 @@ def _reset_after_unban(uid: int):
         updated_at=_now(),
     )
 
-# ───────────────────── NEW: ملتقط روابط (يحفظ post_url ويشعر الأدمن) ─────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ NEW: Ù…Ù„ØªÙ‚Ø· Ø±ÙˆØ§Ø¨Ø· (ÙŠØ­ÙØ¸ post_url ÙˆÙŠØ´Ø¹Ø± Ø§Ù„Ø£Ø¯Ù…Ù†) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def _looks_like_url(s: str) -> bool:
     if not s:
         return False
     s = s.strip()
     if not s.lower().startswith(("http://", "https://")):
         return False
-    # بسيط: وجود نقطة وعدم وجود مسافات
+    # Ø¨Ø³ÙŠØ·: ÙˆØ¬ÙˆØ¯ Ù†Ù‚Ø·Ø© ÙˆØ¹Ø¯Ù… ÙˆØ¬ÙˆØ¯ Ù…Ø³Ø§ÙØ§Øª
     return ("." in s) and (" " not in s)
 
 @router.message(F.chat.type == "private", F.text.regexp(r"https?://"))
 async def promo_capture_url(msg: Message):
     """
-    يلتقط أي رسالة تحتوي رابط من المستخدم في الخاص أثناء مرحلة الطلب
-    (قبل التفعيل)، ويحفظها كـ post_url ويغيّر الحالة إلى awaiting_admin،
-    ثم يرسل إشعارًا للأدمنين مع كيبورد المراجعة.
-    يتجاهل الرسالة إذا كانت محادثة الأدمن مفتوحة (chat_on).
+    ÙŠÙ„ØªÙ‚Ø· Ø£ÙŠ Ø±Ø³Ø§Ù„Ø© ØªØ­ØªÙˆÙŠ Ø±Ø§Ø¨Ø· Ù…Ù† Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… ÙÙŠ Ø§Ù„Ø®Ø§Øµ Ø£Ø«Ù†Ø§Ø¡ Ù…Ø±Ø­Ù„Ø© Ø§Ù„Ø·Ù„Ø¨
+    (Ù‚Ø¨Ù„ Ø§Ù„ØªÙØ¹ÙŠÙ„)ØŒ ÙˆÙŠØ­ÙØ¸Ù‡Ø§ ÙƒÙ€ post_url ÙˆÙŠØºÙŠÙ‘Ø± Ø§Ù„Ø­Ø§Ù„Ø© Ø¥Ù„Ù‰ awaiting_adminØŒ
+    Ø«Ù… ÙŠØ±Ø³Ù„ Ø¥Ø´Ø¹Ø§Ø±Ù‹Ø§ Ù„Ù„Ø£Ø¯Ù…Ù†ÙŠÙ† Ù…Ø¹ ÙƒÙŠØ¨ÙˆØ±Ø¯ Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©.
+    ÙŠØªØ¬Ø§Ù‡Ù„ Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ø¥Ø°Ø§ ÙƒØ§Ù†Øª Ù…Ø­Ø§Ø¯Ø«Ø© Ø§Ù„Ø£Ø¯Ù…Ù† Ù…ÙØªÙˆØ­Ø© (chat_on).
     """
     uid = msg.from_user.id
     rec = find_request(uid) or {}
 
-    # لو الشات مع الأدمن مفتوح، لا نتدخل (حتى تمر للـ relay)
+    # Ù„Ùˆ Ø§Ù„Ø´Ø§Øª Ù…Ø¹ Ø§Ù„Ø£Ø¯Ù…Ù† Ù…ÙØªÙˆØ­ØŒ Ù„Ø§ Ù†ØªØ¯Ø®Ù„ (Ø­ØªÙ‰ ØªÙ…Ø± Ù„Ù„Ù€ relay)
     if _chat_on(rec):
         return
 
     status = str(rec.get("status") or "")
-    # حالات مؤهلة لالتقاط الرابط
+    # Ø­Ø§Ù„Ø§Øª Ù…Ø¤Ù‡Ù„Ø© Ù„Ø§Ù„ØªÙ‚Ø§Ø· Ø§Ù„Ø±Ø§Ø¨Ø·
     if status in {"banned", "activated"}:
         return
 
-    # لا نكرر إذا كان محفوظًا مسبقًا
+    # Ù„Ø§ Ù†ÙƒØ±Ø± Ø¥Ø°Ø§ ÙƒØ§Ù† Ù…Ø­ÙÙˆØ¸Ù‹Ø§ Ù…Ø³Ø¨Ù‚Ù‹Ø§
     if rec.get("post_url"):
         return
 
@@ -262,7 +260,7 @@ async def promo_capture_url(msg: Message):
     if not _looks_like_url(text):
         return
 
-    # احفظ الرابط وادفعه للمراجعة
+    # Ø§Ø­ÙØ¸ Ø§Ù„Ø±Ø§Ø¨Ø· ÙˆØ§Ø¯ÙØ¹Ù‡ Ù„Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©
     update_request(
         uid,
         post_url=text,
@@ -271,23 +269,23 @@ async def promo_capture_url(msg: Message):
         updated_at=_now(),
     )
 
-    # تأكيد للمستخدم
+    # ØªØ£ÙƒÙŠØ¯ Ù„Ù„Ù…Ø³ØªØ®Ø¯Ù…
     try:
         await msg.reply(
             _L(uid,
-               "📨 تم استلام الرابط. سيتم مراجعته من الإدارة وسنخبرك بالنتيجة.",
-               "📨 Got the URL. Admins will review it and we’ll notify you."),
+               "ðŸ“¨ ØªÙ… Ø§Ø³ØªÙ„Ø§Ù… Ø§Ù„Ø±Ø§Ø¨Ø·. Ø³ÙŠØªÙ… Ù…Ø±Ø§Ø¬Ø¹ØªÙ‡ Ù…Ù† Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© ÙˆØ³Ù†Ø®Ø¨Ø±Ùƒ Ø¨Ø§Ù„Ù†ØªÙŠØ¬Ø©.",
+               "ðŸ“¨ Got the URL. Admins will review it and weâ€™ll notify you."),
             disable_web_page_preview=True
         )
     except Exception:
         pass
 
-    # إشعار الأدمنين
+    # Ø¥Ø´Ø¹Ø§Ø± Ø§Ù„Ø£Ø¯Ù…Ù†ÙŠÙ†
     try:
         un = f"@{msg.from_user.username}" if msg.from_user.username else "-"
         platform = rec.get("platform", "-")
         notice = (
-            "🔔 طلب جديد للمراجعة\n"
+            "ðŸ”” Ø·Ù„Ø¨ Ø¬Ø¯ÙŠØ¯ Ù„Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©\n"
             f"user_id={uid}\n"
             f"username={un}\n"
             f"platform={platform}\n"
@@ -305,7 +303,7 @@ async def promo_capture_url(msg: Message):
     except Exception:
         pass
 
-# ───────────────────────────── حظر/تجميد (أزرار الأدمن) ─────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Ø­Ø¸Ø±/ØªØ¬Ù…ÙŠØ¯ (Ø£Ø²Ø±Ø§Ø± Ø§Ù„Ø£Ø¯Ù…Ù†) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @router.callback_query(F.data.regexp(r"^admin:promo:(ban|unban|freeze|unfreeze):(\d+)$"))
 async def admin_block_ops(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
@@ -337,7 +335,7 @@ async def admin_block_ops(cb: CallbackQuery):
         try:
             await cb.bot.send_message(
                 uid,
-                _L(uid, "✅ تم رفع الحظر. يمكنك التقديم من جديد.", "✅ Ban lifted. You can apply again.")
+                _L(uid, "âœ… ØªÙ… Ø±ÙØ¹ Ø§Ù„Ø­Ø¸Ø±. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… Ù…Ù† Ø¬Ø¯ÙŠØ¯.", "âœ… Ban lifted. You can apply again.")
             )
         except Exception:
             pass
@@ -354,7 +352,7 @@ async def admin_block_ops(cb: CallbackQuery):
     else:  # unfreeze
         update_request(uid, frozen=False, unfrozen_at=_now())
         try:
-            await cb.bot.send_message(uid, _L(uid, "♻️ تم رفع التجميد. يمكنك المتابعة.", "♻️ Freeze removed. You can continue."))
+            await cb.bot.send_message(uid, _L(uid, "â™»ï¸ ØªÙ… Ø±ÙØ¹ Ø§Ù„ØªØ¬Ù…ÙŠØ¯. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„Ù…ØªØ§Ø¨Ø¹Ø©.", "â™»ï¸ Freeze removed. You can continue."))
         except Exception:
             pass
         await cb.answer("User unfrozen")
@@ -364,7 +362,7 @@ async def admin_block_ops(cb: CallbackQuery):
     except Exception:
         pass
 
-# ───────────────────────────── أوامر إدارية سريعة ─────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Ø£ÙˆØ§Ù…Ø± Ø¥Ø¯Ø§Ø±ÙŠØ© Ø³Ø±ÙŠØ¹Ø© â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @router.message(Command("promo_view"))
 async def promo_view(msg: Message):
     if not _is_admin(msg.from_user.id): return
@@ -374,7 +372,7 @@ async def promo_view(msg: Message):
     uid = int(parts[1])
     rec = find_request(uid) or {}
     await msg.reply(
-        "📄 Record\n"
+        "ðŸ“„ Record\n"
         + "\n".join(f"{k}={v}" for k,v in rec.items()),
         disable_web_page_preview=True
     )
@@ -389,7 +387,7 @@ async def promo_ban(msg: Message):
     update_request(uid, status="banned", banned_at=_now(), frozen=False, ban_reason=reason)
     try: await msg.bot.send_message(uid, _block_reason_txt(uid, "ban", reason))
     except Exception: pass
-    await msg.reply("✅ banned.")
+    await msg.reply("âœ… banned.")
 
 @router.message(Command("promo_unban"))
 async def promo_unban(msg: Message):
@@ -412,11 +410,11 @@ async def promo_unban(msg: Message):
     try:
         await msg.bot.send_message(
             uid,
-            _L(uid, "✅ تم رفع الحظر. يمكنك التقديم من جديد.", "✅ Ban lifted. You can apply again.")
+            _L(uid, "âœ… ØªÙ… Ø±ÙØ¹ Ø§Ù„Ø­Ø¸Ø±. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… Ù…Ù† Ø¬Ø¯ÙŠØ¯.", "âœ… Ban lifted. You can apply again.")
         )
     except Exception:
         pass
-    await msg.reply("✅ unbanned & reset.")
+    await msg.reply("âœ… unbanned & reset.")
 
 @router.message(Command("promo_freeze"))
 async def promo_freeze(msg: Message):
@@ -428,7 +426,7 @@ async def promo_freeze(msg: Message):
     update_request(uid, frozen=True, frozen_at=_now(), freeze_reason=reason)
     try: await msg.bot.send_message(uid, _block_reason_txt(uid, "freeze", reason))
     except Exception: pass
-    await msg.reply("✅ frozen.")
+    await msg.reply("âœ… frozen.")
 
 @router.message(Command("promo_unfreeze"))
 async def promo_unfreeze(msg: Message):
@@ -438,11 +436,11 @@ async def promo_unfreeze(msg: Message):
         return await msg.reply("usage: /promo_unfreeze <uid>")
     uid = int(parts[1])
     update_request(uid, frozen=False, unfrozen_at=_now())
-    try: await msg.bot.send_message(uid, _L(uid, "♻️ تم رفع التجميد. يمكنك المتابعة.", "♻️ Freeze removed. You can continue."))
+    try: await msg.bot.send_message(uid, _L(uid, "â™»ï¸ ØªÙ… Ø±ÙØ¹ Ø§Ù„ØªØ¬Ù…ÙŠØ¯. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„Ù…ØªØ§Ø¨Ø¹Ø©.", "â™»ï¸ Freeze removed. You can continue."))
     except Exception: pass
-    await msg.reply("✅ unfrozen.")
+    await msg.reply("âœ… unfrozen.")
 
-# ───────────────────────────── فتح/إغلاق الشات ─────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ ÙØªØ­/Ø¥ØºÙ„Ø§Ù‚ Ø§Ù„Ø´Ø§Øª â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @router.callback_query(F.data.regexp(r"^admin:promo:chat:(\d+)$"))
 async def open_chat(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
@@ -455,8 +453,8 @@ async def open_chat(cb: CallbackQuery):
     try:
         await cb.bot.send_message(
             uid,
-            _L(uid,"💬 تم فتح محادثة مباشرة مع المشرف. يمكنك الرد هنا.",
-                    "💬 A direct chat with the admin was opened. You can reply here."),
+            _L(uid,"ðŸ’¬ ØªÙ… ÙØªØ­ Ù…Ø­Ø§Ø¯Ø«Ø© Ù…Ø¨Ø§Ø´Ø±Ø© Ù…Ø¹ Ø§Ù„Ù…Ø´Ø±Ù. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„Ø±Ø¯ Ù‡Ù†Ø§.",
+                    "ðŸ’¬ A direct chat with the admin was opened. You can reply here."),
             reply_markup=_user_chat_kb(uid)
         )
     except Exception:
@@ -469,7 +467,7 @@ async def open_chat(cb: CallbackQuery):
         )
     except Exception:
         pass
-    await cb.answer("Chat opened ✔")
+    await cb.answer("Chat opened âœ”")
 
 @router.callback_query(F.data.startswith("admin:promo:closechat:"))
 async def close_chat(cb: CallbackQuery):
@@ -483,7 +481,7 @@ async def close_chat(cb: CallbackQuery):
         pass
     await cb.answer("Chat closed.")
 
-# رد سريع جاهز من كيبورد الأدمن
+# Ø±Ø¯ Ø³Ø±ÙŠØ¹ Ø¬Ø§Ù‡Ø² Ù…Ù† ÙƒÙŠØ¨ÙˆØ±Ø¯ Ø§Ù„Ø£Ø¯Ù…Ù†
 @router.callback_query(F.data.regexp(r"^admin:chat:quick:(\d+):([a-z_]+)$"))
 async def admin_quick_reply(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
@@ -499,7 +497,7 @@ async def admin_quick_reply(cb: CallbackQuery):
         _push_history(uid, "admin", text)
     except Exception:
         pass
-    await cb.answer("Sent ✓")
+    await cb.answer("Sent âœ“")
 
 @router.callback_query(F.data.regexp(r"^admin:chat:close:(\d+)$"))
 async def admin_quick_close(cb: CallbackQuery):
@@ -511,9 +509,9 @@ async def admin_quick_close(cb: CallbackQuery):
         await cb.bot.send_message(uid, _t(uid, "close"))
     except Exception:
         pass
-    await cb.answer("Closed ✓")
+    await cb.answer("Closed âœ“")
 
-# تدوين ملاحظة داخلية
+# ØªØ¯ÙˆÙŠÙ† Ù…Ù„Ø§Ø­Ø¸Ø© Ø¯Ø§Ø®Ù„ÙŠØ©
 @router.message(Command("note"))
 async def admin_note(msg: Message):
     if not _is_admin(msg.from_user.id): return
@@ -525,9 +523,9 @@ async def admin_note(msg: Message):
     notes = rec.get("admin_notes") or []
     notes.append({"t":_now(), "by":msg.from_user.id, "note":note})
     update_request(uid, admin_notes=notes)
-    await msg.reply("📝 noted.")
+    await msg.reply("ðŸ“ noted.")
 
-# تصدير سجل الدردشة كملف JSON
+# ØªØµØ¯ÙŠØ± Ø³Ø¬Ù„ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© ÙƒÙ…Ù„Ù JSON
 @router.message(Command("exportchat"))
 async def export_chat(msg: Message):
     if not _is_admin(msg.from_user.id): return
@@ -546,7 +544,7 @@ async def export_chat(msg: Message):
     except Exception:
         await msg.reply("failed to export.")
 
-# ───────────────────────────── Relay المستخدم → الأدمن (عند فتح الشات) ─────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Relay Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… â†’ Ø§Ù„Ø£Ø¯Ù…Ù† (Ø¹Ù†Ø¯ ÙØªØ­ Ø§Ù„Ø´Ø§Øª) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @router.message(~StateFilter(RegState.enter_id), F.chat.type == "private")
 async def user_to_admin_relay(msg: Message):
     uid = msg.from_user.id
@@ -557,17 +555,17 @@ async def user_to_admin_relay(msg: Message):
     try:
         un = f"@{msg.from_user.username}" if msg.from_user.username else "-"
         if msg.content_type == "text":
-            text = f"👤 #{uid} ({un}):\n{msg.text}"
+            text = f"ðŸ‘¤ #{uid} ({un}):\n{msg.text}"
             await msg.bot.send_message(admin_id, text, reply_markup=_chat_kb(uid))
             _push_history(uid, "user", msg.text)
         elif msg.content_type == "photo":
             fid = msg.photo[-1].file_id
             await msg.bot.send_photo(admin_id, fid,
-                                     caption=f"👤 #{uid} ({un}) sent a photo",
+                                     caption=f"ðŸ‘¤ #{uid} ({un}) sent a photo",
                                      reply_markup=_chat_kb(uid))
             _push_history(uid, "user", "[photo]", kind="photo", file_id=fid)
         else:
-            await msg.bot.send_message(admin_id, f"👤 #{uid}: {msg.content_type}",
+            await msg.bot.send_message(admin_id, f"ðŸ‘¤ #{uid}: {msg.content_type}",
                                        reply_markup=_chat_kb(uid))
             _push_history(uid, "user", f"[{msg.content_type}]")
     except Exception:
@@ -577,15 +575,15 @@ async def user_to_admin_relay(msg: Message):
     if _now() - last_ack >= USER_ACK_COOLDOWN:
         try:
             await msg.reply(
-                _L(uid, "📨 تم إرسال رسالتك إلى المشرف. يرجى الانتظار.",
-                         "📨 Your message was sent to the admin. Please wait."),
+                _L(uid, "ðŸ“¨ ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø±Ø³Ø§Ù„ØªÙƒ Ø¥Ù„Ù‰ Ø§Ù„Ù…Ø´Ø±Ù. ÙŠØ±Ø¬Ù‰ Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø±.",
+                         "ðŸ“¨ Your message was sent to the admin. Please wait."),
                 reply_markup=_user_chat_kb(uid)
             )
             update_request(uid, last_user_ack_ts=_now())
         except Exception:
             pass
 
-# إرسال رسالة يدوية من الأدمن
+# Ø¥Ø±Ø³Ø§Ù„ Ø±Ø³Ø§Ù„Ø© ÙŠØ¯ÙˆÙŠØ© Ù…Ù† Ø§Ù„Ø£Ø¯Ù…Ù†
 @router.message(Command("say"))
 async def say_to_user(msg: Message):
     if not _is_admin(msg.from_user.id):
@@ -600,15 +598,15 @@ async def say_to_user(msg: Message):
     try:
         await msg.bot.send_message(uid, txt, reply_markup=_user_chat_kb(uid))
         _push_history(uid, "admin", txt)
-        await msg.reply("✅ sent.")
+        await msg.reply("âœ… sent.")
     except Exception:
-        await msg.reply("⚠️ failed.")
+        await msg.reply("âš ï¸ failed.")
 
-# ───────────────────────────── Collect details after final approval ─────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Collect details after final approval â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async def start_user_details_flow(bot, uid: int):
     await bot.send_message(
         uid,
-        _L(uid, "✅ تمت الموافقة النهائية. اختر اللعبة:", "✅ Final approval. Choose the game:"),
+        _L(uid, "âœ… ØªÙ…Øª Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø© Ø§Ù„Ù†Ù‡Ø§Ø¦ÙŠØ©. Ø§Ø®ØªØ± Ø§Ù„Ù„Ø¹Ø¨Ø©:", "âœ… Final approval. Choose the game:"),
         reply_markup=_row_buttons(GAMES, "user:game")
     )
 
@@ -619,13 +617,13 @@ async def user_close_chat(cb: CallbackQuery):
     admin_id = int(rec.get("chat_admin") or 0)
     update_request(uid, chat_on=False, chat_admin=None)
     try:
-        await cb.message.answer(_L(uid, "🔒 تم إنهاء المحادثة. شكراً لك.",
-                                         "🔒 Chat ended. Thank you."))
+        await cb.message.answer(_L(uid, "ðŸ”’ ØªÙ… Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø©. Ø´ÙƒØ±Ø§Ù‹ Ù„Ùƒ.",
+                                         "ðŸ”’ Chat ended. Thank you."))
     except Exception:
         pass
     if admin_id:
         try:
-            await cb.bot.send_message(admin_id, f"ℹ️ User #{uid} closed the chat.")
+            await cb.bot.send_message(admin_id, f"â„¹ï¸ User #{uid} closed the chat.")
         except Exception:
             pass
     await cb.answer()
@@ -636,14 +634,14 @@ async def user_done_chat(cb: CallbackQuery):
     rec = find_request(uid) or {}
     admin_id = int(rec.get("chat_admin") or 0)
     try:
-        await cb.message.answer(_L(uid, "✅ شكرًا لك! سنبقى متاحين لأي استفسار.",
-                                         "✅ Thanks! We're here if you need anything."),
+        await cb.message.answer(_L(uid, "âœ… Ø´ÙƒØ±Ù‹Ø§ Ù„Ùƒ! Ø³Ù†Ø¨Ù‚Ù‰ Ù…ØªØ§Ø­ÙŠÙ† Ù„Ø£ÙŠ Ø§Ø³ØªÙØ³Ø§Ø±.",
+                                         "âœ… Thanks! We're here if you need anything."),
                                 reply_markup=_user_chat_kb(uid))
     except Exception:
         pass
     if admin_id:
         try:
-            await cb.bot.send_message(admin_id, f"ℹ️ User #{uid} marked conversation as done.")
+            await cb.bot.send_message(admin_id, f"â„¹ï¸ User #{uid} marked conversation as done.")
         except Exception:
             pass
     await cb.answer()
@@ -653,24 +651,24 @@ async def pick_game(cb: CallbackQuery, state: FSMContext):
     uid = cb.from_user.id
     rec = find_request(uid) or {}
     if _is_locked(rec) and rec.get("status") not in {"final_approved","ready_for_activation"}:
-        return await cb.answer("الطلب مُقفل.", show_alert=True)
+        return await cb.answer("Ø§Ù„Ø·Ù„Ø¨ Ù…ÙÙ‚ÙÙ„.", show_alert=True)
     if rec.get("snake_id"):
-        await _safe_edit_rm(cb); return await cb.answer("تم استلام التفاصيل سابقًا.")
+        await _safe_edit_rm(cb); return await cb.answer("ØªÙ… Ø§Ø³ØªÙ„Ø§Ù… Ø§Ù„ØªÙØ§ØµÙŠÙ„ Ø³Ø§Ø¨Ù‚Ù‹Ø§.")
     game = cb.data.split(":")[-1]
     await state.update_data(game=game, plan="none")
     await state.set_state(RegState.enter_id)
     await _safe_edit_rm(cb)
-    await _ask_once(cb, uid, "ask:id", _L(uid,"أرسل Snake ID (أرقام فقط):","Send your Snake ID (digits only):"))
+    await _ask_once(cb, uid, "ask:id", _L(uid,"Ø£Ø±Ø³Ù„ Snake ID (Ø£Ø±Ù‚Ø§Ù… ÙÙ‚Ø·):","Send your Snake ID (digits only):"))
     await cb.answer()
 
 @router.message(StateFilter(RegState.enter_id))
 async def get_snake_id(msg: Message, state: FSMContext):
     raw = (msg.text or "").strip()
-    trans = str.maketrans("٠١٢٣٤٥٦٧٨٩","0123456789")
+    trans = str.maketrans("Ù Ù¡Ù¢Ù£Ù¤Ù¥Ù¦Ù§Ù¨Ù©","0123456789")
     raw = raw.translate(trans)
     sid = re.sub(r"\D+","", raw)
     if not (3 <= len(sid) <= 18):
-        return await msg.reply("الرجاء إدخال ID رقمي صحيح (3–18 خانة). أرسل الأرقام فقط.")
+        return await msg.reply("Ø§Ù„Ø±Ø¬Ø§Ø¡ Ø¥Ø¯Ø®Ø§Ù„ ID Ø±Ù‚Ù…ÙŠ ØµØ­ÙŠØ­ (3â€“18 Ø®Ø§Ù†Ø©). Ø£Ø±Ø³Ù„ Ø§Ù„Ø£Ø±Ù‚Ø§Ù… ÙÙ‚Ø·.")
     data = await state.get_data()
     game = data.get("game") or "-"
     update_request(
@@ -680,14 +678,14 @@ async def get_snake_id(msg: Message, state: FSMContext):
         details_submitted_at=_now(), locked=True
     )
     await msg.answer(_L(msg.from_user.id,
-        "✅ تم استلام معرفك.\n⏳ انتظر التفعيل من قِبل المشرف، وسنرسل لك إشعارًا فور اكتماله.",
-        "✅ Got your ID.\n⏳ Please wait for activation; we’ll notify you when it’s done."
+        "âœ… ØªÙ… Ø§Ø³ØªÙ„Ø§Ù… Ù…Ø¹Ø±ÙÙƒ.\nâ³ Ø§Ù†ØªØ¸Ø± Ø§Ù„ØªÙØ¹ÙŠÙ„ Ù…Ù† Ù‚ÙØ¨Ù„ Ø§Ù„Ù…Ø´Ø±ÙØŒ ÙˆØ³Ù†Ø±Ø³Ù„ Ù„Ùƒ Ø¥Ø´Ø¹Ø§Ø±Ù‹Ø§ ÙÙˆØ± Ø§ÙƒØªÙ…Ø§Ù„Ù‡.",
+        "âœ… Got your ID.\nâ³ Please wait for activation; weâ€™ll notify you when itâ€™s done."
     ))
     try:
         for aid in ADMIN_IDS:
             await msg.bot.send_message(
                 aid,
-                "🔔 طلب تفعيل جاهز\n"
+                "ðŸ”” Ø·Ù„Ø¨ ØªÙØ¹ÙŠÙ„ Ø¬Ø§Ù‡Ø²\n"
                 f"user_id={msg.from_user.id}\n"
                 f"username=@{msg.from_user.username or '-'}\n"
                 f"game={game}\n"
@@ -713,15 +711,16 @@ async def admin_activate(cb: CallbackQuery):
     try:
         pretty = PLANS[plan]
         await cb.bot.send_message(uid, _L(uid,
-            f"🎉 تم تفعيل لعبتك ({game}) لمدة {pretty} ✅\nنتمنى لك تجربة ممتعة! لو واجهت أي مشكلة تواصل معنا.",
-            f"🎉 Your game ({game}) was activated for {pretty} ✅\nEnjoy! Contact us if you face any issue."
+            f"ðŸŽ‰ ØªÙ… ØªÙØ¹ÙŠÙ„ Ù„Ø¹Ø¨ØªÙƒ ({game}) Ù„Ù…Ø¯Ø© {pretty} âœ…\nÙ†ØªÙ…Ù†Ù‰ Ù„Ùƒ ØªØ¬Ø±Ø¨Ø© Ù…Ù…ØªØ¹Ø©! Ù„Ùˆ ÙˆØ§Ø¬Ù‡Øª Ø£ÙŠ Ù…Ø´ÙƒÙ„Ø© ØªÙˆØ§ØµÙ„ Ù…Ø¹Ù†Ø§.",
+            f"ðŸŽ‰ Your game ({game}) was activated for {pretty} âœ…\nEnjoy! Contact us if you face any issue."
         ))
     except Exception:
         pass
-    await cb.answer("Activated ✔")
+    await cb.answer("Activated âœ”")
     try:
-        await cb.message.edit_text((cb.message.text or "")+f"\n\n✅ تم التفعيل ({game}, {PLANS[plan]}).", reply_markup=None)
+        await cb.message.edit_text((cb.message.text or "")+f"\n\nâœ… ØªÙ… Ø§Ù„ØªÙØ¹ÙŠÙ„ ({game}, {PLANS[plan]}).", reply_markup=None)
     except Exception:
         pass
+
 
 

@@ -1,3 +1,4 @@
+﻿from utils.admins import get_admin_ids, is_admin, get_owner_ids
 # handlers/start.py
 from __future__ import annotations
 
@@ -14,23 +15,23 @@ from aiogram.enums import ParseMode
 from utils.known_users import add_known_user
 from lang import t, get_user_lang
 
-# بطاقة الترحيب الجديدة (Hero Pro)
+# Ø¨Ø·Ø§Ù‚Ø© Ø§Ù„ØªØ±Ø­ÙŠØ¨ Ø§Ù„Ø¬Ø¯ÙŠØ¯Ø© (Hero Pro)
 from handlers.home_hero import render_home_card
 
-# ===== إعدادات عامة =====
+# ===== Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø¹Ø§Ù…Ø© =====
 VIP_PUBLIC_APPLY = os.getenv("VIP_PUBLIC_APPLY", "1").strip() not in ("0", "false", "False", "")
 
 router = Router(name="start")
 
-# 👇 خاص فقط لتقليل التعارض
+# ðŸ‘‡ Ø®Ø§Øµ ÙÙ‚Ø· Ù„ØªÙ‚Ù„ÙŠÙ„ Ø§Ù„ØªØ¹Ø§Ø±Ø¶
 router.message.filter(F.chat.type == "private")
 router.callback_query.filter(F.message.chat.type == "private")
 
-# 👇 منع فتح القوائم أثناء الدردشة الحيّة
+# ðŸ‘‡ Ù…Ù†Ø¹ ÙØªØ­ Ø§Ù„Ù‚ÙˆØ§Ø¦Ù… Ø£Ø«Ù†Ø§Ø¡ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„Ø­ÙŠÙ‘Ø©
 try:
     from handlers.live_chat import LiveChat
 except Exception:
-    class LiveChat:  # fallback آمن
+    class LiveChat:  # fallback Ø¢Ù…Ù†
         active = None
 
 async def _is_live_active(state: FSMContext) -> bool:
@@ -39,12 +40,12 @@ async def _is_live_active(state: FSMContext) -> bool:
             return False
         cur = await state.get_state()  # aiogram v3: coroutine
         want = getattr(LiveChat, "active", None)
-        # بعض البيئات قد لا تملك .state لو fallback، نتأكد بأمان:
+        # Ø¨Ø¹Ø¶ Ø§Ù„Ø¨ÙŠØ¦Ø§Øª Ù‚Ø¯ Ù„Ø§ ØªÙ…Ù„Ùƒ .state Ù„Ùˆ fallbackØŒ Ù†ØªØ£ÙƒØ¯ Ø¨Ø£Ù…Ø§Ù†:
         target = getattr(want, "state", None)
         return bool(target and cur == target)
     except Exception:
         return False
-# ===== استيرادات اختيارية مع fallback =====
+# ===== Ø§Ø³ØªÙŠØ±Ø§Ø¯Ø§Øª Ø§Ø®ØªÙŠØ§Ø±ÙŠØ© Ù…Ø¹ fallback =====
 try:
     from utils.user_stats import log_user
 except Exception:
@@ -89,14 +90,14 @@ except Exception:
         from aiogram.utils.keyboard import InlineKeyboardBuilder
         return InlineKeyboardBuilder().as_markup()
 
-# (اختياري) خريطة CB بسيطة للاستهلاك من ملفات أخرى إن احتاجت
+# (Ø§Ø®ØªÙŠØ§Ø±ÙŠ) Ø®Ø±ÙŠØ·Ø© CB Ø¨Ø³ÙŠØ·Ø© Ù„Ù„Ø§Ø³ØªÙ‡Ù„Ø§Ùƒ Ù…Ù† Ù…Ù„ÙØ§Øª Ø£Ø®Ø±Ù‰ Ø¥Ù† Ø§Ø­ØªØ§Ø¬Øª
 CB = {
     "BOT_OPEN": "bot:open",
     "TRUSTED_SUPPLIERS": "trusted_suppliers",
     "VIP_BUY_INTERNAL": "shop:sevip",
 }
 
-# ===== إعدادات الأدمن =====
+# ===== Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ø£Ø¯Ù…Ù† =====
 def _load_admin_ids() -> set[int]:
     raw = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
     ids: set[int] = set()
@@ -111,7 +112,7 @@ def _load_admin_ids() -> set[int]:
 
 ADMIN_IDS = _load_admin_ids()
 
-# ===== نموذج مستخدم =====
+# ===== Ù†Ù…ÙˆØ°Ø¬ Ù…Ø³ØªØ®Ø¯Ù… =====
 @dataclass
 class UserMini:
     user_id: int
@@ -125,16 +126,16 @@ async def _get_user_mini(tg_user) -> UserMini:
     role = "supplier" if (_is_supplier_ext and _is_supplier_ext(tg_user.id)) else "user"
     return UserMini(
         user_id=tg_user.id,
-        first_name=tg_user.first_name or ("ضيف" if lang == "ar" else "Guest"),
+        first_name=tg_user.first_name or ("Ø¶ÙŠÙ" if lang == "ar" else "Guest"),
         username=tg_user.username,
         lang=lang,
         role=role,
     )
 
-# ===== واجهة الترحيب: كل العرض عبر بطاقة Hero Pro =====
+# ===== ÙˆØ§Ø¬Ù‡Ø© Ø§Ù„ØªØ±Ø­ÙŠØ¨: ÙƒÙ„ Ø§Ù„Ø¹Ø±Ø¶ Ø¹Ø¨Ø± Ø¨Ø·Ø§Ù‚Ø© Hero Pro =====
 async def _send_welcome_single_message(
     *,
-    target_msg,      # Message أو CallbackQuery.message
+    target_msg,      # Message Ø£Ùˆ CallbackQuery.message
     lang: str,
     user: UserMini,
     vip_real: bool,
@@ -146,19 +147,19 @@ async def _send_welcome_single_message(
 # ======================== /start ========================
 @router.message(CommandStart())
 async def start_handler(message: Message, state: FSMContext):
-    # لو فيه جلسة دردشة حية نشطة — لا تفتح القائمة، اطلب إنهاء الدردشة أولًا
+    # Ù„Ùˆ ÙÙŠÙ‡ Ø¬Ù„Ø³Ø© Ø¯Ø±Ø¯Ø´Ø© Ø­ÙŠØ© Ù†Ø´Ø·Ø© â€” Ù„Ø§ ØªÙØªØ­ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø©ØŒ Ø§Ø·Ù„Ø¨ Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø£ÙˆÙ„Ù‹Ø§
     if await _is_live_active(state):
         lang = get_user_lang(message.from_user.id) or "ar"
-        txt = ("⚠️ لديك جلسة دردشة حيّة مفتوحة.\n"
-               "يرجى إنهاء الدردشة من الزر «❌ إنهاء الدردشة» أولًا للعودة للقائمة.")
+        txt = ("âš ï¸ Ù„Ø¯ÙŠÙƒ Ø¬Ù„Ø³Ø© Ø¯Ø±Ø¯Ø´Ø© Ø­ÙŠÙ‘Ø© Ù…ÙØªÙˆØ­Ø©.\n"
+               "ÙŠØ±Ø¬Ù‰ Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ù…Ù† Ø§Ù„Ø²Ø± Â«âŒ Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø©Â» Ø£ÙˆÙ„Ù‹Ø§ Ù„Ù„Ø¹ÙˆØ¯Ø© Ù„Ù„Ù‚Ø§Ø¦Ù…Ø©.")
         if lang != "ar":
-            txt = "⚠️ You have an active live chat.\nPlease end the chat first (❌ End chat) to go back to the menu."
+            txt = "âš ï¸ You have an active live chat.\nPlease end the chat first (âŒ End chat) to go back to the menu."
         await message.answer(txt)
         return
 
     await state.clear()
 
-    # إخفاء أي لوحة رد سابقة (التبويبات /sections مثلاً)
+    # Ø¥Ø®ÙØ§Ø¡ Ø£ÙŠ Ù„ÙˆØ­Ø© Ø±Ø¯ Ø³Ø§Ø¨Ù‚Ø© (Ø§Ù„ØªØ¨ÙˆÙŠØ¨Ø§Øª /sections Ù…Ø«Ù„Ø§Ù‹)
     try:
         rm = await message.answer("\u2063", reply_markup=ReplyKeyboardRemove())
         await rm.delete()
@@ -167,15 +168,15 @@ async def start_handler(message: Message, state: FSMContext):
 
     await _serve_home(message)
 
-# في حال كان فيه أي حالة أخرى غير LiveChat، /start يلغيها ويعيدك للقائمة
+# ÙÙŠ Ø­Ø§Ù„ ÙƒØ§Ù† ÙÙŠÙ‡ Ø£ÙŠ Ø­Ø§Ù„Ø© Ø£Ø®Ø±Ù‰ ØºÙŠØ± LiveChatØŒ /start ÙŠÙ„ØºÙŠÙ‡Ø§ ÙˆÙŠØ¹ÙŠØ¯Ùƒ Ù„Ù„Ù‚Ø§Ø¦Ù…Ø©
 @router.message(~StateFilter(None), F.text.regexp(r"^/start(\s|$)"))
 async def start_handler_in_state(message: Message, state: FSMContext):
     if await _is_live_active(state):
         lang = get_user_lang(message.from_user.id) or "ar"
-        txt = ("⚠️ لديك جلسة دردشة حيّة مفتوحة.\n"
-               "يرجى إنهاء الدردشة من الزر «❌ إنهاء الدردشة» أولًا للعودة للقائمة.")
+        txt = ("âš ï¸ Ù„Ø¯ÙŠÙƒ Ø¬Ù„Ø³Ø© Ø¯Ø±Ø¯Ø´Ø© Ø­ÙŠÙ‘Ø© Ù…ÙØªÙˆØ­Ø©.\n"
+               "ÙŠØ±Ø¬Ù‰ Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ù…Ù† Ø§Ù„Ø²Ø± Â«âŒ Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø©Â» Ø£ÙˆÙ„Ù‹Ø§ Ù„Ù„Ø¹ÙˆØ¯Ø© Ù„Ù„Ù‚Ø§Ø¦Ù…Ø©.")
         if lang != "ar":
-            txt = "⚠️ You have an active live chat.\nPlease end the chat first (❌ End chat) to go back to the menu."
+            txt = "âš ï¸ You have an active live chat.\nPlease end the chat first (âŒ End chat) to go back to the menu."
         await message.answer(txt)
         return
 
@@ -190,17 +191,17 @@ async def start_handler_in_state(message: Message, state: FSMContext):
 async def _serve_home(message: Message):
     user = await _get_user_mini(message.from_user)
 
-    # صيانة
+    # ØµÙŠØ§Ù†Ø©
     if load_maintenance_mode() and (message.from_user.id not in ADMIN_IDS):
         await message.answer(
             (t(user.lang, "maintenance_active") or
-             "🚧 The bot is currently under maintenance.\n🚧 البوت تحت الصيانة حالياً.\n\nالرجاء المحاولة لاحقاً. Please try again later."),
+             "ðŸš§ The bot is currently under maintenance.\nðŸš§ Ø§Ù„Ø¨ÙˆØª ØªØ­Øª Ø§Ù„ØµÙŠØ§Ù†Ø© Ø­Ø§Ù„ÙŠØ§Ù‹.\n\nØ§Ù„Ø±Ø¬Ø§Ø¡ Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø© Ù„Ø§Ø­Ù‚Ø§Ù‹. Please try again later."),
             parse_mode=ParseMode.HTML,
             disable_web_page_preview=True,
         )
         return
 
-    # أعلام (موجودة للتوافق)
+    # Ø£Ø¹Ù„Ø§Ù… (Ù…ÙˆØ¬ÙˆØ¯Ø© Ù„Ù„ØªÙˆØ§ÙÙ‚)
     try:
         vip_real = bool(_is_vip and _is_vip(user.user_id))
     except Exception:
@@ -219,7 +220,7 @@ async def _serve_home(message: Message):
         vip_member=vip_real,
     )
 
-    # خلفية: سجل/قوائم/أوامر/إعلانات
+    # Ø®Ù„ÙÙŠØ©: Ø³Ø¬Ù„/Ù‚ÙˆØ§Ø¦Ù…/Ø£ÙˆØ§Ù…Ø±/Ø¥Ø¹Ù„Ø§Ù†Ø§Øª
     asyncio.create_task(asyncio.to_thread(log_user, message.from_user.id))
     asyncio.create_task(asyncio.to_thread(add_known_user, message.from_user.id))
     asyncio.create_task(update_user_commands(message.bot, message.chat.id, user.lang))
@@ -240,8 +241,8 @@ async def _serve_home(message: Message):
                             await message.bot.send_message(
                                 admin_id,
                                 f"{t(user.lang, 'vip.admin.new_request_title')}\n"
-                                f"👤 {t(user.lang,'vip.admin.user')}: <code>{user.user_id}</code>\n"
-                                f"🆔 {t(user.lang,'vip.admin.app_id')}: <code>{app_id}</code>\n\n"
+                                f"ðŸ‘¤ {t(user.lang,'vip.admin.user')}: <code>{user.user_id}</code>\n"
+                                f"ðŸ†” {t(user.lang,'vip.admin.app_id')}: <code>{app_id}</code>\n\n"
                                 f"{t(user.lang,'vip.admin.instructions')}",
                                 reply_markup=_admin_review_kb(user.user_id, app_id, user.lang),
                                 parse_mode=ParseMode.HTML
@@ -257,16 +258,16 @@ async def _serve_home(message: Message):
 
             asyncio.create_task(_vip_bg())
 
-# ===== زر رجوع عام =====
+# ===== Ø²Ø± Ø±Ø¬ÙˆØ¹ Ø¹Ø§Ù… =====
 @router.callback_query(F.data.in_({"back_to_menu", "home"}))
 async def back_to_menu_handler(callback: CallbackQuery, state: FSMContext):
-    # لا نعرض القائمة أثناء الدردشة الحيّة
+    # Ù„Ø§ Ù†Ø¹Ø±Ø¶ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© Ø£Ø«Ù†Ø§Ø¡ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„Ø­ÙŠÙ‘Ø©
     if await _is_live_active(state):
         lang = get_user_lang(callback.from_user.id) or "ar"
-        txt = ("⚠️ لديك جلسة دردشة حيّة مفتوحة.\n"
-               "يرجى إنهاء الدردشة من الزر «❌ إنهاء الدردشة» أولًا للعودة للقائمة.")
+        txt = ("âš ï¸ Ù„Ø¯ÙŠÙƒ Ø¬Ù„Ø³Ø© Ø¯Ø±Ø¯Ø´Ø© Ø­ÙŠÙ‘Ø© Ù…ÙØªÙˆØ­Ø©.\n"
+               "ÙŠØ±Ø¬Ù‰ Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ù…Ù† Ø§Ù„Ø²Ø± Â«âŒ Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø©Â» Ø£ÙˆÙ„Ù‹Ø§ Ù„Ù„Ø¹ÙˆØ¯Ø© Ù„Ù„Ù‚Ø§Ø¦Ù…Ø©.")
         if lang != "ar":
-            txt = "⚠️ You have an active live chat.\nPlease end the chat first (❌ End chat) to go back to the menu."
+            txt = "âš ï¸ You have an active live chat.\nPlease end the chat first (âŒ End chat) to go back to the menu."
         await callback.answer()
         try:
             await callback.message.answer(txt)
@@ -303,3 +304,4 @@ async def back_to_menu_handler(callback: CallbackQuery, state: FSMContext):
 
     asyncio.create_task(update_user_commands(callback.message.bot, callback.message.chat.id, user.lang))
     await callback.answer()
+

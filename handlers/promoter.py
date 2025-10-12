@@ -1,3 +1,4 @@
+﻿from utils.admins import get_admin_ids, is_admin, get_owner_ids
 # handlers/promoter.py
 from __future__ import annotations
 import os, json, time, logging
@@ -16,25 +17,25 @@ from aiogram.enums import ParseMode
 from lang import t, get_user_lang
 
 router = Router(name="promoter")
-# ✅ قيّد كولباكات المروّج على بادئة prom:
+# âœ… Ù‚ÙŠÙ‘Ø¯ ÙƒÙˆÙ„Ø¨Ø§ÙƒØ§Øª Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬ Ø¹Ù„Ù‰ Ø¨Ø§Ø¯Ø¦Ø© prom:
 router.callback_query.filter(lambda cq: (cq.data or "").startswith("prom:"))
-# ✅ لا تلتقط أي أوامر (كل ما يبدأ بـ "/") — حتى لا تبلع /report و /start
+# âœ… Ù„Ø§ ØªÙ„ØªÙ‚Ø· Ø£ÙŠ Ø£ÙˆØ§Ù…Ø± (ÙƒÙ„ Ù…Ø§ ÙŠØ¨Ø¯Ø£ Ø¨Ù€ "/") â€” Ø­ØªÙ‰ Ù„Ø§ ØªØ¨Ù„Ø¹ /report Ùˆ /start
 router.message.filter(lambda m: not ((m.text or "").lstrip().startswith("/")))
 
 log = logging.getLogger(__name__)
 
-# ===== ملفات وإعدادات =====
+# ===== Ù…Ù„ÙØ§Øª ÙˆØ¥Ø¹Ø¯Ø§Ø¯Ø§Øª =====
 DATA_DIR = Path("data"); DATA_DIR.mkdir(parents=True, exist_ok=True)
 STORE_FILE = DATA_DIR / "promoters.json"
 
 _admin_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
-ADMIN_IDS = [int(x) for x in str(_admin_env).split(",") if str(x).strip().isdigit()]
+ADMIN_IDS = get_admin_ids()
 if not ADMIN_IDS:
-    ADMIN_IDS = [7360982123]
+    ADMIN_IDS = get_admin_ids()
 
-_DEFAULT_DAILY_LIMIT = 5  # حد افتراضي إذا لم يوجد في settings
+_DEFAULT_DAILY_LIMIT = 5  # Ø­Ø¯ Ø§ÙØªØ±Ø§Ø¶ÙŠ Ø¥Ø°Ø§ Ù„Ù… ÙŠÙˆØ¬Ø¯ ÙÙŠ settings
 
-# ===== I/O (مع تطبيع الشكل لتفادي KeyError: 'users') =====
+# ===== I/O (Ù…Ø¹ ØªØ·Ø¨ÙŠØ¹ Ø§Ù„Ø´ÙƒÙ„ Ù„ØªÙØ§Ø¯ÙŠ KeyError: 'users') =====
 def _load_raw() -> Any:
     if STORE_FILE.exists():
         try:
@@ -45,17 +46,17 @@ def _load_raw() -> Any:
 
 def _users_map_from_any(obj: Any) -> Dict[str, Any]:
     """
-    يُرجِع قاموسًا موحّدًا بالشكل { '<uid>': {...} } من أي صيغة محتملة:
+    ÙŠÙØ±Ø¬ÙØ¹ Ù‚Ø§Ù…ÙˆØ³Ù‹Ø§ Ù…ÙˆØ­Ù‘Ø¯Ù‹Ø§ Ø¨Ø§Ù„Ø´ÙƒÙ„ { '<uid>': {...} } Ù…Ù† Ø£ÙŠ ØµÙŠØºØ© Ù…Ø­ØªÙ…Ù„Ø©:
       1) {"users": { "123": {...} | True | 1 | {} , ... }}
-      2) {"123": {...} | True | 1 | {} , ...}  (بدون مفتاح users)
-      3) [123, 456, ...]  أو  [{"id":123,"active":true}, {"uid":456}, ...]
+      2) {"123": {...} | True | 1 | {} , ...}  (Ø¨Ø¯ÙˆÙ† Ù…ÙØªØ§Ø­ users)
+      3) [123, 456, ...]  Ø£Ùˆ  [{"id":123,"active":true}, {"uid":456}, ...]
     """
     out: Dict[str, Any] = {}
 
     if not obj:
         return out
 
-    # شكل به users
+    # Ø´ÙƒÙ„ Ø¨Ù‡ users
     if isinstance(obj, dict) and isinstance(obj.get("users"), dict):
         base = obj["users"]
         for k, v in base.items():
@@ -65,7 +66,7 @@ def _users_map_from_any(obj: Any) -> Dict[str, Any]:
                 out[str(k)] = {"active": bool(v)} if v is not None else {}
         return out
 
-    # قاموس مباشر
+    # Ù‚Ø§Ù…ÙˆØ³ Ù…Ø¨Ø§Ø´Ø±
     if isinstance(obj, dict):
         for k, v in obj.items():
             if k in ("meta", "stats", "settings"):
@@ -76,7 +77,7 @@ def _users_map_from_any(obj: Any) -> Dict[str, Any]:
                 out[str(k)] = {"active": bool(v)} if v is not None else {}
         return out
 
-    # قائمة
+    # Ù‚Ø§Ø¦Ù…Ø©
     if isinstance(obj, list):
         for item in obj:
             try:
@@ -97,23 +98,23 @@ def _users_map_from_any(obj: Any) -> Dict[str, Any]:
 
 def _load_store() -> Dict[str, Any]:
     """
-    يضمن إرجاع شكل قياسي:
+    ÙŠØ¶Ù…Ù† Ø¥Ø±Ø¬Ø§Ø¹ Ø´ÙƒÙ„ Ù‚ÙŠØ§Ø³ÙŠ:
         {"users": {...}, "settings": {...}}
-    بغض النظر عن صيغة الملف الفعلية.
+    Ø¨ØºØ¶ Ø§Ù„Ù†Ø¸Ø± Ø¹Ù† ØµÙŠØºØ© Ø§Ù„Ù…Ù„Ù Ø§Ù„ÙØ¹Ù„ÙŠØ©.
     """
     raw = _load_raw()
     users = _users_map_from_any(raw)
     settings = {}
     if isinstance(raw, dict):
         settings = raw.get("settings") or {}
-    # إعداد افتراضي للحد اليومي
+    # Ø¥Ø¹Ø¯Ø§Ø¯ Ø§ÙØªØ±Ø§Ø¶ÙŠ Ù„Ù„Ø­Ø¯ Ø§Ù„ÙŠÙˆÙ…ÙŠ
     if "daily_limit" not in settings:
         settings["daily_limit"] = _DEFAULT_DAILY_LIMIT
     return {"users": users, "settings": settings}
 
 def _save_store(d: Dict[str, Any]) -> None:
     try:
-        # كتابة بالصيغة القياسية دومًا لتفادي المشاكل مستقبلًا
+        # ÙƒØªØ§Ø¨Ø© Ø¨Ø§Ù„ØµÙŠØºØ© Ø§Ù„Ù‚ÙŠØ§Ø³ÙŠØ© Ø¯ÙˆÙ…Ù‹Ø§ Ù„ØªÙØ§Ø¯ÙŠ Ø§Ù„Ù…Ø´Ø§ÙƒÙ„ Ù…Ø³ØªÙ‚Ø¨Ù„Ù‹Ø§
         payload = {
             "users": d.get("users", {}),
             "settings": d.get("settings", {"daily_limit": _DEFAULT_DAILY_LIMIT}),
@@ -125,7 +126,7 @@ def _save_store(d: Dict[str, Any]) -> None:
         log.warning(f"[promoters] save failed: {e}")
 
 def _get_daily_limit(d: Dict[str, Any] | None = None) -> int:
-    """يقرأ الحد اليومي من التخزين (مع افتراضي)."""
+    """ÙŠÙ‚Ø±Ø£ Ø§Ù„Ø­Ø¯ Ø§Ù„ÙŠÙˆÙ…ÙŠ Ù…Ù† Ø§Ù„ØªØ®Ø²ÙŠÙ† (Ù…Ø¹ Ø§ÙØªØ±Ø§Ø¶ÙŠ)."""
     if d is None:
         d = _load_store()
     try:
@@ -137,12 +138,12 @@ def _get_daily_limit(d: Dict[str, Any] | None = None) -> int:
 def _now() -> int:
     return int(time.time())
 
-# ===== API لـ start.py =====
+# ===== API Ù„Ù€ start.py =====
 def is_promoter(uid: int) -> bool:
     """
-    آمنة بالكامل—لا ترمي KeyError حتى لو كان الملف بصيغ قديمة.
-    يعتبر المستخدم مروّجًا إن وُجد سجل له ولم يكن محظورًا،
-    ويحترم مفتاح active إن كان موجودًا.
+    Ø¢Ù…Ù†Ø© Ø¨Ø§Ù„ÙƒØ§Ù…Ù„â€”Ù„Ø§ ØªØ±Ù…ÙŠ KeyError Ø­ØªÙ‰ Ù„Ùˆ ÙƒØ§Ù† Ø§Ù„Ù…Ù„Ù Ø¨ØµÙŠØº Ù‚Ø¯ÙŠÙ…Ø©.
+    ÙŠØ¹ØªØ¨Ø± Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ù…Ø±ÙˆÙ‘Ø¬Ù‹Ø§ Ø¥Ù† ÙˆÙØ¬Ø¯ Ø³Ø¬Ù„ Ù„Ù‡ ÙˆÙ„Ù… ÙŠÙƒÙ† Ù…Ø­Ø¸ÙˆØ±Ù‹Ø§ØŒ
+    ÙˆÙŠØ­ØªØ±Ù… Ù…ÙØªØ§Ø­ active Ø¥Ù† ÙƒØ§Ù† Ù…ÙˆØ¬ÙˆØ¯Ù‹Ø§.
     """
     d = _load_store()
     u = d.get("users", {}).get(str(uid))
@@ -155,20 +156,20 @@ def is_promoter(uid: int) -> bool:
             return False
         status = u.get("status")
         if status and status not in ("approved", "active", "enabled"):
-            # لو النظام عندك يعتمد "approved" فقط، السطر التالي يكفي:
+            # Ù„Ùˆ Ø§Ù„Ù†Ø¸Ø§Ù… Ø¹Ù†Ø¯Ùƒ ÙŠØ¹ØªÙ…Ø¯ "approved" ÙÙ‚Ø·ØŒ Ø§Ù„Ø³Ø·Ø± Ø§Ù„ØªØ§Ù„ÙŠ ÙŠÙƒÙÙŠ:
             return status == "approved"
-    # إن لم تُحدد حالة، نعدّه مفعّلًا لوجوده في القائمة
+    # Ø¥Ù† Ù„Ù… ØªÙØ­Ø¯Ø¯ Ø­Ø§Ù„Ø©ØŒ Ù†Ø¹Ø¯Ù‘Ù‡ Ù…ÙØ¹Ù‘Ù„Ù‹Ø§ Ù„ÙˆØ¬ÙˆØ¯Ù‡ ÙÙŠ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø©
     return True
 
-# ===== ترجمة مبسطة (ثنائية fallback) =====
+# ===== ØªØ±Ø¬Ù…Ø© Ù…Ø¨Ø³Ø·Ø© (Ø«Ù†Ø§Ø¦ÙŠØ© fallback) =====
 def L(uid: int) -> str:
     return get_user_lang(uid) or "en"
 
 def _tf(lang: str, key: str, ar_fallback: str, en_fallback: str | None = None) -> str:
     """
-    يحاول الترجمة من ملف اللغات. إن لم يجد:
-      - إن قُدّم en_fallback يستخدمه للإنجليزية و ar_fallback للعربية.
-      - إن لم يُقدّم en_fallback يستخدم ar_fallback لكلا اللغتين (توافقًا مع الاستدعاءات القديمة).
+    ÙŠØ­Ø§ÙˆÙ„ Ø§Ù„ØªØ±Ø¬Ù…Ø© Ù…Ù† Ù…Ù„Ù Ø§Ù„Ù„ØºØ§Øª. Ø¥Ù† Ù„Ù… ÙŠØ¬Ø¯:
+      - Ø¥Ù† Ù‚ÙØ¯Ù‘Ù… en_fallback ÙŠØ³ØªØ®Ø¯Ù…Ù‡ Ù„Ù„Ø¥Ù†Ø¬Ù„ÙŠØ²ÙŠØ© Ùˆ ar_fallback Ù„Ù„Ø¹Ø±Ø¨ÙŠØ©.
+      - Ø¥Ù† Ù„Ù… ÙŠÙÙ‚Ø¯Ù‘Ù… en_fallback ÙŠØ³ØªØ®Ø¯Ù… ar_fallback Ù„ÙƒÙ„Ø§ Ø§Ù„Ù„ØºØªÙŠÙ† (ØªÙˆØ§ÙÙ‚Ù‹Ø§ Ù…Ø¹ Ø§Ù„Ø§Ø³ØªØ¯Ø¹Ø§Ø¡Ø§Øª Ø§Ù„Ù‚Ø¯ÙŠÙ…Ø©).
     """
     try:
         s = t(lang, key)
@@ -180,7 +181,7 @@ def _tf(lang: str, key: str, ar_fallback: str, en_fallback: str | None = None) -
         return ar_fallback
     return en_fallback if str(lang).lower().startswith("en") else ar_fallback
 
-# ===== حسابات حد/تبريد/حظر =====
+# ===== Ø­Ø³Ø§Ø¨Ø§Øª Ø­Ø¯/ØªØ¨Ø±ÙŠØ¯/Ø­Ø¸Ø± =====
 def _attempts_last_24h(u: Dict[str, Any]) -> int:
     now = _now()
     attempts: List[int] = u.get("attempts", [])
@@ -200,10 +201,10 @@ def _format_duration(sec: int, lang: str) -> str:
     m = sec // 60
     h = m // 60
     d = h // 24
-    if d >= 1: return f"{d} " + _tf(lang, "prom.time.days", "يوم", "day(s)")
-    if h >= 1: return f"{h} " + _tf(lang, "prom.time.hours", "ساعة", "hour(s)")
-    if m >= 1: return f"{m} " + _tf(lang, "prom.time.minutes", "دقيقة", "minute(s)")
-    return f"{sec} " + _tf(lang, "prom.time.seconds", "ثانية", "second(s)")
+    if d >= 1: return f"{d} " + _tf(lang, "prom.time.days", "ÙŠÙˆÙ…", "day(s)")
+    if h >= 1: return f"{h} " + _tf(lang, "prom.time.hours", "Ø³Ø§Ø¹Ø©", "hour(s)")
+    if m >= 1: return f"{m} " + _tf(lang, "prom.time.minutes", "Ø¯Ù‚ÙŠÙ‚Ø©", "minute(s)")
+    return f"{sec} " + _tf(lang, "prom.time.seconds", "Ø«Ø§Ù†ÙŠØ©", "second(s)")
 
 def _next_reject_ban_secs(rejects_count: int) -> int:
     if rejects_count <= 0: return 0
@@ -211,55 +212,55 @@ def _next_reject_ban_secs(rejects_count: int) -> int:
     if rejects_count == 2: return 7*24*3600
     return 30*24*3600
 
-# ===== واجهة عامة =====
+# ===== ÙˆØ§Ø¬Ù‡Ø© Ø¹Ø§Ù…Ø© =====
 def prom_info_text(lang: str) -> str:
     return (
-        f"📣 <b>{_tf(lang,'prom.title','برنامج المروّجين','Promoters Program')}</b>\n\n"
-        f"{_tf(lang,'prom.terms.lead','الشروط للانضمام:','Requirements to join:')}\n"
-        f"• {_tf(lang,'prom.terms.1','لديك 5,000 متابع أو أكثر على منصّات التواصل.','Have 5,000+ followers on socials.')}\n"
-        f"• {_tf(lang,'prom.terms.2','الالتزام بالمنصّة ونشر/بث يومي أو رفع مقاطع عنها.','Commit to daily posting/streaming about the platform.')}\n"
-        f"• {_tf(lang,'prom.terms.3','جدّية والتزام بالشروط.','Seriousness and commitment.')}\n"
-        f"• {_tf(lang,'prom.terms.4','إذا استوفيت الشروط سنمنحك اشتراكًا مجانيًا في التطبيق.','If you qualify, you’ll get a free app subscription.')}\n\n"
-        f"{_tf(lang,'prom.terms.ready_q','هل أنت جاهز للبدء؟','Are you ready to start?')}"
+        f"ðŸ“£ <b>{_tf(lang,'prom.title','Ø¨Ø±Ù†Ø§Ù…Ø¬ Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬ÙŠÙ†','Promoters Program')}</b>\n\n"
+        f"{_tf(lang,'prom.terms.lead','Ø§Ù„Ø´Ø±ÙˆØ· Ù„Ù„Ø§Ù†Ø¶Ù…Ø§Ù…:','Requirements to join:')}\n"
+        f"â€¢ {_tf(lang,'prom.terms.1','Ù„Ø¯ÙŠÙƒ 5,000 Ù…ØªØ§Ø¨Ø¹ Ø£Ùˆ Ø£ÙƒØ«Ø± Ø¹Ù„Ù‰ Ù…Ù†ØµÙ‘Ø§Øª Ø§Ù„ØªÙˆØ§ØµÙ„.','Have 5,000+ followers on socials.')}\n"
+        f"â€¢ {_tf(lang,'prom.terms.2','Ø§Ù„Ø§Ù„ØªØ²Ø§Ù… Ø¨Ø§Ù„Ù…Ù†ØµÙ‘Ø© ÙˆÙ†Ø´Ø±/Ø¨Ø« ÙŠÙˆÙ…ÙŠ Ø£Ùˆ Ø±ÙØ¹ Ù…Ù‚Ø§Ø·Ø¹ Ø¹Ù†Ù‡Ø§.','Commit to daily posting/streaming about the platform.')}\n"
+        f"â€¢ {_tf(lang,'prom.terms.3','Ø¬Ø¯Ù‘ÙŠØ© ÙˆØ§Ù„ØªØ²Ø§Ù… Ø¨Ø§Ù„Ø´Ø±ÙˆØ·.','Seriousness and commitment.')}\n"
+        f"â€¢ {_tf(lang,'prom.terms.4','Ø¥Ø°Ø§ Ø§Ø³ØªÙˆÙÙŠØª Ø§Ù„Ø´Ø±ÙˆØ· Ø³Ù†Ù…Ù†Ø­Ùƒ Ø§Ø´ØªØ±Ø§ÙƒÙ‹Ø§ Ù…Ø¬Ø§Ù†ÙŠÙ‹Ø§ ÙÙŠ Ø§Ù„ØªØ·Ø¨ÙŠÙ‚.','If you qualify, youâ€™ll get a free app subscription.')}\n\n"
+        f"{_tf(lang,'prom.terms.ready_q','Ù‡Ù„ Ø£Ù†Øª Ø¬Ø§Ù‡Ø² Ù„Ù„Ø¨Ø¯Ø¡ØŸ','Are you ready to start?')}"
     )
 
 def prom_info_kb(lang: str) -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
-    b.button(text=_tf(lang, "prom.btn.ready", "أنا جاهز ✅", "I’m ready ✅"), callback_data="prom:apply")
-    b.button(text=_tf(lang, "prom.btn.cancel", "إلغاء", "Cancel"), callback_data="back_to_menu")
+    b.button(text=_tf(lang, "prom.btn.ready", "Ø£Ù†Ø§ Ø¬Ø§Ù‡Ø² âœ…", "Iâ€™m ready âœ…"), callback_data="prom:apply")
+    b.button(text=_tf(lang, "prom.btn.cancel", "Ø¥Ù„ØºØ§Ø¡", "Cancel"), callback_data="back_to_menu")
     b.adjust(2)
     return b.as_markup()
 
 def _admin_review_kb(uid: int, lang: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text=_tf(lang,"prom.adm.approve","✅ موافقة","✅ Approve"), callback_data=f"prom:adm:approve:{uid}"),
-            InlineKeyboardButton(text=_tf(lang,"prom.adm.reject","❌ رفض","❌ Reject"), callback_data=f"prom:adm:reject:{uid}"),
+            InlineKeyboardButton(text=_tf(lang,"prom.adm.approve","âœ… Ù…ÙˆØ§ÙÙ‚Ø©","âœ… Approve"), callback_data=f"prom:adm:approve:{uid}"),
+            InlineKeyboardButton(text=_tf(lang,"prom.adm.reject","âŒ Ø±ÙØ¶","âŒ Reject"), callback_data=f"prom:adm:reject:{uid}"),
         ],
         [
-            InlineKeyboardButton(text=_tf(lang,"prom.adm.more","✍️ معلومات إضافية","✍️ Request more info"), callback_data=f"prom:adm:more:{uid}"),
-            InlineKeyboardButton(text=_tf(lang,"prom.adm.hold","⏸️ تعليق","⏸️ Put on hold"), callback_data=f"prom:adm:hold:{uid}"),
+            InlineKeyboardButton(text=_tf(lang,"prom.adm.more","âœï¸ Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø¥Ø¶Ø§ÙÙŠØ©","âœï¸ Request more info"), callback_data=f"prom:adm:more:{uid}"),
+            InlineKeyboardButton(text=_tf(lang,"prom.adm.hold","â¸ï¸ ØªØ¹Ù„ÙŠÙ‚","â¸ï¸ Put on hold"), callback_data=f"prom:adm:hold:{uid}"),
         ],
         [
-            InlineKeyboardButton(text=_tf(lang,"prom.adm.ban","🚫 حظر","🚫 Ban"), callback_data=f"prom:adm:ban:{uid}"),
-            InlineKeyboardButton(text=_tf(lang,"prom.adm.unban","♻️ إزالة الحظر","♻️ Unban"), callback_data=f"prom:adm:unban:{uid}"),
+            InlineKeyboardButton(text=_tf(lang,"prom.adm.ban","ðŸš« Ø­Ø¸Ø±","ðŸš« Ban"), callback_data=f"prom:adm:ban:{uid}"),
+            InlineKeyboardButton(text=_tf(lang,"prom.adm.unban","â™»ï¸ Ø¥Ø²Ø§Ù„Ø© Ø§Ù„Ø­Ø¸Ø±","â™»ï¸ Unban"), callback_data=f"prom:adm:unban:{uid}"),
         ],
         [
-            InlineKeyboardButton(text=_tf(lang,"prom.adm.delete","🗑 حذف الطلب","🗑 Delete request"), callback_data=f"prom:adm:delete:{uid}"),
+            InlineKeyboardButton(text=_tf(lang,"prom.adm.delete","ðŸ—‘ Ø­Ø°Ù Ø§Ù„Ø·Ù„Ø¨","ðŸ—‘ Delete request"), callback_data=f"prom:adm:delete:{uid}"),
         ],
     ])
 
 def _ban_menu_kb(uid: int, lang: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text=_tf(lang, "prom.adm.ban1d", "حظر 1 يوم", "Ban 1 day"), callback_data=f"prom:adm:ban_do:{uid}:1"),
-            InlineKeyboardButton(text=_tf(lang, "prom.adm.ban7d", "حظر 7 أيام", "Ban 7 days"), callback_data=f"prom:adm:ban_do:{uid}:7"),
-            InlineKeyboardButton(text=_tf(lang, "prom.adm.ban30d", "حظر 30 يوم", "Ban 30 days"), callback_data=f"prom:adm:ban_do:{uid}:30"),
+            InlineKeyboardButton(text=_tf(lang, "prom.adm.ban1d", "Ø­Ø¸Ø± 1 ÙŠÙˆÙ…", "Ban 1 day"), callback_data=f"prom:adm:ban_do:{uid}:1"),
+            InlineKeyboardButton(text=_tf(lang, "prom.adm.ban7d", "Ø­Ø¸Ø± 7 Ø£ÙŠØ§Ù…", "Ban 7 days"), callback_data=f"prom:adm:ban_do:{uid}:7"),
+            InlineKeyboardButton(text=_tf(lang, "prom.adm.ban30d", "Ø­Ø¸Ø± 30 ÙŠÙˆÙ…", "Ban 30 days"), callback_data=f"prom:adm:ban_do:{uid}:30"),
         ],
-        [InlineKeyboardButton(text=_tf(lang,"prom.adm.back","⬅️ رجوع","⬅️ Back"), callback_data=f"prom:adm:back:{uid}")]
+        [InlineKeyboardButton(text=_tf(lang,"prom.adm.back","â¬…ï¸ Ø±Ø¬ÙˆØ¹","â¬…ï¸ Back"), callback_data=f"prom:adm:back:{uid}")]
     ])
 
-# ===== الحالات =====
+# ===== Ø§Ù„Ø­Ø§Ù„Ø§Øª =====
 class PromApply(StatesGroup):
     name = State()
     links = State()
@@ -267,48 +268,48 @@ class PromApply(StatesGroup):
     proof = State()
     more  = State()
 
-# ===== فحوصات قبل التقديم =====
+# ===== ÙØ­ÙˆØµØ§Øª Ù‚Ø¨Ù„ Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… =====
 def _precheck_message(u: Dict[str, Any], lang: str) -> Tuple[bool, str | None]:
-    # موافَق = لديه لوحة
+    # Ù…ÙˆØ§ÙÙŽÙ‚ = Ù„Ø¯ÙŠÙ‡ Ù„ÙˆØ­Ø©
     if u.get("status") == "approved":
         return False, _tf(lang, "prom.err.already_approved",
-                          "أنت مروّج مُعتمد بالفعل. استخدم لوحة المروّجين.",
-                          "You’re already an approved promoter. Use the promoter panel.")
+                          "Ø£Ù†Øª Ù…Ø±ÙˆÙ‘Ø¬ Ù…ÙØ¹ØªÙ…Ø¯ Ø¨Ø§Ù„ÙØ¹Ù„. Ø§Ø³ØªØ®Ø¯Ù… Ù„ÙˆØ­Ø© Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬ÙŠÙ†.",
+                          "Youâ€™re already an approved promoter. Use the promoter panel.")
     if u.get("status") in {"pending", "on_hold", "more_info"}:
         return False, _tf(lang, "prom.err.already_pending",
-                          "لديك طلب سابق قيد المعالجة. انتظر قرار الإدارة أو أرسل المعلومات المطلوبة.",
+                          "Ù„Ø¯ÙŠÙƒ Ø·Ù„Ø¨ Ø³Ø§Ø¨Ù‚ Ù‚ÙŠØ¯ Ø§Ù„Ù…Ø¹Ø§Ù„Ø¬Ø©. Ø§Ù†ØªØ¸Ø± Ù‚Ø±Ø§Ø± Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© Ø£Ùˆ Ø£Ø±Ø³Ù„ Ø§Ù„Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ù…Ø·Ù„ÙˆØ¨Ø©.",
                           "You already have a request in progress. Please wait for a decision or provide the requested info.")
 
-    # حظر مباشر
+    # Ø­Ø¸Ø± Ù…Ø¨Ø§Ø´Ø±
     ban_left = _is_on_until("banned_until", u)
     if ban_left > 0:
         return False, _tf(lang, "prom.err.banned",
-                          "تم حظرك مؤقتًا. تبقّى: ", "You are temporarily banned. Time left: ") + _format_duration(ban_left, lang)
+                          "ØªÙ… Ø­Ø¸Ø±Ùƒ Ù…Ø¤Ù‚ØªÙ‹Ø§. ØªØ¨Ù‚Ù‘Ù‰: ", "You are temporarily banned. Time left: ") + _format_duration(ban_left, lang)
 
-    # تبريد/حد
+    # ØªØ¨Ø±ÙŠØ¯/Ø­Ø¯
     cd_left = _is_on_until("cooldown_until", u)
     if cd_left > 0:
         return False, _tf(lang, "prom.err.cooldown",
-                          "لا يمكنك التقديم الآن. تبقّى: ", "You can’t apply right now. Time left: ") + _format_duration(cd_left, lang)
+                          "Ù„Ø§ ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… Ø§Ù„Ø¢Ù†. ØªØ¨Ù‚Ù‘Ù‰: ", "You canâ€™t apply right now. Time left: ") + _format_duration(cd_left, lang)
 
-    # حد يومي ديناميكي
+    # Ø­Ø¯ ÙŠÙˆÙ…ÙŠ Ø¯ÙŠÙ†Ø§Ù…ÙŠÙƒÙŠ
     daily_limit = _get_daily_limit()
     if _attempts_last_24h(u) >= daily_limit:
         u["cooldown_until"] = _now() + 24*3600
         return False, _tf(lang, "prom.err.daily_limit",
-                          f"وصلت للحد اليومي ({daily_limit})، تم إيقاف التقديم ليوم واحد.",
+                          f"ÙˆØµÙ„Øª Ù„Ù„Ø­Ø¯ Ø§Ù„ÙŠÙˆÙ…ÙŠ ({daily_limit})ØŒ ØªÙ… Ø¥ÙŠÙ‚Ø§Ù Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… Ù„ÙŠÙˆÙ… ÙˆØ§Ø­Ø¯.",
                           f"You reached the daily limit ({daily_limit}). Applying is paused for one day.")
 
     return True, None
 
-# ===== فتح الشروط =====
+# ===== ÙØªØ­ Ø§Ù„Ø´Ø±ÙˆØ· =====
 @router.callback_query(F.data == "prom:info")
 async def prom_info(cb: CallbackQuery):
     lang = L(cb.from_user.id)
     await cb.message.answer(prom_info_text(lang), reply_markup=prom_info_kb(lang), parse_mode=ParseMode.HTML)
     await cb.answer()
 
-# ===== بدء التقديم =====
+# ===== Ø¨Ø¯Ø¡ Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… =====
 @router.callback_query(F.data == "prom:apply")
 async def prom_apply_start(cb: CallbackQuery, state: FSMContext):
     lang = L(cb.from_user.id)
@@ -329,7 +330,7 @@ async def prom_apply_start(cb: CallbackQuery, state: FSMContext):
     _save_store(store)
     await state.set_state(PromApply.name)
     await cb.message.answer(_tf(lang, "prom.ask.name",
-                                "أرسل اسمك كما يظهر على قناتك/منصّتك:",
+                                "Ø£Ø±Ø³Ù„ Ø§Ø³Ù…Ùƒ ÙƒÙ…Ø§ ÙŠØ¸Ù‡Ø± Ø¹Ù„Ù‰ Ù‚Ù†Ø§ØªÙƒ/Ù…Ù†ØµÙ‘ØªÙƒ:",
                                 "Send your name as it appears on your channel/platform:"))
     await cb.answer()
 
@@ -339,22 +340,22 @@ async def prom_save_name(m: Message, state: FSMContext):
     await state.update_data(name=m.text.strip())
     await state.set_state(PromApply.links)
     await m.answer(_tf(lang, "prom.ask.links",
-                       "أرسل روابط حساباتك (تيك توك/يوتيوب/فيسبوك…)، كل رابط بسطر منفصل.",
-                       "Send your account links (TikTok/YouTube/Facebook…), one link per line."))
+                       "Ø£Ø±Ø³Ù„ Ø±ÙˆØ§Ø¨Ø· Ø­Ø³Ø§Ø¨Ø§ØªÙƒ (ØªÙŠÙƒ ØªÙˆÙƒ/ÙŠÙˆØªÙŠÙˆØ¨/ÙÙŠØ³Ø¨ÙˆÙƒâ€¦)ØŒ ÙƒÙ„ Ø±Ø§Ø¨Ø· Ø¨Ø³Ø·Ø± Ù…Ù†ÙØµÙ„.",
+                       "Send your account links (TikTok/YouTube/Facebookâ€¦), one link per line."))
 
 @router.message(PromApply.links, F.text)
 async def prom_save_links(m: Message, state: FSMContext):
     lang = L(m.from_user.id)
     links = [s.strip() for s in (m.text or "").splitlines() if s.strip()]
     if not links:
-        return await m.answer(_tf(lang, "prom.err.links", "أرسل رابطًا واحدًا على الأقل.", "Please send at least one link."))
+        return await m.answer(_tf(lang, "prom.err.links", "Ø£Ø±Ø³Ù„ Ø±Ø§Ø¨Ø·Ù‹Ø§ ÙˆØ§Ø­Ø¯Ù‹Ø§ Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„.", "Please send at least one link."))
     await state.update_data(links=links)
     await state.set_state(PromApply.tg)
-    # نعرض معرفه الحقيقي للمقارنة
-    real = ("@" + m.from_user.username) if m.from_user.username else _tf(lang, "prom.tg.no_username", "لا يوجد @username في حسابك.", "Your account has no @username.")
+    # Ù†Ø¹Ø±Ø¶ Ù…Ø¹Ø±ÙÙ‡ Ø§Ù„Ø­Ù‚ÙŠÙ‚ÙŠ Ù„Ù„Ù…Ù‚Ø§Ø±Ù†Ø©
+    real = ("@" + m.from_user.username) if m.from_user.username else _tf(lang, "prom.tg.no_username", "Ù„Ø§ ÙŠÙˆØ¬Ø¯ @username ÙÙŠ Ø­Ø³Ø§Ø¨Ùƒ.", "Your account has no @username.")
     await m.answer(
-        _tf(lang, "prom.ask.tg", "أرسل معرّف تيليجرام الخاص بك (مثل @username).", "Send your Telegram handle (e.g. @username).")
-        + f"\n{_tf(lang,'prom.tg.yours','معرّفك الحالي:','Your current handle:')} {real}"
+        _tf(lang, "prom.ask.tg", "Ø£Ø±Ø³Ù„ Ù…Ø¹Ø±Ù‘Ù ØªÙŠÙ„ÙŠØ¬Ø±Ø§Ù… Ø§Ù„Ø®Ø§Øµ Ø¨Ùƒ (Ù…Ø«Ù„ @username).", "Send your Telegram handle (e.g. @username).")
+        + f"\n{_tf(lang,'prom.tg.yours','Ù…Ø¹Ø±Ù‘ÙÙƒ Ø§Ù„Ø­Ø§Ù„ÙŠ:','Your current handle:')} {real}"
     )
 
 @router.message(PromApply.tg, F.text.regexp(r"^@?[A-Za-z0-9_]{5,}$"))
@@ -370,17 +371,17 @@ async def prom_save_tg(m: Message, state: FSMContext):
     await state.set_state(PromApply.proof)
     if match:
         await m.answer(_tf(lang, "prom.ask.proof",
-                            "أرسل صورة أو فيديو قصير يثبت أنك صاحب المحتوى.",
+                            "Ø£Ø±Ø³Ù„ ØµÙˆØ±Ø© Ø£Ùˆ ÙÙŠØ¯ÙŠÙˆ Ù‚ØµÙŠØ± ÙŠØ«Ø¨Øª Ø£Ù†Ùƒ ØµØ§Ø­Ø¨ Ø§Ù„Ù…Ø­ØªÙˆÙ‰.",
                             "Send a photo or short video proving you own the content."))
     else:
         await m.answer(_tf(lang, "prom.tg.mismatch",
-                            "تحذير: المعرّف الذي أرسلته لا يطابق معرف حسابك الحالي. يمكنك المتابعة لكن سيظهر للأدمن كتحذير.",
-                            "Warning: The handle you sent doesn’t match your current account handle. You can continue, but admins will see a warning."))
+                            "ØªØ­Ø°ÙŠØ±: Ø§Ù„Ù…Ø¹Ø±Ù‘Ù Ø§Ù„Ø°ÙŠ Ø£Ø±Ø³Ù„ØªÙ‡ Ù„Ø§ ÙŠØ·Ø§Ø¨Ù‚ Ù…Ø¹Ø±Ù Ø­Ø³Ø§Ø¨Ùƒ Ø§Ù„Ø­Ø§Ù„ÙŠ. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„Ù…ØªØ§Ø¨Ø¹Ø© Ù„ÙƒÙ† Ø³ÙŠØ¸Ù‡Ø± Ù„Ù„Ø£Ø¯Ù…Ù† ÙƒØªØ­Ø°ÙŠØ±.",
+                            "Warning: The handle you sent doesnâ€™t match your current account handle. You can continue, but admins will see a warning."))
 
 @router.message(PromApply.tg)
 async def prom_save_tg_invalid(m: Message):
     lang = L(m.from_user.id)
-    await m.answer(_tf(lang, "prom.err.tg", "المعرّف غير صالح. مثال: @MyChannel", "Invalid handle. Example: @MyChannel"))
+    await m.answer(_tf(lang, "prom.err.tg", "Ø§Ù„Ù…Ø¹Ø±Ù‘Ù ØºÙŠØ± ØµØ§Ù„Ø­. Ù…Ø«Ø§Ù„: @MyChannel", "Invalid handle. Example: @MyChannel"))
 
 @router.message(PromApply.proof, F.photo | F.video)
 async def prom_save_proof(m: Message, state: FSMContext):
@@ -415,29 +416,29 @@ async def prom_save_proof(m: Message, state: FSMContext):
     _save_store(store)
     await state.clear()
 
-    # إشعار الأدمنين
+    # Ø¥Ø´Ø¹Ø§Ø± Ø§Ù„Ø£Ø¯Ù…Ù†ÙŠÙ†
     tg_decl = store["users"][uid]["telegram"]["declared"]
     tg_real = store["users"][uid]["telegram"]["real"]
     tg_match = store["users"][uid]["telegram"]["match"]
 
-    # سطر التيليجرام
-    tg_line = _tf(lang, "prom.adm.tg", "✈️ تيليجرام: ", "✈️ Telegram: ")  # prefix label
+    # Ø³Ø·Ø± Ø§Ù„ØªÙŠÙ„ÙŠØ¬Ø±Ø§Ù…
+    tg_line = _tf(lang, "prom.adm.tg", "âœˆï¸ ØªÙŠÙ„ÙŠØ¬Ø±Ø§Ù…: ", "âœˆï¸ Telegram: ")  # prefix label
     if tg_real:
         tg_line += f"<a href='https://t.me/{tg_real[1:]}'>{tg_real}</a> "
-    tg_line += f"({_tf(lang,'prom.adm.tg_declared','المعلن','declared')}: <code>{tg_decl}</code>) "
-    tg_line += _tf(lang, "prom.adm.tg_match_ok", "✅", "✅") if tg_match else _tf(lang, "prom.adm.tg_match_warn", "❗️", "❗️")
+    tg_line += f"({_tf(lang,'prom.adm.tg_declared','Ø§Ù„Ù…Ø¹Ù„Ù†','declared')}: <code>{tg_decl}</code>) "
+    tg_line += _tf(lang, "prom.adm.tg_match_ok", "âœ…", "âœ…") if tg_match else _tf(lang, "prom.adm.tg_match_warn", "â—ï¸", "â—ï¸")
 
     attempts_now = _attempts_last_24h(store["users"][uid])
     daily_limit = _get_daily_limit(store)
 
     txt = (
-        f"🆕 <b>{_tf(lang,'prom.adm.new_req','طلب مروّج جديد','New promoter request')}</b>\n"
-        f"{_tf(lang,'prom.adm.user_id','المستخدم','User')}: <code>{uid}</code> — "
-        f"<a href='tg://user?id={uid}'>{_tf(lang,'prom.adm.open_chat','فتح المحادثة','Open chat')}</a>\n"
-        f"{_tf(lang,'prom.adm.name','الاسم','Name')}: <code>{store['users'][uid]['name']}</code>\n"
-        f"{_tf(lang,'prom.adm.links','الروابط','Links')}:\n" + ("\n".join(f"• {x}" for x in store['users'][uid]['links']) or "—") + "\n" +
+        f"ðŸ†• <b>{_tf(lang,'prom.adm.new_req','Ø·Ù„Ø¨ Ù…Ø±ÙˆÙ‘Ø¬ Ø¬Ø¯ÙŠØ¯','New promoter request')}</b>\n"
+        f"{_tf(lang,'prom.adm.user_id','Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…','User')}: <code>{uid}</code> â€” "
+        f"<a href='tg://user?id={uid}'>{_tf(lang,'prom.adm.open_chat','ÙØªØ­ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø©','Open chat')}</a>\n"
+        f"{_tf(lang,'prom.adm.name','Ø§Ù„Ø§Ø³Ù…','Name')}: <code>{store['users'][uid]['name']}</code>\n"
+        f"{_tf(lang,'prom.adm.links','Ø§Ù„Ø±ÙˆØ§Ø¨Ø·','Links')}:\n" + ("\n".join(f"â€¢ {x}" for x in store['users'][uid]['links']) or "â€”") + "\n" +
         tg_line + "\n"
-        f"{_tf(lang,'prom.adm.attempts','المحاولات (24 ساعة)','Attempts (24h)')}: <code>{attempts_now}/{daily_limit}</code>\n"
+        f"{_tf(lang,'prom.adm.attempts','Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø§Øª (24 Ø³Ø§Ø¹Ø©)','Attempts (24h)')}: <code>{attempts_now}/{daily_limit}</code>\n"
     )
 
     for admin_id in ADMIN_IDS:
@@ -449,20 +450,20 @@ async def prom_save_proof(m: Message, state: FSMContext):
                 disable_web_page_preview=True
             )
             if photo_ids:
-                await m.bot.send_photo(admin_id, photo_ids[-1], caption=_tf(L(admin_id), "prom.adm.proof_caption", "📎 إثبات", "📎 Proof"))
+                await m.bot.send_photo(admin_id, photo_ids[-1], caption=_tf(L(admin_id), "prom.adm.proof_caption", "ðŸ“Ž Ø¥Ø«Ø¨Ø§Øª", "ðŸ“Ž Proof"))
             elif video_ids:
-                await m.bot.send_video(admin_id, video_ids[0], caption=_tf(L(admin_id), "prom.adm.proof_caption", "📎 إثبات", "📎 Proof"))
+                await m.bot.send_video(admin_id, video_ids[0], caption=_tf(L(admin_id), "prom.adm.proof_caption", "ðŸ“Ž Ø¥Ø«Ø¨Ø§Øª", "ðŸ“Ž Proof"))
         except Exception:
             pass
 
-    await m.answer(_tf(lang, "prom.submitted", "تم إرسال طلبك. سيتم مراجعته من قبل الإدارة ✅", "Your request was submitted. Admins will review it ✅"))
+    await m.answer(_tf(lang, "prom.submitted", "ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨Ùƒ. Ø³ÙŠØªÙ… Ù…Ø±Ø§Ø¬Ø¹ØªÙ‡ Ù…Ù† Ù‚Ø¨Ù„ Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© âœ…", "Your request was submitted. Admins will review it âœ…"))
 
 @router.message(PromApply.proof)
 async def prom_save_proof_invalid(m: Message):
     lang = L(m.from_user.id)
-    await m.answer(_tf(lang, "prom.err.proof", "أرسل صورة أو فيديو كإثبات.", "Send a photo or a video as proof."))
+    await m.answer(_tf(lang, "prom.err.proof", "Ø£Ø±Ø³Ù„ ØµÙˆØ±Ø© Ø£Ùˆ ÙÙŠØ¯ÙŠÙˆ ÙƒØ¥Ø«Ø¨Ø§Øª.", "Send a photo or a video as proof."))
 
-# ===== أدوات مشتركة =====
+# ===== Ø£Ø¯ÙˆØ§Øª Ù…Ø´ØªØ±ÙƒØ© =====
 def _get_app(uid: int) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     store = _load_store()
     u = store["users"].get(str(uid))
@@ -471,51 +472,51 @@ def _get_app(uid: int) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 def _adm_only(cb_or_msg) -> bool:
     return cb_or_msg.from_user.id in ADMIN_IDS
 
-# ===== قرارات الأدمن =====
+# ===== Ù‚Ø±Ø§Ø±Ø§Øª Ø§Ù„Ø£Ø¯Ù…Ù† =====
 @router.callback_query(F.data.startswith("prom:adm:approve:"))
 async def adm_approve(cb: CallbackQuery):
-    # رسائل الأدمن بلغة الأدمن
+    # Ø±Ø³Ø§Ø¦Ù„ Ø§Ù„Ø£Ø¯Ù…Ù† Ø¨Ù„ØºØ© Ø§Ù„Ø£Ø¯Ù…Ù†
     lang_admin = L(cb.from_user.id)
     if not _adm_only(cb):
-        return await cb.answer(_tf(lang_admin, "common.admins_only", "للمشرفين فقط.", "Admins only."), show_alert=True)
+        return await cb.answer(_tf(lang_admin, "common.admins_only", "Ù„Ù„Ù…Ø´Ø±ÙÙŠÙ† ÙÙ‚Ø·.", "Admins only."), show_alert=True)
 
     uid = int(cb.data.split(":")[-1])
     store, u = _get_app(uid)
     if not u:
-        return await cb.answer(_tf(lang_admin, "common.not_found", "غير موجود.", "Not found."), show_alert=True)
+        return await cb.answer(_tf(lang_admin, "common.not_found", "ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯.", "Not found."), show_alert=True)
 
     u["status"] = "approved"
     u["cooldown_until"] = 0
     _save_store(store)
 
-    # رسالة المستخدم بلغة المستخدم
+    # Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø¨Ù„ØºØ© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…
     lang_user = L(uid)
     try:
         await cb.bot.send_message(
             uid,
             _tf(lang_user, "prom.user.approved",
-                "تمت الموافقة على طلبك 🎉. تم تفعيل لوحة المروّجين لك.",
-                "Your application was approved 🎉. The promoter panel is now enabled for you.")
+                "ØªÙ…Øª Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø© Ø¹Ù„Ù‰ Ø·Ù„Ø¨Ùƒ ðŸŽ‰. ØªÙ… ØªÙØ¹ÙŠÙ„ Ù„ÙˆØ­Ø© Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬ÙŠÙ† Ù„Ùƒ.",
+                "Your application was approved ðŸŽ‰. The promoter panel is now enabled for you.")
         )
     except Exception:
         pass
 
-    await cb.answer(_tf(lang_admin, "prom.saved", "تم الحفظ ✅", "Saved ✅"))
+    await cb.answer(_tf(lang_admin, "prom.saved", "ØªÙ… Ø§Ù„Ø­ÙØ¸ âœ…", "Saved âœ…"))
 
 @router.callback_query(F.data.startswith("prom:adm:reject:"))
 async def adm_reject(cb: CallbackQuery):
     lang_admin = L(cb.from_user.id)
     if not _adm_only(cb):
-        return await cb.answer(_tf(lang_admin, "common.admins_only", "للمشرفين فقط.", "Admins only."), show_alert=True)
+        return await cb.answer(_tf(lang_admin, "common.admins_only", "Ù„Ù„Ù…Ø´Ø±ÙÙŠÙ† ÙÙ‚Ø·.", "Admins only."), show_alert=True)
 
     try:
         uid = int(cb.data.split(":")[-1])
     except Exception:
-        return await cb.answer(_tf(lang_admin, "common.bad_payload", "حمولة غير صالحة.", "Bad payload."), show_alert=True)
+        return await cb.answer(_tf(lang_admin, "common.bad_payload", "Ø­Ù…ÙˆÙ„Ø© ØºÙŠØ± ØµØ§Ù„Ø­Ø©.", "Bad payload."), show_alert=True)
 
     store, u = _get_app(uid)
     if not u:
-        return await cb.answer(_tf(lang_admin, "common.not_found", "غير موجود.", "Not found."), show_alert=True)
+        return await cb.answer(_tf(lang_admin, "common.not_found", "ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯.", "Not found."), show_alert=True)
 
     u["status"] = "rejected"
     u["rejects"] = int(u.get("rejects", 0) or 0) + 1
@@ -526,33 +527,33 @@ async def adm_reject(cb: CallbackQuery):
     lang_user = L(uid)
     try:
         msg = (
-            _tf(lang_user, "prom.user.rejected", "تم رفض طلبك.", "Your application was rejected.")
+            _tf(lang_user, "prom.user.rejected", "ØªÙ… Ø±ÙØ¶ Ø·Ù„Ø¨Ùƒ.", "Your application was rejected.")
             + " "
-            + _tf(lang_user, "prom.user.cooldown", "يمكنك التقديم بعد: ", "You can apply again in: ")
+            + _tf(lang_user, "prom.user.cooldown", "ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… Ø¨Ø¹Ø¯: ", "You can apply again in: ")
             + _format_duration(ban_secs, lang_user)
         )
         await cb.bot.send_message(uid, msg)
     except Exception:
         pass
 
-    await cb.answer(_tf(lang_admin, "prom.saved", "تم الحفظ ✅", "Saved ✅"))
+    await cb.answer(_tf(lang_admin, "prom.saved", "ØªÙ… Ø§Ù„Ø­ÙØ¸ âœ…", "Saved âœ…"))
 
 @router.callback_query(F.data.startswith("prom:adm:more:"))
 async def adm_more_info(cb: CallbackQuery, state: FSMContext):
     lang_admin = L(cb.from_user.id)
     if not _adm_only(cb):
-        return await cb.answer(_tf(lang_admin, "common.admins_only", "للمشرفين فقط.", "Admins only."), show_alert=True)
+        return await cb.answer(_tf(lang_admin, "common.admins_only", "Ù„Ù„Ù…Ø´Ø±ÙÙŠÙ† ÙÙ‚Ø·.", "Admins only."), show_alert=True)
     uid = int(cb.data.split(":")[-1])
     store, u = _get_app(uid)
     if not u:
-        return await cb.answer(_tf(lang_admin, "common.not_found", "غير موجود.", "Not found."), show_alert=True)
+        return await cb.answer(_tf(lang_admin, "common.not_found", "ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯.", "Not found."), show_alert=True)
     u["status"] = "more_info"
     _save_store(store)
     try:
-        await cb.bot.send_message(uid, _tf(L(uid), "prom.user.more", "نحتاج معلومات إضافية. أرسل التفاصيل هنا.", "We need more information. Please send the details here."))
+        await cb.bot.send_message(uid, _tf(L(uid), "prom.user.more", "Ù†Ø­ØªØ§Ø¬ Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø¥Ø¶Ø§ÙÙŠØ©. Ø£Ø±Ø³Ù„ Ø§Ù„ØªÙØ§ØµÙŠÙ„ Ù‡Ù†Ø§.", "We need more information. Please send the details here."))
     except Exception:
         pass
-    await cb.answer(_tf(lang_admin, "prom.saved", "تم الحفظ ✅", "Saved ✅"))
+    await cb.answer(_tf(lang_admin, "prom.saved", "ØªÙ… Ø§Ù„Ø­ÙØ¸ âœ…", "Saved âœ…"))
 
 @router.callback_query(F.data.startswith("prom:adm:hold:"))
 async def adm_hold(cb: CallbackQuery):
@@ -563,7 +564,7 @@ async def adm_hold(cb: CallbackQuery):
     try:
         uid = int(cb.data.split(":")[-1])
     except Exception:
-        return await cb.answer(_tf(lang_admin, "common.bad_payload", "بيانات غير صالحة.", "Bad payload."), show_alert=True)
+        return await cb.answer(_tf(lang_admin, "common.bad_payload", "Ø¨ÙŠØ§Ù†Ø§Øª ØºÙŠØ± ØµØ§Ù„Ø­Ø©.", "Bad payload."), show_alert=True)
 
     store, u = _get_app(uid)
     if not u:
@@ -573,11 +574,11 @@ async def adm_hold(cb: CallbackQuery):
     _save_store(store)
 
     try:
-        await cb.bot.send_message(uid, _tf(L(uid), "prom.user.hold", "تم تعليق طلبك مؤقتًا.", "Your request has been put on hold."))
+        await cb.bot.send_message(uid, _tf(L(uid), "prom.user.hold", "ØªÙ… ØªØ¹Ù„ÙŠÙ‚ Ø·Ù„Ø¨Ùƒ Ù…Ø¤Ù‚ØªÙ‹Ø§.", "Your request has been put on hold."))
     except Exception:
         pass
 
-    await cb.answer(_tf(lang_admin, "prom.saved", "تم الحفظ ✅", "Saved ✅"))
+    await cb.answer(_tf(lang_admin, "prom.saved", "ØªÙ… Ø§Ù„Ø­ÙØ¸ âœ…", "Saved âœ…"))
 
 @router.callback_query(F.data.startswith("prom:adm:delete:"))
 async def adm_delete(cb: CallbackQuery):
@@ -588,32 +589,32 @@ async def adm_delete(cb: CallbackQuery):
     try:
         uid = int(cb.data.split(":")[-1])
     except Exception:
-        return await cb.answer(_tf(lang_admin, "common.bad_payload", "بيانات غير صالحة.", "Bad payload."), show_alert=True)
+        return await cb.answer(_tf(lang_admin, "common.bad_payload", "Ø¨ÙŠØ§Ù†Ø§Øª ØºÙŠØ± ØµØ§Ù„Ø­Ø©.", "Bad payload."), show_alert=True)
 
     store = _load_store()
     if str(uid) in store.get("users", {}):
         del store["users"][str(uid)]
         _save_store(store)
         try:
-            await cb.bot.send_message(uid, _tf(L(uid), "prom.user.deleted", "تم حذف طلبك.", "Your request has been deleted."))
+            await cb.bot.send_message(uid, _tf(L(uid), "prom.user.deleted", "ØªÙ… Ø­Ø°Ù Ø·Ù„Ø¨Ùƒ.", "Your request has been deleted."))
         except Exception:
             pass
     else:
-        return await cb.answer(_tf(lang_admin, "common.not_found", "غير موجود.", "Not found."), show_alert=True)
+        return await cb.answer(_tf(lang_admin, "common.not_found", "ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯.", "Not found."), show_alert=True)
 
-    await cb.answer(_tf(lang_admin, "prom.saved", "تم الحفظ ✅", "Saved ✅"))
+    await cb.answer(_tf(lang_admin, "prom.saved", "ØªÙ… Ø§Ù„Ø­ÙØ¸ âœ…", "Saved âœ…"))
 
-# ===== الحظر/إزالة الحظر =====
+# ===== Ø§Ù„Ø­Ø¸Ø±/Ø¥Ø²Ø§Ù„Ø© Ø§Ù„Ø­Ø¸Ø± =====
 @router.callback_query(F.data.startswith("prom:adm:ban:"))
 async def adm_ban_menu(cb: CallbackQuery):
     lang_admin = L(cb.from_user.id)
     if not _adm_only(cb):
         return await cb.answer(_tf(lang_admin, "common.admins_only", "Admins only.", "Admins only."), show_alert=True)
     uid = int(cb.data.split(":")[-1])
-    await cb.message.reply(_tf(lang_admin, "prom.adm.choose_ban", "اختر مدة الحظر:", "Choose ban duration:"), reply_markup=_ban_menu_kb(uid, lang_admin))
+    await cb.message.reply(_tf(lang_admin, "prom.adm.choose_ban", "Ø§Ø®ØªØ± Ù…Ø¯Ø© Ø§Ù„Ø­Ø¸Ø±:", "Choose ban duration:"), reply_markup=_ban_menu_kb(uid, lang_admin))
     await cb.answer()
 
-# ===== إلغاء التبريد (رفع الحظر الوقتي) =====
+# ===== Ø¥Ù„ØºØ§Ø¡ Ø§Ù„ØªØ¨Ø±ÙŠØ¯ (Ø±ÙØ¹ Ø§Ù„Ø­Ø¸Ø± Ø§Ù„ÙˆÙ‚ØªÙŠ) =====
 @router.callback_query(F.data.startswith("prom:adm:cdclear:"))
 async def adm_clear_cooldown(cb: CallbackQuery):
     lang_admin = L(cb.from_user.id)
@@ -629,10 +630,10 @@ async def adm_clear_cooldown(cb: CallbackQuery):
     u["cooldown_until"] = 0
     _save_store(store)
     try:
-        await cb.bot.send_message(uid, _tf(L(uid), "prom.user.cooldown_cleared", "تمت إزالة التبريد ويمكنك التقديم الآن.", "Cooldown cleared. You can apply now."))
+        await cb.bot.send_message(uid, _tf(L(uid), "prom.user.cooldown_cleared", "ØªÙ…Øª Ø¥Ø²Ø§Ù„Ø© Ø§Ù„ØªØ¨Ø±ÙŠØ¯ ÙˆÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… Ø§Ù„Ø¢Ù†.", "Cooldown cleared. You can apply now."))
     except Exception:
         pass
-    await cb.answer(_tf(lang_admin, "prom.saved", "تم الحفظ ✅", "Saved ✅"))
+    await cb.answer(_tf(lang_admin, "prom.saved", "ØªÙ… Ø§Ù„Ø­ÙØ¸ âœ…", "Saved âœ…"))
 
 @router.callback_query(F.data.startswith("prom:adm:ban_do:"))
 async def adm_ban_do(cb: CallbackQuery):
@@ -650,10 +651,10 @@ async def adm_ban_do(cb: CallbackQuery):
     u["banned_until"] = _now() + secs
     _save_store(store)
     try:
-        await cb.bot.send_message(uid, _tf(L(uid), "prom.user.banned", "تم حظرك مؤقتًا. المدة: ", "You have been temporarily banned. Duration: ") + _format_duration(secs, L(uid)))
+        await cb.bot.send_message(uid, _tf(L(uid), "prom.user.banned", "ØªÙ… Ø­Ø¸Ø±Ùƒ Ù…Ø¤Ù‚ØªÙ‹Ø§. Ø§Ù„Ù…Ø¯Ø©: ", "You have been temporarily banned. Duration: ") + _format_duration(secs, L(uid)))
     except Exception:
         pass
-    await cb.answer(_tf(lang_admin, "prom.saved", "تم الحفظ ✅", "Saved ✅"))
+    await cb.answer(_tf(lang_admin, "prom.saved", "ØªÙ… Ø§Ù„Ø­ÙØ¸ âœ…", "Saved âœ…"))
 
 @router.callback_query(F.data.startswith("prom:adm:unban:"))
 async def adm_unban(cb: CallbackQuery):
@@ -669,21 +670,21 @@ async def adm_unban(cb: CallbackQuery):
     u["banned_until"] = 0
     _save_store(store)
     try:
-        await cb.bot.send_message(uid, _tf(L(uid), "prom.user.unbanned", "تمت إزالة الحظر عنك. يمكنك التقديم من جديد.", "Your ban has been lifted. You can apply again."))
+        await cb.bot.send_message(uid, _tf(L(uid), "prom.user.unbanned", "ØªÙ…Øª Ø¥Ø²Ø§Ù„Ø© Ø§Ù„Ø­Ø¸Ø± Ø¹Ù†Ùƒ. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… Ù…Ù† Ø¬Ø¯ÙŠØ¯.", "Your ban has been lifted. You can apply again."))
     except Exception:
         pass
-    await cb.answer(_tf(lang_admin, "prom.saved", "تم الحفظ ✅", "Saved ✅"))
+    await cb.answer(_tf(lang_admin, "prom.saved", "ØªÙ… Ø§Ù„Ø­ÙØ¸ âœ…", "Saved âœ…"))
 
-# ===== التقاط معلومات إضافية للمستخدم (عند more_info) =====
+# ===== Ø§Ù„ØªÙ‚Ø§Ø· Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø¥Ø¶Ø§ÙÙŠØ© Ù„Ù„Ù…Ø³ØªØ®Ø¯Ù… (Ø¹Ù†Ø¯ more_info) =====
 def _is_more_info_msg(m: Message) -> bool:
-    # خاص فقط
+    # Ø®Ø§Øµ ÙÙ‚Ø·
     if getattr(m.chat, "type", None) != "private":
         return False
-    # نص غير أمر
+    # Ù†Øµ ØºÙŠØ± Ø£Ù…Ø±
     txt = (m.text or "").strip()
     if not txt or txt.startswith("/"):
         return False
-    # تحقق من حالة المستخدم في التخزين
+    # ØªØ­Ù‚Ù‚ Ù…Ù† Ø­Ø§Ù„Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… ÙÙŠ Ø§Ù„ØªØ®Ø²ÙŠÙ†
     d = _load_store()
     u = d["users"].get(str(m.from_user.id))
     return bool(u and u.get("status") == "more_info")
@@ -692,22 +693,23 @@ def _is_more_info_msg(m: Message) -> bool:
 async def _maybe_capture_more_info(m: Message):
     d = _load_store()
     u = d["users"].get(str(m.from_user.id))
-    # المستخدم لازم يكون في more_info (مضمون بواسطة الفلتر)
+    # Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ù„Ø§Ø²Ù… ÙŠÙƒÙˆÙ† ÙÙŠ more_info (Ù…Ø¶Ù…ÙˆÙ† Ø¨ÙˆØ§Ø³Ø·Ø© Ø§Ù„ÙÙ„ØªØ±)
     extra = u.setdefault("extra_messages", [])
     extra.append({"t": _now(), "text": m.text})
     _save_store(d)
     for admin_id in ADMIN_IDS:
         try:
-            head = _tf(L(admin_id), "prom.adm.extra_head", "✍️ إضافي", "✍️ Extra")
+            head = _tf(L(admin_id), "prom.adm.extra_head", "âœï¸ Ø¥Ø¶Ø§ÙÙŠ", "âœï¸ Extra")
             await m.bot.send_message(
                 admin_id,
-                f"{head} { _tf(L(admin_id),'prom.adm.from_user','من المستخدم','From user') }: <code>{m.from_user.id}</code>:\n{m.text}",
+                f"{head} { _tf(L(admin_id),'prom.adm.from_user','Ù…Ù† Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…','From user') }: <code>{m.from_user.id}</code>:\n{m.text}",
                 parse_mode=ParseMode.HTML
             )
         except Exception:
             pass
-    await m.answer(_tf(L(m.from_user.id), "prom.user.more.ok", "تم استلام المعلومات الإضافية ✅", "Additional info received ✅"))
+    await m.answer(_tf(L(m.from_user.id), "prom.user.more.ok", "ØªÙ… Ø§Ø³ØªÙ„Ø§Ù… Ø§Ù„Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ø¥Ø¶Ø§ÙÙŠØ© âœ…", "Additional info received âœ…"))
 
-# ثابتات للاستخدام من start.py
+# Ø«Ø§Ø¨ØªØ§Øª Ù„Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù… Ù…Ù† start.py
 PROMOTER_INFO_CB = "prom:info"
 PROMOTER_PANEL_CB = "prom:panel"
+

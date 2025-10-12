@@ -1,4 +1,5 @@
-# 📁 handlers/help.py
+﻿from utils.admins import get_admin_ids, is_admin, get_owner_ids
+# ðŸ“ handlers/help.py
 from __future__ import annotations
 
 import os
@@ -13,49 +14,49 @@ log = logging.getLogger(__name__)
 # ===== Router =====
 router = Router(name="help")
 
-# لا نعترض back_to_menu حتى يبقى عند persistent_menu
+# Ù„Ø§ Ù†Ø¹ØªØ±Ø¶ back_to_menu Ø­ØªÙ‰ ÙŠØ¨Ù‚Ù‰ Ø¹Ù†Ø¯ persistent_menu
 router.callback_query.filter(lambda cq: (cq.data or "").startswith("help_") or (cq.data or "") in {"back_to_help"})
 
-# ===== إدمن (اختياري) =====
+# ===== Ø¥Ø¯Ù…Ù† (Ø§Ø®ØªÙŠØ§Ø±ÙŠ) =====
 _admin_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
 ADMIN_IDS = {int(x) for x in str(_admin_env).split(",") if str(x).strip().isdigit()} or {7360982123}
 
-# ===== نص ثنائي اللغة محلي =====
+# ===== Ù†Øµ Ø«Ù†Ø§Ø¦ÙŠ Ø§Ù„Ù„ØºØ© Ù…Ø­Ù„ÙŠ =====
 def L(lang: str, ar: str, en: str) -> str:
     return ar if (lang or "ar").lower().startswith("ar") else en
 
-# ===== شاشة الـFAQ الرئيسية =====
+# ===== Ø´Ø§Ø´Ø© Ø§Ù„Ù€FAQ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ© =====
 async def help_handler_target(user_id: int, send_func):
     lang = get_user_lang(user_id) or "en"
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=L(lang, "📱 مشاكل التطبيق", "📱 App issues"),      callback_data="help_app")],
-        [InlineKeyboardButton(text=L(lang, "🎮 مشاكل اللعبة", "🎮 Game issues"),       callback_data="help_game")],
-        [InlineKeyboardButton(text=L(lang, "🛒 المورّدون/الشراء", "🛒 Resellers / Purchase"), callback_data="help_reseller")],
-        [InlineKeyboardButton(text=L(lang, "🧩 أخطاء ورموز", "🧩 Errors & Codes"),     callback_data="help_errors")],
-        [InlineKeyboardButton(text=L(lang, "⬅️ رجوع للقائمة", "⬅️ Back to menu"),     callback_data="back_to_menu")],
+        [InlineKeyboardButton(text=L(lang, "ðŸ“± Ù…Ø´Ø§ÙƒÙ„ Ø§Ù„ØªØ·Ø¨ÙŠÙ‚", "ðŸ“± App issues"),      callback_data="help_app")],
+        [InlineKeyboardButton(text=L(lang, "ðŸŽ® Ù…Ø´Ø§ÙƒÙ„ Ø§Ù„Ù„Ø¹Ø¨Ø©", "ðŸŽ® Game issues"),       callback_data="help_game")],
+        [InlineKeyboardButton(text=L(lang, "ðŸ›’ Ø§Ù„Ù…ÙˆØ±Ù‘Ø¯ÙˆÙ†/Ø§Ù„Ø´Ø±Ø§Ø¡", "ðŸ›’ Resellers / Purchase"), callback_data="help_reseller")],
+        [InlineKeyboardButton(text=L(lang, "ðŸ§© Ø£Ø®Ø·Ø§Ø¡ ÙˆØ±Ù…ÙˆØ²", "ðŸ§© Errors & Codes"),     callback_data="help_errors")],
+        [InlineKeyboardButton(text=L(lang, "â¬…ï¸ Ø±Ø¬ÙˆØ¹ Ù„Ù„Ù‚Ø§Ø¦Ù…Ø©", "â¬…ï¸ Back to menu"),     callback_data="back_to_menu")],
     ])
 
     await send_func(
         L(
             lang,
-            "❓ <b>الأسئلة الشائعة (FAQ)</b>\n"
-            "اختر فئة المشكلة للحصول على خطوات مفصلة. إن لم تُحل مشكلتك، افتح <code>/report</code> أو استخدم الدردشة الحيّة.",
-            "❓ <b>Frequently Asked Questions (FAQ)</b>\n"
-            "Pick a category to see detailed steps. If that doesn’t help, open <code>/report</code> or use Live Chat."
+            "â“ <b>Ø§Ù„Ø£Ø³Ø¦Ù„Ø© Ø§Ù„Ø´Ø§Ø¦Ø¹Ø© (FAQ)</b>\n"
+            "Ø§Ø®ØªØ± ÙØ¦Ø© Ø§Ù„Ù…Ø´ÙƒÙ„Ø© Ù„Ù„Ø­ØµÙˆÙ„ Ø¹Ù„Ù‰ Ø®Ø·ÙˆØ§Øª Ù…ÙØµÙ„Ø©. Ø¥Ù† Ù„Ù… ØªÙØ­Ù„ Ù…Ø´ÙƒÙ„ØªÙƒØŒ Ø§ÙØªØ­ <code>/report</code> Ø£Ùˆ Ø§Ø³ØªØ®Ø¯Ù… Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„Ø­ÙŠÙ‘Ø©.",
+            "â“ <b>Frequently Asked Questions (FAQ)</b>\n"
+            "Pick a category to see detailed steps. If that doesnâ€™t help, open <code>/report</code> or use Live Chat."
         ),
         reply_markup=keyboard,
         parse_mode="HTML",
         disable_web_page_preview=True
     )
 
-# ===== أوامر /help و /faq =====
+# ===== Ø£ÙˆØ§Ù…Ø± /help Ùˆ /faq =====
 @router.message(Command("help", "faq"))
 async def help_cmd(message: Message):
     log.info("[HELP] handler fired")
     await help_handler_target(message.from_user.id, message.answer)
 
-# ===== توافق مع أزرار قديمة للـFAQ =====
+# ===== ØªÙˆØ§ÙÙ‚ Ù…Ø¹ Ø£Ø²Ø±Ø§Ø± Ù‚Ø¯ÙŠÙ…Ø© Ù„Ù„Ù€FAQ =====
 @router.callback_query(
     F.data.in_({"bot:faq", "menu:faq", "faq", "faq_open", "help", "help:open", "faq:open"})
 )
@@ -63,25 +64,25 @@ async def open_faq_compat(callback: CallbackQuery):
     await help_handler_target(callback.from_user.id, callback.message.edit_text)
     await callback.answer()
 
-# ===== رجوع لصفحة الـFAQ الرئيسية =====
+# ===== Ø±Ø¬ÙˆØ¹ Ù„ØµÙØ­Ø© Ø§Ù„Ù€FAQ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ© =====
 @router.callback_query(F.data == "back_to_help")
 async def back_to_help(callback: CallbackQuery):
     await help_handler_target(callback.from_user.id, callback.message.edit_text)
     await callback.answer()
 
-# ===================== الأقسام =====================
+# ===================== Ø§Ù„Ø£Ù‚Ø³Ø§Ù… =====================
 
 @router.callback_query(F.data == "help_app")
 async def help_app(callback: CallbackQuery):
     lang = get_user_lang(callback.from_user.id) or "en"
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=L(lang, "التطبيق لا يفتح", "App won’t open"),       callback_data="help_app_not_open")],
-        [InlineKeyboardButton(text=L(lang, "التطبيق بطيء/يعلّق", "App is slow/laggy"), callback_data="help_app_slow")],
-        [InlineKeyboardButton(text=L(lang, "القوائم لا تظهر", "Menus not showing"),    callback_data="help_menu_not_showing")],
-        [InlineKeyboardButton(text=L(lang, "⬅️ رجوع", "⬅️ Back"),                      callback_data="back_to_help")],
+        [InlineKeyboardButton(text=L(lang, "Ø§Ù„ØªØ·Ø¨ÙŠÙ‚ Ù„Ø§ ÙŠÙØªØ­", "App wonâ€™t open"),       callback_data="help_app_not_open")],
+        [InlineKeyboardButton(text=L(lang, "Ø§Ù„ØªØ·Ø¨ÙŠÙ‚ Ø¨Ø·ÙŠØ¡/ÙŠØ¹Ù„Ù‘Ù‚", "App is slow/laggy"), callback_data="help_app_slow")],
+        [InlineKeyboardButton(text=L(lang, "Ø§Ù„Ù‚ÙˆØ§Ø¦Ù… Ù„Ø§ ØªØ¸Ù‡Ø±", "Menus not showing"),    callback_data="help_menu_not_showing")],
+        [InlineKeyboardButton(text=L(lang, "â¬…ï¸ Ø±Ø¬ÙˆØ¹", "â¬…ï¸ Back"),                      callback_data="back_to_help")],
     ])
     await callback.message.edit_text(
-        L(lang, "اختر مشكلة التطبيق:", "Choose an app issue:"),
+        L(lang, "Ø§Ø®ØªØ± Ù…Ø´ÙƒÙ„Ø© Ø§Ù„ØªØ·Ø¨ÙŠÙ‚:", "Choose an app issue:"),
         reply_markup=keyboard, parse_mode="HTML", disable_web_page_preview=True
     )
     await callback.answer()
@@ -91,17 +92,17 @@ async def app_not_open(callback: CallbackQuery):
     lang = get_user_lang(callback.from_user.id) or "en"
     text = L(
         lang,
-        "🔧 <b>حل مشكلة: التطبيق لا يفتح</b>\n"
-        "1) حدّث لأحدث إصدار من داخل البوت (قسم التطبيق).\n"
-        "2) عطّل مؤقتًا VPN/حاجب الإعلانات/DNS المخصص.\n"
-        "3) إعدادات الهاتف ➜ التطبيقات ➜ التطبيق ➜ التخزين ➜ امسح الكاش ثم البيانات.\n"
-        "4) تأكد من وجود >500MB مساحة ثم أعد تشغيل الجهاز.\n"
-        "5) إن استمرت المشكلة: احذف التطبيق وثبته من جديد.\n"
-        "6) ما زالت؟ افتح <code>/report</code> واذكر طراز جهازك وإصدار النظام.",
-        "🔧 <b>Fix: App won’t open</b>\n"
+        "ðŸ”§ <b>Ø­Ù„ Ù…Ø´ÙƒÙ„Ø©: Ø§Ù„ØªØ·Ø¨ÙŠÙ‚ Ù„Ø§ ÙŠÙØªØ­</b>\n"
+        "1) Ø­Ø¯Ù‘Ø« Ù„Ø£Ø­Ø¯Ø« Ø¥ØµØ¯Ø§Ø± Ù…Ù† Ø¯Ø§Ø®Ù„ Ø§Ù„Ø¨ÙˆØª (Ù‚Ø³Ù… Ø§Ù„ØªØ·Ø¨ÙŠÙ‚).\n"
+        "2) Ø¹Ø·Ù‘Ù„ Ù…Ø¤Ù‚ØªÙ‹Ø§ VPN/Ø­Ø§Ø¬Ø¨ Ø§Ù„Ø¥Ø¹Ù„Ø§Ù†Ø§Øª/DNS Ø§Ù„Ù…Ø®ØµØµ.\n"
+        "3) Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ù‡Ø§ØªÙ âžœ Ø§Ù„ØªØ·Ø¨ÙŠÙ‚Ø§Øª âžœ Ø§Ù„ØªØ·Ø¨ÙŠÙ‚ âžœ Ø§Ù„ØªØ®Ø²ÙŠÙ† âžœ Ø§Ù…Ø³Ø­ Ø§Ù„ÙƒØ§Ø´ Ø«Ù… Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª.\n"
+        "4) ØªØ£ÙƒØ¯ Ù…Ù† ÙˆØ¬ÙˆØ¯ >500MB Ù…Ø³Ø§Ø­Ø© Ø«Ù… Ø£Ø¹Ø¯ ØªØ´ØºÙŠÙ„ Ø§Ù„Ø¬Ù‡Ø§Ø².\n"
+        "5) Ø¥Ù† Ø§Ø³ØªÙ…Ø±Øª Ø§Ù„Ù…Ø´ÙƒÙ„Ø©: Ø§Ø­Ø°Ù Ø§Ù„ØªØ·Ø¨ÙŠÙ‚ ÙˆØ«Ø¨ØªÙ‡ Ù…Ù† Ø¬Ø¯ÙŠØ¯.\n"
+        "6) Ù…Ø§ Ø²Ø§Ù„ØªØŸ Ø§ÙØªØ­ <code>/report</code> ÙˆØ§Ø°ÙƒØ± Ø·Ø±Ø§Ø² Ø¬Ù‡Ø§Ø²Ùƒ ÙˆØ¥ØµØ¯Ø§Ø± Ø§Ù„Ù†Ø¸Ø§Ù….",
+        "ðŸ”§ <b>Fix: App wonâ€™t open</b>\n"
         "1) Update to the latest build (App section in the bot).\n"
         "2) Temporarily disable VPN/ad-block/ custom DNS.\n"
-        "3) Phone Settings ➜ Apps ➜ the app ➜ Storage ➜ clear cache then data.\n"
+        "3) Phone Settings âžœ Apps âžœ the app âžœ Storage âžœ clear cache then data.\n"
         "4) Ensure >500MB free storage and reboot the device.\n"
         "5) If persists: uninstall then reinstall the app.\n"
         "6) Still stuck? Open <code>/report</code> with device model & OS."
@@ -109,7 +110,7 @@ async def app_not_open(callback: CallbackQuery):
     await callback.message.edit_text(
         text,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=L(lang, "⬅️ رجوع لمشاكل التطبيق", "⬅️ Back to app issues"), callback_data="help_app")],
+            [InlineKeyboardButton(text=L(lang, "â¬…ï¸ Ø±Ø¬ÙˆØ¹ Ù„Ù…Ø´Ø§ÙƒÙ„ Ø§Ù„ØªØ·Ø¨ÙŠÙ‚", "â¬…ï¸ Back to app issues"), callback_data="help_app")],
         ]),
         parse_mode="HTML", disable_web_page_preview=True
     )
@@ -120,25 +121,25 @@ async def app_slow(callback: CallbackQuery):
     lang = get_user_lang(callback.from_user.id) or "en"
     text = L(
         lang,
-        "⚙️ <b>تحسين الأداء</b>\n"
-        "• أغلق التطبيقات في الخلفية وفعّل وضع الأداء إن وُجد.\n"
-        "• استخدم اتصالًا ثابتًا (جرّب Wi-Fi بدل البيانات).\n"
-        "• حدّث التطبيق وامسح الكاش.\n"
-        "• عطّل أوضاع توفير الطاقة الشديدة.\n"
-        "• إن لم يتحسن: أعد التثبيت.\n"
-        "• ما زالت المشكلة؟ أرسل <code>/report</code> مع تسجيل شاشة قصير.",
-        "⚙️ <b>Performance tips</b>\n"
-        "• Close background apps; enable performance mode.\n"
-        "• Prefer stable internet (try Wi-Fi instead of mobile data).\n"
-        "• Update the app and clear cache.\n"
-        "• Disable aggressive battery savers.\n"
-        "• If no change: reinstall the app.\n"
-        "• Still slow? Use <code>/report</code> with a short screen recording."
+        "âš™ï¸ <b>ØªØ­Ø³ÙŠÙ† Ø§Ù„Ø£Ø¯Ø§Ø¡</b>\n"
+        "â€¢ Ø£ØºÙ„Ù‚ Ø§Ù„ØªØ·Ø¨ÙŠÙ‚Ø§Øª ÙÙŠ Ø§Ù„Ø®Ù„ÙÙŠØ© ÙˆÙØ¹Ù‘Ù„ ÙˆØ¶Ø¹ Ø§Ù„Ø£Ø¯Ø§Ø¡ Ø¥Ù† ÙˆÙØ¬Ø¯.\n"
+        "â€¢ Ø§Ø³ØªØ®Ø¯Ù… Ø§ØªØµØ§Ù„Ù‹Ø§ Ø«Ø§Ø¨ØªÙ‹Ø§ (Ø¬Ø±Ù‘Ø¨ Wi-Fi Ø¨Ø¯Ù„ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª).\n"
+        "â€¢ Ø­Ø¯Ù‘Ø« Ø§Ù„ØªØ·Ø¨ÙŠÙ‚ ÙˆØ§Ù…Ø³Ø­ Ø§Ù„ÙƒØ§Ø´.\n"
+        "â€¢ Ø¹Ø·Ù‘Ù„ Ø£ÙˆØ¶Ø§Ø¹ ØªÙˆÙÙŠØ± Ø§Ù„Ø·Ø§Ù‚Ø© Ø§Ù„Ø´Ø¯ÙŠØ¯Ø©.\n"
+        "â€¢ Ø¥Ù† Ù„Ù… ÙŠØªØ­Ø³Ù†: Ø£Ø¹Ø¯ Ø§Ù„ØªØ«Ø¨ÙŠØª.\n"
+        "â€¢ Ù…Ø§ Ø²Ø§Ù„Øª Ø§Ù„Ù…Ø´ÙƒÙ„Ø©ØŸ Ø£Ø±Ø³Ù„ <code>/report</code> Ù…Ø¹ ØªØ³Ø¬ÙŠÙ„ Ø´Ø§Ø´Ø© Ù‚ØµÙŠØ±.",
+        "âš™ï¸ <b>Performance tips</b>\n"
+        "â€¢ Close background apps; enable performance mode.\n"
+        "â€¢ Prefer stable internet (try Wi-Fi instead of mobile data).\n"
+        "â€¢ Update the app and clear cache.\n"
+        "â€¢ Disable aggressive battery savers.\n"
+        "â€¢ If no change: reinstall the app.\n"
+        "â€¢ Still slow? Use <code>/report</code> with a short screen recording."
     )
     await callback.message.edit_text(
         text,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=L(lang, "⬅️ رجوع لمشاكل التطبيق", "⬅️ Back to app issues"), callback_data="help_app")],
+            [InlineKeyboardButton(text=L(lang, "â¬…ï¸ Ø±Ø¬ÙˆØ¹ Ù„Ù…Ø´Ø§ÙƒÙ„ Ø§Ù„ØªØ·Ø¨ÙŠÙ‚", "â¬…ï¸ Back to app issues"), callback_data="help_app")],
         ]),
         parse_mode="HTML", disable_web_page_preview=True
     )
@@ -149,23 +150,23 @@ async def menu_not_showing(callback: CallbackQuery):
     lang = get_user_lang(callback.from_user.id) or "en"
     text = L(
         lang,
-        "📋 <b>القوائم/الأزرار لا تظهر</b>\n"
-        "• حدّث التطبيق.\n"
-        "• امسح الكاش والبيانات ثم افتحه مجددًا.\n"
-        "• جرّب تغيير اللغة من /language ثم افتح القائمة.\n"
-        "• تأكد من عدم تضخيم الخط (إمكانية الوصول).\n"
-        "• إن استمرت: أرسل لقطة شاشة مع <code>/report</code>.",
-        "📋 <b>Menus/buttons not visible</b>\n"
-        "• Update the app.\n"
-        "• Clear cache/data then reopen.\n"
-        "• Switch language via /language and try again.\n"
-        "• Ensure system font scaling isn’t too large.\n"
-        "• Still happening? Send a screenshot with <code>/report</code>."
+        "ðŸ“‹ <b>Ø§Ù„Ù‚ÙˆØ§Ø¦Ù…/Ø§Ù„Ø£Ø²Ø±Ø§Ø± Ù„Ø§ ØªØ¸Ù‡Ø±</b>\n"
+        "â€¢ Ø­Ø¯Ù‘Ø« Ø§Ù„ØªØ·Ø¨ÙŠÙ‚.\n"
+        "â€¢ Ø§Ù…Ø³Ø­ Ø§Ù„ÙƒØ§Ø´ ÙˆØ§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø«Ù… Ø§ÙØªØ­Ù‡ Ù…Ø¬Ø¯Ø¯Ù‹Ø§.\n"
+        "â€¢ Ø¬Ø±Ù‘Ø¨ ØªØºÙŠÙŠØ± Ø§Ù„Ù„ØºØ© Ù…Ù† /language Ø«Ù… Ø§ÙØªØ­ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø©.\n"
+        "â€¢ ØªØ£ÙƒØ¯ Ù…Ù† Ø¹Ø¯Ù… ØªØ¶Ø®ÙŠÙ… Ø§Ù„Ø®Ø· (Ø¥Ù…ÙƒØ§Ù†ÙŠØ© Ø§Ù„ÙˆØµÙˆÙ„).\n"
+        "â€¢ Ø¥Ù† Ø§Ø³ØªÙ…Ø±Øª: Ø£Ø±Ø³Ù„ Ù„Ù‚Ø·Ø© Ø´Ø§Ø´Ø© Ù…Ø¹ <code>/report</code>.",
+        "ðŸ“‹ <b>Menus/buttons not visible</b>\n"
+        "â€¢ Update the app.\n"
+        "â€¢ Clear cache/data then reopen.\n"
+        "â€¢ Switch language via /language and try again.\n"
+        "â€¢ Ensure system font scaling isnâ€™t too large.\n"
+        "â€¢ Still happening? Send a screenshot with <code>/report</code>."
     )
     await callback.message.edit_text(
         text,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=L(lang, "⬅️ رجوع لمشاكل التطبيق", "⬅️ Back to app issues"), callback_data="help_app")],
+            [InlineKeyboardButton(text=L(lang, "â¬…ï¸ Ø±Ø¬ÙˆØ¹ Ù„Ù…Ø´Ø§ÙƒÙ„ Ø§Ù„ØªØ·Ø¨ÙŠÙ‚", "â¬…ï¸ Back to app issues"), callback_data="help_app")],
         ]),
         parse_mode="HTML", disable_web_page_preview=True
     )
@@ -175,12 +176,12 @@ async def menu_not_showing(callback: CallbackQuery):
 async def help_game(callback: CallbackQuery):
     lang = get_user_lang(callback.from_user.id) or "en"
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=L(lang, "اللعبة لا تعمل", "Game not working"), callback_data="help_game_not_working")],
-        [InlineKeyboardButton(text=L(lang, "اللعبة تتوقف/تخرج", "Game crashes/exits"), callback_data="help_game_crash")],
-        [InlineKeyboardButton(text=L(lang, "⬅️ رجوع", "⬅️ Back"), callback_data="back_to_help")],
+        [InlineKeyboardButton(text=L(lang, "Ø§Ù„Ù„Ø¹Ø¨Ø© Ù„Ø§ ØªØ¹Ù…Ù„", "Game not working"), callback_data="help_game_not_working")],
+        [InlineKeyboardButton(text=L(lang, "Ø§Ù„Ù„Ø¹Ø¨Ø© ØªØªÙˆÙ‚Ù/ØªØ®Ø±Ø¬", "Game crashes/exits"), callback_data="help_game_crash")],
+        [InlineKeyboardButton(text=L(lang, "â¬…ï¸ Ø±Ø¬ÙˆØ¹", "â¬…ï¸ Back"), callback_data="back_to_help")],
     ])
     await callback.message.edit_text(
-        L(lang, "اختر مشكلة اللعبة:", "Choose a game issue:"),
+        L(lang, "Ø§Ø®ØªØ± Ù…Ø´ÙƒÙ„Ø© Ø§Ù„Ù„Ø¹Ø¨Ø©:", "Choose a game issue:"),
         reply_markup=keyboard, parse_mode="HTML", disable_web_page_preview=True
     )
     await callback.answer()
@@ -190,25 +191,25 @@ async def game_not_working(callback: CallbackQuery):
     lang = get_user_lang(callback.from_user.id) or "en"
     text = L(
         lang,
-        "🎮 <b>حل مشكلة: اللعبة لا تعمل</b>\n"
-        "1) حدّث اللعبة والتطبيق.\n"
-        "2) عطّل VPN والأدوات التي تغيّر الشبكة.\n"
-        "3) اسمح بأذونات التخزين/الوسائط.\n"
-        "4) امسح كاش اللعبة ثم أعد التشغيل.\n"
-        "5) أثناء صيانة الخادم قد تتعطل مؤقتًا — جرّب لاحقًا.\n"
-        "6) ما زالت؟ أرسل <code>/report</code> مع اسم اللعبة وجهازك.",
-        "🎮 <b>Fix: Game not working</b>\n"
+        "ðŸŽ® <b>Ø­Ù„ Ù…Ø´ÙƒÙ„Ø©: Ø§Ù„Ù„Ø¹Ø¨Ø© Ù„Ø§ ØªØ¹Ù…Ù„</b>\n"
+        "1) Ø­Ø¯Ù‘Ø« Ø§Ù„Ù„Ø¹Ø¨Ø© ÙˆØ§Ù„ØªØ·Ø¨ÙŠÙ‚.\n"
+        "2) Ø¹Ø·Ù‘Ù„ VPN ÙˆØ§Ù„Ø£Ø¯ÙˆØ§Øª Ø§Ù„ØªÙŠ ØªØºÙŠÙ‘Ø± Ø§Ù„Ø´Ø¨ÙƒØ©.\n"
+        "3) Ø§Ø³Ù…Ø­ Ø¨Ø£Ø°ÙˆÙ†Ø§Øª Ø§Ù„ØªØ®Ø²ÙŠÙ†/Ø§Ù„ÙˆØ³Ø§Ø¦Ø·.\n"
+        "4) Ø§Ù…Ø³Ø­ ÙƒØ§Ø´ Ø§Ù„Ù„Ø¹Ø¨Ø© Ø«Ù… Ø£Ø¹Ø¯ Ø§Ù„ØªØ´ØºÙŠÙ„.\n"
+        "5) Ø£Ø«Ù†Ø§Ø¡ ØµÙŠØ§Ù†Ø© Ø§Ù„Ø®Ø§Ø¯Ù… Ù‚Ø¯ ØªØªØ¹Ø·Ù„ Ù…Ø¤Ù‚ØªÙ‹Ø§ â€” Ø¬Ø±Ù‘Ø¨ Ù„Ø§Ø­Ù‚Ù‹Ø§.\n"
+        "6) Ù…Ø§ Ø²Ø§Ù„ØªØŸ Ø£Ø±Ø³Ù„ <code>/report</code> Ù…Ø¹ Ø§Ø³Ù… Ø§Ù„Ù„Ø¹Ø¨Ø© ÙˆØ¬Ù‡Ø§Ø²Ùƒ.",
+        "ðŸŽ® <b>Fix: Game not working</b>\n"
         "1) Update both game and app.\n"
         "2) Disable VPN/network-altering tools.\n"
         "3) Grant storage/media permissions.\n"
         "4) Clear game cache then reboot.\n"
-        "5) Server maintenance can cause temporary issues — try later.\n"
+        "5) Server maintenance can cause temporary issues â€” try later.\n"
         "6) Still broken? <code>/report</code> with game name & device."
     )
     await callback.message.edit_text(
         text,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=L(lang, "⬅️ رجوع لمشاكل اللعبة", "⬅️ Back to game issues"), callback_data="help_game")],
+            [InlineKeyboardButton(text=L(lang, "â¬…ï¸ Ø±Ø¬ÙˆØ¹ Ù„Ù…Ø´Ø§ÙƒÙ„ Ø§Ù„Ù„Ø¹Ø¨Ø©", "â¬…ï¸ Back to game issues"), callback_data="help_game")],
         ]),
         parse_mode="HTML", disable_web_page_preview=True
     )
@@ -219,23 +220,23 @@ async def game_crash(callback: CallbackQuery):
     lang = get_user_lang(callback.from_user.id) or "en"
     text = L(
         lang,
-        "💥 <b>تعطّل/خروج مفاجئ</b>\n"
-        "• أفرغ مساحة ورام كافية.\n"
-        "• حدّث النظام/تعريفات الرسوم إن وُجدت.\n"
-        "• أزل تطبيقات الطبقة فوق الشاشة.\n"
-        "• امسح بيانات اللعبة وسجّل الدخول مجددًا.\n"
-        "• إن استمر، أرفق فيديو/سجل أعطال مع <code>/report</code>.",
-        "💥 <b>Crashes / force closes</b>\n"
-        "• Free up storage/RAM.\n"
-        "• Update OS/graphics drivers if applicable.\n"
-        "• Remove screen-overlay apps.\n"
-        "• Clear game data and sign in again.\n"
-        "• If it persists, attach video/crash log via <code>/report</code>."
+        "ðŸ’¥ <b>ØªØ¹Ø·Ù‘Ù„/Ø®Ø±ÙˆØ¬ Ù…ÙØ§Ø¬Ø¦</b>\n"
+        "â€¢ Ø£ÙØ±Øº Ù…Ø³Ø§Ø­Ø© ÙˆØ±Ø§Ù… ÙƒØ§ÙÙŠØ©.\n"
+        "â€¢ Ø­Ø¯Ù‘Ø« Ø§Ù„Ù†Ø¸Ø§Ù…/ØªØ¹Ø±ÙŠÙØ§Øª Ø§Ù„Ø±Ø³ÙˆÙ… Ø¥Ù† ÙˆÙØ¬Ø¯Øª.\n"
+        "â€¢ Ø£Ø²Ù„ ØªØ·Ø¨ÙŠÙ‚Ø§Øª Ø§Ù„Ø·Ø¨Ù‚Ø© ÙÙˆÙ‚ Ø§Ù„Ø´Ø§Ø´Ø©.\n"
+        "â€¢ Ø§Ù…Ø³Ø­ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù„Ø¹Ø¨Ø© ÙˆØ³Ø¬Ù‘Ù„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ù…Ø¬Ø¯Ø¯Ù‹Ø§.\n"
+        "â€¢ Ø¥Ù† Ø§Ø³ØªÙ…Ø±ØŒ Ø£Ø±ÙÙ‚ ÙÙŠØ¯ÙŠÙˆ/Ø³Ø¬Ù„ Ø£Ø¹Ø·Ø§Ù„ Ù…Ø¹ <code>/report</code>.",
+        "ðŸ’¥ <b>Crashes / force closes</b>\n"
+        "â€¢ Free up storage/RAM.\n"
+        "â€¢ Update OS/graphics drivers if applicable.\n"
+        "â€¢ Remove screen-overlay apps.\n"
+        "â€¢ Clear game data and sign in again.\n"
+        "â€¢ If it persists, attach video/crash log via <code>/report</code>."
     )
     await callback.message.edit_text(
         text,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=L(lang, "⬅️ رجوع لمشاكل اللعبة", "⬅️ Back to game issues"), callback_data="help_game")],
+            [InlineKeyboardButton(text=L(lang, "â¬…ï¸ Ø±Ø¬ÙˆØ¹ Ù„Ù…Ø´Ø§ÙƒÙ„ Ø§Ù„Ù„Ø¹Ø¨Ø©", "â¬…ï¸ Back to game issues"), callback_data="help_game")],
         ]),
         parse_mode="HTML", disable_web_page_preview=True
     )
@@ -245,12 +246,12 @@ async def game_crash(callback: CallbackQuery):
 async def help_reseller(callback: CallbackQuery):
     lang = get_user_lang(callback.from_user.id) or "en"
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=L(lang, "المورّد لا يرد", "Reseller not responding"), callback_data="help_reseller_not_responding")],
-        [InlineKeyboardButton(text=L(lang, "التحقق/بلاغ عن مزيف", "Verify/Report fake"),  callback_data="help_reseller_fake")],
-        [InlineKeyboardButton(text=L(lang, "⬅️ رجوع", "⬅️ Back"),                        callback_data="back_to_help")],
+        [InlineKeyboardButton(text=L(lang, "Ø§Ù„Ù…ÙˆØ±Ù‘Ø¯ Ù„Ø§ ÙŠØ±Ø¯", "Reseller not responding"), callback_data="help_reseller_not_responding")],
+        [InlineKeyboardButton(text=L(lang, "Ø§Ù„ØªØ­Ù‚Ù‚/Ø¨Ù„Ø§Øº Ø¹Ù† Ù…Ø²ÙŠÙ", "Verify/Report fake"),  callback_data="help_reseller_fake")],
+        [InlineKeyboardButton(text=L(lang, "â¬…ï¸ Ø±Ø¬ÙˆØ¹", "â¬…ï¸ Back"),                        callback_data="back_to_help")],
     ])
     await callback.message.edit_text(
-        L(lang, "اختر موضوعًا:", "Choose a topic:"),
+        L(lang, "Ø§Ø®ØªØ± Ù…ÙˆØ¶ÙˆØ¹Ù‹Ø§:", "Choose a topic:"),
         reply_markup=keyboard, parse_mode="HTML", disable_web_page_preview=True
     )
     await callback.answer()
@@ -260,21 +261,21 @@ async def reseller_not_responding(callback: CallbackQuery):
     lang = get_user_lang(callback.from_user.id) or "en"
     text = L(
         lang,
-        "📨 <b>المورّد لا يرد</b>\n"
-        "• المهلة المعتادة للرد حتى 24 ساعة.\n"
-        "• تواصل عبر القناة الظاهرة داخل البوت فقط.\n"
-        "• إن تجاوز 24 ساعة دون تحديث: افتح <code>/report</code> مع رقم الطلب ووسيلة الدفع.\n"
-        "• استخدم دائمًا قائمة <b>المورّدين الموثّقين</b> داخل البوت.",
-        "📨 <b>Reseller not responding</b>\n"
-        "• Typical response window is up to 24h.\n"
-        "• Contact them only via the in-bot channel.\n"
-        "• If >24h with no update: <code>/report</code> with order ID & payment method.\n"
-        "• Always use the in-bot <b>Verified Resellers</b> list."
+        "ðŸ“¨ <b>Ø§Ù„Ù…ÙˆØ±Ù‘Ø¯ Ù„Ø§ ÙŠØ±Ø¯</b>\n"
+        "â€¢ Ø§Ù„Ù…Ù‡Ù„Ø© Ø§Ù„Ù…Ø¹ØªØ§Ø¯Ø© Ù„Ù„Ø±Ø¯ Ø­ØªÙ‰ 24 Ø³Ø§Ø¹Ø©.\n"
+        "â€¢ ØªÙˆØ§ØµÙ„ Ø¹Ø¨Ø± Ø§Ù„Ù‚Ù†Ø§Ø© Ø§Ù„Ø¸Ø§Ù‡Ø±Ø© Ø¯Ø§Ø®Ù„ Ø§Ù„Ø¨ÙˆØª ÙÙ‚Ø·.\n"
+        "â€¢ Ø¥Ù† ØªØ¬Ø§ÙˆØ² 24 Ø³Ø§Ø¹Ø© Ø¯ÙˆÙ† ØªØ­Ø¯ÙŠØ«: Ø§ÙØªØ­ <code>/report</code> Ù…Ø¹ Ø±Ù‚Ù… Ø§Ù„Ø·Ù„Ø¨ ÙˆÙˆØ³ÙŠÙ„Ø© Ø§Ù„Ø¯ÙØ¹.\n"
+        "â€¢ Ø§Ø³ØªØ®Ø¯Ù… Ø¯Ø§Ø¦Ù…Ù‹Ø§ Ù‚Ø§Ø¦Ù…Ø© <b>Ø§Ù„Ù…ÙˆØ±Ù‘Ø¯ÙŠÙ† Ø§Ù„Ù…ÙˆØ«Ù‘Ù‚ÙŠÙ†</b> Ø¯Ø§Ø®Ù„ Ø§Ù„Ø¨ÙˆØª.",
+        "ðŸ“¨ <b>Reseller not responding</b>\n"
+        "â€¢ Typical response window is up to 24h.\n"
+        "â€¢ Contact them only via the in-bot channel.\n"
+        "â€¢ If >24h with no update: <code>/report</code> with order ID & payment method.\n"
+        "â€¢ Always use the in-bot <b>Verified Resellers</b> list."
     )
     await callback.message.edit_text(
         text,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=L(lang, "⬅️ رجوع لقسم المورّدين", "⬅️ Back to resellers"), callback_data="help_reseller")],
+            [InlineKeyboardButton(text=L(lang, "â¬…ï¸ Ø±Ø¬ÙˆØ¹ Ù„Ù‚Ø³Ù… Ø§Ù„Ù…ÙˆØ±Ù‘Ø¯ÙŠÙ†", "â¬…ï¸ Back to resellers"), callback_data="help_reseller")],
         ]),
         parse_mode="HTML", disable_web_page_preview=True
     )
@@ -285,21 +286,21 @@ async def reseller_fake(callback: CallbackQuery):
     lang = get_user_lang(callback.from_user.id) or "en"
     text = L(
         lang,
-        "🛡️ <b>التحقق والإبلاغ</b>\n"
-        "• لا تدفع خارج القنوات الرسمية داخل البوت.\n"
-        "• اطلب إثبات الهوية داخل البوت (حساب موثّق/معرّف).\n"
-        "• أبلغ فورًا عبر <code>/report</code> وأرفق المحادثات والفواتير.\n"
-        "• سيتواصل فريقنا معك لاتخاذ اللازم.",
-        "🛡️ <b>Verify & report</b>\n"
-        "• Never pay outside the official in-bot channels.\n"
-        "• Ask for in-bot identity proof (verified account/ID).\n"
-        "• Report immediately via <code>/report</code> with chats/invoices attached.\n"
-        "• Our team will follow up."
+        "ðŸ›¡ï¸ <b>Ø§Ù„ØªØ­Ù‚Ù‚ ÙˆØ§Ù„Ø¥Ø¨Ù„Ø§Øº</b>\n"
+        "â€¢ Ù„Ø§ ØªØ¯ÙØ¹ Ø®Ø§Ø±Ø¬ Ø§Ù„Ù‚Ù†ÙˆØ§Øª Ø§Ù„Ø±Ø³Ù…ÙŠØ© Ø¯Ø§Ø®Ù„ Ø§Ù„Ø¨ÙˆØª.\n"
+        "â€¢ Ø§Ø·Ù„Ø¨ Ø¥Ø«Ø¨Ø§Øª Ø§Ù„Ù‡ÙˆÙŠØ© Ø¯Ø§Ø®Ù„ Ø§Ù„Ø¨ÙˆØª (Ø­Ø³Ø§Ø¨ Ù…ÙˆØ«Ù‘Ù‚/Ù…Ø¹Ø±Ù‘Ù).\n"
+        "â€¢ Ø£Ø¨Ù„Øº ÙÙˆØ±Ù‹Ø§ Ø¹Ø¨Ø± <code>/report</code> ÙˆØ£Ø±ÙÙ‚ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø§Øª ÙˆØ§Ù„ÙÙˆØ§ØªÙŠØ±.\n"
+        "â€¢ Ø³ÙŠØªÙˆØ§ØµÙ„ ÙØ±ÙŠÙ‚Ù†Ø§ Ù…Ø¹Ùƒ Ù„Ø§ØªØ®Ø§Ø° Ø§Ù„Ù„Ø§Ø²Ù….",
+        "ðŸ›¡ï¸ <b>Verify & report</b>\n"
+        "â€¢ Never pay outside the official in-bot channels.\n"
+        "â€¢ Ask for in-bot identity proof (verified account/ID).\n"
+        "â€¢ Report immediately via <code>/report</code> with chats/invoices attached.\n"
+        "â€¢ Our team will follow up."
     )
     await callback.message.edit_text(
         text,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=L(lang, "⬅️ رجوع لقسم المورّدين", "⬅️ Back to resellers"), callback_data="help_reseller")],
+            [InlineKeyboardButton(text=L(lang, "â¬…ï¸ Ø±Ø¬ÙˆØ¹ Ù„Ù‚Ø³Ù… Ø§Ù„Ù…ÙˆØ±Ù‘Ø¯ÙŠÙ†", "â¬…ï¸ Back to resellers"), callback_data="help_reseller")],
         ]),
         parse_mode="HTML", disable_web_page_preview=True
     )
@@ -309,12 +310,12 @@ async def reseller_fake(callback: CallbackQuery):
 async def help_errors(callback: CallbackQuery):
     lang = get_user_lang(callback.from_user.id) or "en"
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=L(lang, "تفسير رموز الخطأ", "Error code meanings"), callback_data="help_error_code")],
-        [InlineKeyboardButton(text=L(lang, "سلوك غير متوقع", "Unexpected behavior"),   callback_data="help_error_unexpected")],
-        [InlineKeyboardButton(text=L(lang, "⬅️ رجوع", "⬅️ Back"),                       callback_data="back_to_help")],
+        [InlineKeyboardButton(text=L(lang, "ØªÙØ³ÙŠØ± Ø±Ù…ÙˆØ² Ø§Ù„Ø®Ø·Ø£", "Error code meanings"), callback_data="help_error_code")],
+        [InlineKeyboardButton(text=L(lang, "Ø³Ù„ÙˆÙƒ ØºÙŠØ± Ù…ØªÙˆÙ‚Ø¹", "Unexpected behavior"),   callback_data="help_error_unexpected")],
+        [InlineKeyboardButton(text=L(lang, "â¬…ï¸ Ø±Ø¬ÙˆØ¹", "â¬…ï¸ Back"),                       callback_data="back_to_help")],
     ])
     await callback.message.edit_text(
-        L(lang, "اختر موضوعًا:", "Choose a topic:"),
+        L(lang, "Ø§Ø®ØªØ± Ù…ÙˆØ¶ÙˆØ¹Ù‹Ø§:", "Choose a topic:"),
         reply_markup=keyboard, parse_mode="HTML", disable_web_page_preview=True
     )
     await callback.answer()
@@ -324,25 +325,25 @@ async def error_code(callback: CallbackQuery):
     lang = get_user_lang(callback.from_user.id) or "en"
     text = L(
         lang,
-        "🧩 <b>أكثر رموز الخطأ شيوعًا</b>\n"
-        "• 401/403: صلاحيات غير كافية — سجّل الدخول أو يلزم اشتراك.\n"
-        "• 404: العنصر غير متاح أو تم حذفه.\n"
-        "• 406/415: إصدار قديم أو صيغة غير مدعومة — حدّث التطبيق.\n"
-        "• 429: محاولات كثيرة — انتظر دقائق ثم حاول.\n"
-        "• 500/502/503: مشكلة خادم — جرّب لاحقًا.\n"
-        "إن ظهر رمز آخر، أرفقه في <code>/report</code>.",
-        "🧩 <b>Common error codes</b>\n"
-        "• 401/403: Not authorized — sign in or subscription required.\n"
-        "• 404: Item not available or removed.\n"
-        "• 406/415: Old version or unsupported format — update the app.\n"
-        "• 429: Too many attempts — wait a few minutes.\n"
-        "• 500/502/503: Server issue — try again later.\n"
+        "ðŸ§© <b>Ø£ÙƒØ«Ø± Ø±Ù…ÙˆØ² Ø§Ù„Ø®Ø·Ø£ Ø´ÙŠÙˆØ¹Ù‹Ø§</b>\n"
+        "â€¢ 401/403: ØµÙ„Ø§Ø­ÙŠØ§Øª ØºÙŠØ± ÙƒØ§ÙÙŠØ© â€” Ø³Ø¬Ù‘Ù„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø£Ùˆ ÙŠÙ„Ø²Ù… Ø§Ø´ØªØ±Ø§Ùƒ.\n"
+        "â€¢ 404: Ø§Ù„Ø¹Ù†ØµØ± ØºÙŠØ± Ù…ØªØ§Ø­ Ø£Ùˆ ØªÙ… Ø­Ø°ÙÙ‡.\n"
+        "â€¢ 406/415: Ø¥ØµØ¯Ø§Ø± Ù‚Ø¯ÙŠÙ… Ø£Ùˆ ØµÙŠØºØ© ØºÙŠØ± Ù…Ø¯Ø¹ÙˆÙ…Ø© â€” Ø­Ø¯Ù‘Ø« Ø§Ù„ØªØ·Ø¨ÙŠÙ‚.\n"
+        "â€¢ 429: Ù…Ø­Ø§ÙˆÙ„Ø§Øª ÙƒØ«ÙŠØ±Ø© â€” Ø§Ù†ØªØ¸Ø± Ø¯Ù‚Ø§Ø¦Ù‚ Ø«Ù… Ø­Ø§ÙˆÙ„.\n"
+        "â€¢ 500/502/503: Ù…Ø´ÙƒÙ„Ø© Ø®Ø§Ø¯Ù… â€” Ø¬Ø±Ù‘Ø¨ Ù„Ø§Ø­Ù‚Ù‹Ø§.\n"
+        "Ø¥Ù† Ø¸Ù‡Ø± Ø±Ù…Ø² Ø¢Ø®Ø±ØŒ Ø£Ø±ÙÙ‚Ù‡ ÙÙŠ <code>/report</code>.",
+        "ðŸ§© <b>Common error codes</b>\n"
+        "â€¢ 401/403: Not authorized â€” sign in or subscription required.\n"
+        "â€¢ 404: Item not available or removed.\n"
+        "â€¢ 406/415: Old version or unsupported format â€” update the app.\n"
+        "â€¢ 429: Too many attempts â€” wait a few minutes.\n"
+        "â€¢ 500/502/503: Server issue â€” try again later.\n"
         "If you see a different code, include it in <code>/report</code>."
     )
     await callback.message.edit_text(
         text,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=L(lang, "⬅️ رجوع لقسم الأخطاء", "⬅️ Back to errors"), callback_data="help_errors")],
+            [InlineKeyboardButton(text=L(lang, "â¬…ï¸ Ø±Ø¬ÙˆØ¹ Ù„Ù‚Ø³Ù… Ø§Ù„Ø£Ø®Ø·Ø§Ø¡", "â¬…ï¸ Back to errors"), callback_data="help_errors")],
         ]),
         parse_mode="HTML", disable_web_page_preview=True
     )
@@ -353,13 +354,13 @@ async def error_unexpected(callback: CallbackQuery):
     lang = get_user_lang(callback.from_user.id) or "en"
     text = L(
         lang,
-        "🛠️ <b>سلوك غير متوقع/أخطاء عامة</b>\n"
-        "1) أعد تشغيل الجهاز.\n"
-        "2) امسح كاش التطبيق وحدّثه.\n"
-        "3) عطّل VPN/الأدوات التي تغيّر الشبكة.\n"
-        "4) إن تكرّر: أعد التثبيت.\n"
-        "5) أرسل <code>/report</code> مع وصف مختصر + صور/فيديو.",
-        "🛠️ <b>Unexpected behavior / generic errors</b>\n"
+        "ðŸ› ï¸ <b>Ø³Ù„ÙˆÙƒ ØºÙŠØ± Ù…ØªÙˆÙ‚Ø¹/Ø£Ø®Ø·Ø§Ø¡ Ø¹Ø§Ù…Ø©</b>\n"
+        "1) Ø£Ø¹Ø¯ ØªØ´ØºÙŠÙ„ Ø§Ù„Ø¬Ù‡Ø§Ø².\n"
+        "2) Ø§Ù…Ø³Ø­ ÙƒØ§Ø´ Ø§Ù„ØªØ·Ø¨ÙŠÙ‚ ÙˆØ­Ø¯Ù‘Ø«Ù‡.\n"
+        "3) Ø¹Ø·Ù‘Ù„ VPN/Ø§Ù„Ø£Ø¯ÙˆØ§Øª Ø§Ù„ØªÙŠ ØªØºÙŠÙ‘Ø± Ø§Ù„Ø´Ø¨ÙƒØ©.\n"
+        "4) Ø¥Ù† ØªÙƒØ±Ù‘Ø±: Ø£Ø¹Ø¯ Ø§Ù„ØªØ«Ø¨ÙŠØª.\n"
+        "5) Ø£Ø±Ø³Ù„ <code>/report</code> Ù…Ø¹ ÙˆØµÙ Ù…Ø®ØªØµØ± + ØµÙˆØ±/ÙÙŠØ¯ÙŠÙˆ.",
+        "ðŸ› ï¸ <b>Unexpected behavior / generic errors</b>\n"
         "1) Reboot the device.\n"
         "2) Clear app cache and update.\n"
         "3) Disable VPN/network-altering tools.\n"
@@ -369,8 +370,9 @@ async def error_unexpected(callback: CallbackQuery):
     await callback.message.edit_text(
         text,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=L(lang, "⬅️ رجوع لقسم الأخطاء", "⬅️ Back to errors"), callback_data="help_errors")],
+            [InlineKeyboardButton(text=L(lang, "â¬…ï¸ Ø±Ø¬ÙˆØ¹ Ù„Ù‚Ø³Ù… Ø§Ù„Ø£Ø®Ø·Ø§Ø¡", "â¬…ï¸ Back to errors"), callback_data="help_errors")],
         ]),
         parse_mode="HTML", disable_web_page_preview=True
     )
     await callback.answer()
+
