@@ -32,6 +32,17 @@ from utils.paths import BASE
 from constants import PRICE_USD_3, PRICE_USD_10, PRICE_USD_30
 from aiogram.fsm.context import FSMContext
 from handlers.home_hero import render_home_card
+
+# ... بعد try/import لطرق الدفع
+try:
+    from services.payments import is_product_enabled as _p_is_prod_enabled
+    def _is_product_enabled(product: str) -> bool:
+        return bool(_p_is_prod_enabled(product))
+except Exception:
+    def _is_product_enabled(product: str) -> bool:
+        # لو ما توفرت الدالة، اعتبره مفعّل
+        return True
+
 # --- Pay modes per product (admin toggles) ---
 try:
     from services.payments import (
@@ -558,22 +569,60 @@ def _pay_methods_for(product: str) -> List[str]:
 
 def _pay_methods_kb(lang: str, product: str):
     kb = InlineKeyboardBuilder()
-    for m in _pay_methods_for(product):
+
+    # لو المنتج متوقف، أعرض زر رجوع فقط
+    if not _is_product_enabled(product):
+        kb.button(
+            text=("رجوع ◀️" if str(lang).startswith("ar") else "Back ◀️"),
+            callback_data="shop:home"
+        )
+        kb.adjust(1)
+        return kb.as_markup()
+
+    methods = _pay_methods_for(product)
+
+    for m in methods:
         if m == "stars":
-            kb.button(text=("⭐ الدفع بنجوم تيليجرام" if str(lang).startswith("ar") else "⭐ Pay with Telegram Stars"),
-                      callback_data=f"shop:pm:{product}:stars")
+            kb.button(
+                text=("⭐ الدفع بنجوم تيليجرام" if str(lang).startswith("ar") else "⭐ Pay with Telegram Stars"),
+                callback_data=f"shop:pm:{product}:stars"
+            )
         elif m == "crypto":
             label = ("💳 الدفع (USDT/TON)" if str(lang).startswith("ar") else "💳 Pay (USDT/TON)")
-            kb.button(text=label, callback_data=f"shop:pm:{product}:crypto")
-    kb.button(text=("رجوع ◀️" if str(lang).startswith("ar") else "Back ◀️"), callback_data="shop:home")
+            kb.button(
+                text=label,
+                callback_data=f"shop:pm:{product}:crypto"
+            )
+
+    # زر الرجوع دائمًا
+    kb.button(
+        text=("رجوع ◀️" if str(lang).startswith("ar") else "Back ◀️"),
+        callback_data="shop:home"
+    )
+
+    # ترتيب الأعمدة (زرين في الصف كحد أقصى)
     kb.adjust(1, 1)
     return kb.as_markup()
+
 
 @router.callback_query(F.data.startswith("shop:g:"))
 async def choose_payment_method(cb: CallbackQuery):
     if not await _ensure_service_available(cb): return
     lang = _user_lang(cb)
     _, _, product = cb.data.split(":", 2)
+
+    # منتج متوقف؟
+    if not _is_product_enabled(product):
+        txt = "⏸️ هذا المنتج متوقف مؤقتًا." if str(lang).startswith("ar") else "⏸️ This product is temporarily paused."
+        kb = InlineKeyboardBuilder()
+        kb.button(text=("رجوع ◀️" if str(lang).startswith("ar") else "Back ◀️"), callback_data="shop:home")
+        kb.adjust(1)
+        try:
+            await cb.message.edit_text(txt, reply_markup=kb.as_markup())
+        except Exception:
+            await cb.message.answer(txt, reply_markup=kb.as_markup())
+        await cb.answer()
+        return
 
     methods = _pay_methods_for(product)
     if not methods:
@@ -586,6 +635,7 @@ async def choose_payment_method(cb: CallbackQuery):
     except Exception:
         await cb.message.answer(txt, reply_markup=_pay_methods_kb(lang, product))
     await cb.answer()
+
 
 # ========= اختيار الخطة (حسب الطريقة) =========
 def _labels_for_usd(lang: str, product: str) -> Dict[int, str]:

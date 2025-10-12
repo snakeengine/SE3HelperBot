@@ -8,6 +8,9 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command
 from aiogram.enums import ParseMode
+from aiogram.fsm.state import StatesGroup, State
+from aiogram.fsm.context import FSMContext
+from aiogram.filters import StateFilter
 
 from lang import t, get_user_lang
 
@@ -124,12 +127,18 @@ def _kb_main(lang: str) -> InlineKeyboardMarkup:
         text=_tt(lang, "liveadm.btn.i_am_offline", "غير متاح ⛔", "I'm offline ⛔"),
         callback_data="liveadm:online:off"
     )
+    # زر رفع الحظر بالـ UID (جديد)
+    unban_btn = InlineKeyboardButton(
+        text=_tt(lang, "liveadm.btn.unban_prompt", "🔓 رفع الحظر (UID)", "🔓 Unban by UID"),
+        callback_data="liveadm:unban:open"
+    )
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=toggle, callback_data="liveadm:toggle"),
          InlineKeyboardButton(text=_tt(lang,"liveadm.btn.refresh","تحديث ♻️","Refresh ♻️"), callback_data="liveadm:refresh")],
         [online_btn, offline_btn],
         [InlineKeyboardButton(text=_tt(lang,"liveadm.btn.sessions","الجلسات النشطة","Active sessions"), callback_data="liveadm:sessions"),
          InlineKeyboardButton(text=_tt(lang,"liveadm.btn.blocklist","قائمة الحظر","Blocklist"), callback_data="liveadm:blocklist")],
+        [unban_btn],
         [InlineKeyboardButton(text=_tt(lang,"liveadm.btn.help","تعليمات","Help"), callback_data="liveadm:help")]
     ])
 
@@ -190,6 +199,10 @@ async def cmd_offline(m: Message):
     lang = _L(m.from_user.id)
     await m.reply(_tt(lang, "liveadm.offline.ok", "⛔ تم تعيين حالتك: غير متاح.", "⛔ You are now offline."))
 
+# --- حالة FSM لرفع الحظر بالـ UID (جديد) ---
+class LiveAdmState(StatesGroup):
+    unban_wait = State()
+
 @router.callback_query(F.data.in_({"liveadm:refresh", "liveadm:toggle", "liveadm:sessions", "liveadm:blocklist", "liveadm:help", "liveadm:online:on", "liveadm:online:off"}))
 async def cb_panel_actions(cb: CallbackQuery):
     if not await _is_live_admin(cb.from_user.id):
@@ -210,8 +223,8 @@ async def cb_panel_actions(cb: CallbackQuery):
 
     if cb.data == "liveadm:help":
         txt = _tt(lang, "liveadm.help",
-            "• هذه لوحة للتحكم بالدردشة الحية.\n• استعمل الأزرار أو الأوامر: /online و /offline.\n• أوامر الحظر: /block UID مدة — /unblock UID",
-            "• Manage live chat here.\n• Use /online and /offline to toggle presence.\n• Block cmds: /block UID duration — /unblock UID"
+            "• هذه لوحة للتحكم بالدردشة الحية.\n• استعمل الأزرار أو الأوامر: /online و /offline.\n• أوامر الحظر: /block UID مدة — /unblock UID\n• يمكنك أيضًا استخدام زر «🔓 رفع الحظر (UID)».",
+            "• Manage live chat here.\n• Use /online and /offline to toggle presence.\n• Block cmds: /block UID duration — /unblock UID\n• You can also use the “🔓 Unban by UID” button."
         )
         return await cb.message.edit_text(txt, reply_markup=_kb_main(lang))
 
@@ -246,6 +259,53 @@ async def cb_panel_actions(cb: CallbackQuery):
         await cb.message.edit_text("\n".join(lines), reply_markup=_kb_main(lang), parse_mode=ParseMode.HTML)
         return await cb.answer()
 
+# --- فتح جلسة إدخال UID لرفع الحظر (زر جديد) ---
+@router.callback_query(F.data == "liveadm:unban:open")
+async def cb_unban_open(cb: CallbackQuery, state: FSMContext):
+    if not await _is_live_admin(cb.from_user.id):
+        return
+    lang = _L(cb.from_user.id)
+    await state.set_state(LiveAdmState.unban_wait)
+    prompt = _tt(
+        lang,
+        "أرسل الآن UID المراد رفع الحظر عنه.\n• للإلغاء أرسل /cancel",
+        "Send the UID you want to unban now.\n• To cancel, send /cancel"
+    )
+    await cb.message.answer(prompt)
+    await cb.answer()
+
+# --- التقاط UID وتنفيذ رفع الحظر ---
+@router.message(StateFilter(LiveAdmState.unban_wait))
+async def msg_unban_apply(m: Message, state: FSMContext):
+    if not await _is_live_admin(m.from_user.id):
+        return
+    lang = _L(m.from_user.id)
+    raw = (m.text or "").strip()
+    if raw.lower() in {"/cancel", "cancel", "إلغاء", "الغاء"}:
+        await state.clear()
+        return await m.reply(_tt(lang, "ألغيت جلسة رفع الحظر.", "Unban session canceled."))
+    if not raw.isdigit():
+        return await m.reply(_tt(lang, "أرسل UID صحيح (أرقام فقط) أو اكتب /cancel للإلغاء.",
+                                       "Send a valid UID (digits only) or type /cancel to cancel."))
+    uid = int(raw)
+    bl = _load(BLOCKLIST_FILE)
+    if str(uid) in bl:
+        bl.pop(str(uid), None)
+        _save(BLOCKLIST_FILE, bl)
+        await state.clear()
+        # حاول إعلام المستخدم المرفوع عنه الحظر
+        try:
+            tlang = _L(uid)
+            txt_user = _tt(tlang, "✅ تم رفع الحظر عن الدردشة. يمكنك المحاولة الآن.",
+                                   "✅ Unban completed. You can try again now.")
+            await m.bot.send_message(uid, txt_user)
+        except Exception:
+            pass
+        return await m.reply(_tt(lang, f"تم رفع الحظر عن UID={uid} ✅", f"Unbanned UID={uid} ✅"))
+    else:
+        await state.clear()
+        return await m.reply(_tt(lang, "هذا المستخدم غير محظور أصلًا.", "This user is not currently banned."))
+
 # عناصر الحظر ورفع الحظر
 def _parse_dur(s: str) -> int:
     if s == "perm": return 0
@@ -275,6 +335,14 @@ async def cb_unblock(cb: CallbackQuery):
     await cb.answer("Unblocked")
     lang = _L(cb.from_user.id)
     await cb.message.answer(_tt(lang,"liveadm.unblocked.ok","تم رفع الحظر عن {uid}.","User {uid} unblocked.").format(uid=uid))
+    # أبلغ المستخدم أيضًا إن أمكن
+    try:
+        tlang = _L(uid)
+        txt_user = _tt(tlang, "✅ تم رفع الحظر عن الدردشة. يمكنك المحاولة الآن.",
+                               "✅ Unban completed. You can try again now.")
+        await cb.bot.send_message(uid, txt_user)
+    except Exception:
+        pass
 
 # أوامر نصية /block /unblock (اختيارية)
 @router.message(Command("block"))
@@ -308,3 +376,11 @@ async def cmd_unblock(m: Message):
         return await m.reply("UID?")
     bl = _load(BLOCKLIST_FILE); bl.pop(str(uid), None); _save(BLOCKLIST_FILE, bl)
     await m.reply(_tt(lang,"liveadm.unblocked.ok","تم رفع الحظر عن {uid}.","User {uid} unblocked.").format(uid=uid))
+    # محاولة إعلام المستخدم
+    try:
+        tlang = _L(uid)
+        txt_user = _tt(tlang, "✅ تم رفع الحظر عن الدردشة. يمكنك المحاولة الآن.",
+                               "✅ Unban completed. You can try again now.")
+        await m.bot.send_message(uid, txt_user)
+    except Exception:
+        pass

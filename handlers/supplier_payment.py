@@ -29,7 +29,7 @@ if not ADMIN_IDS:
 
 DEV_HANDLE   = os.getenv("DEV_HANDLE", "@DevSE2")
 BINANCE_ID   = os.getenv("BINANCE_ID", "846769489")
-SUPPLIER_FEE = int(os.getenv("SUPPLIER_FEE", "500"))
+SUPPLIER_FEE = int(os.getenv("SUPPLIER_FEE", "300"))
 
 # ترقية/إلغاء المورد (اختياري – لو الملف غير موجود نكمل بدون خطأ)
 try:
@@ -135,7 +135,7 @@ async def supplier_paid_done(
     body  = (
         f"<b>{title}</b>\n"
         f"{_tr(lang,'supplier_paid_user','User','المستخدم')} {first_name or ''} ({uname}) "
-        f"{_tr(lang,'supplier_paid_confirms','confirms paying the $500 supplier fee.','يؤكد دفع رسوم المورد $500.')}\n\n"
+        f"{_tr(lang,'supplier_paid_confirms','confirms paying the $300 supplier fee.','يؤكد دفع رسوم المورد $300.')}\n\n"
         f"UserID: <code>{user_id}</code>\n"
         f"Binance ID: <code>{BINANCE_ID}</code>\n\n"
         f"{_tr(lang,'supplier_paid_footer','Please verify and upgrade.','يرجى التحقق والترقية.')}"

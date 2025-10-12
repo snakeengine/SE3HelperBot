@@ -8,21 +8,20 @@ from pathlib import Path
 from aiogram import Router, F
 from aiogram.types import Message, InlineKeyboardButton, CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.filters import StateFilter
+from aiogram.exceptions import TelegramBadRequest
+from aiogram.fsm.context import FSMContext
+from aiogram.types import CallbackQuery
+from lang import get_user_lang
 
 from lang import t, get_user_lang
-from aiogram.filters import StateFilter
-from handlers.report import report_cmd  # لفتح فلو البلاغ مباشرة
-from aiogram.fsm.context import FSMContext
-from aiogram.exceptions import TelegramBadRequest
 
 # نستخدم الدوال من report.py بدل استدعاء report_cmd
 from handlers.report import (
     _is_admin, load_settings, _bl_is_blocked, _next_allowed_dt,
     human_remaining, ReportState
 )
-from lang import t, get_user_lang
 import datetime
-
 
 try:
     from utils.home_card_cfg import get_cfg
@@ -35,11 +34,8 @@ try:
     from utils.feature_flags import is_enabled
 except Exception:
     def is_enabled(_name: str, *, user_id: int | None = None) -> bool:
-        # لو ما فيه ملف الأعلام، اعتبر كل شيء مفعّل
         return True
 
- 
-    
 router = Router(name="home_hero")
 
 # امنع التفاعل أثناء الدردشة الحيّة + واحد-لواحد (خاص فقط)
@@ -51,7 +47,6 @@ except Exception:
 
 router.message.filter(F.chat.type == "private", ~StateFilter(getattr(LiveChat, "active", None)))
 router.callback_query.filter(F.message.chat.type == "private", ~StateFilter(getattr(LiveChat, "active", None)))
-
 
 # --------- أدوار واقعية (مع fallbacks آمنة) ---------
 try:
@@ -163,7 +158,7 @@ CB = {
     # المروّج (زر واحد يتبدّل)
     "PROMO_INFO": "prom:info",
     "PROMO_PANEL": "prom:panel",
-    "PROMO_LIVE": "promp:live",     # ← بث مباشر للمروّجين (قائمة عامة أيضًا)
+    "PROMO_LIVE": "promp:live",
 
     # المورّد (زر واحد يتبدّل)
     "SUPPLIER_PUBLIC": "supplier_public",
@@ -178,11 +173,18 @@ CB = {
     "REPORT": "report:open",
 }
 
-# --------- أزرار القائمة الرئيسية (2×2 دائماً) ---------
-def _build_main_kb(lang: str, *, is_vip: bool, is_promoter: bool, is_supplier: bool):
+# --------- أزرار القائمة الرئيسية ---------
+def _build_main_kb(
+    lang: str,
+    *,
+    is_vip: bool,
+    is_promoter: bool,
+    is_supplier: bool,
+    unseen_alerts: int = 0,
+):
     kb = InlineKeyboardBuilder(); row = kb.row
 
-    # السطر 1 — شراء/تنشيط (منفرد)
+    # السطر 1 — شراء/تنشيط
     row(
         InlineKeyboardButton(
             text="🛒 " + _k(lang, "btn_sevip_buy",
@@ -210,8 +212,11 @@ def _build_main_kb(lang: str, *, is_vip: bool, is_promoter: bool, is_supplier: b
     # السطر 3
     row(
         InlineKeyboardButton(
-            text="📬 " + _k(lang, "btn_alerts_inbox", "صندوق الإشعارات" if lang == "ar" else "Alerts Inbox"),
-            callback_data="inb:back"
+            text="📬 " + (
+                (_k(lang, "btn_alerts_inbox", "صندوق الإشعارات" if lang == "ar" else "Alerts Inbox")
+                 + (f" ({unseen_alerts})" if unseen_alerts > 0 else ""))
+            ),
+            callback_data="ibox:list:0:a"
         ),
         InlineKeyboardButton(
             text="🎁 " + _k(lang, "btn_rewards", "الجوائز" if lang == "ar" else "Rewards"),
@@ -255,7 +260,7 @@ def _build_main_kb(lang: str, *, is_vip: bool, is_promoter: bool, is_supplier: b
         ),
     )
 
-    # السطر 7 — بث + (لوحة المروّجين أو كيف تصبح مروّجًا)
+    # السطر 7 — بث + المروّج
     live_n = _count_live()
     live_label = _k(lang, "btn_promoter_live", "بث مباشر للمروّجين" if lang == "ar" else "Promoters Live")
     if live_n > 0:
@@ -264,20 +269,31 @@ def _build_main_kb(lang: str, *, is_vip: bool, is_promoter: bool, is_supplier: b
     if is_promoter:
         row(
             InlineKeyboardButton(text="🎥 " + live_label, callback_data=CB["PROMO_LIVE"]),
-            InlineKeyboardButton(text="📣 " + _k(lang, "btn_promoter_panel", "لوحة المروّجين" if lang == "ar" else "Promoter Panel"),
-                                 callback_data=CB["PROMO_PANEL"]),
+            InlineKeyboardButton(
+                text="📣 " + _k(lang, "btn_promoter_panel", "لوحة المروّجين" if lang == "ar" else "Promoter Panel"),
+                callback_data=CB["PROMO_PANEL"]
+            ),
         )
     else:
         row(
             InlineKeyboardButton(text="🎥 " + live_label, callback_data=CB["PROMO_LIVE"]),
-            InlineKeyboardButton(text="📣 " + _k(lang, "btn_be_promoter", "كيف تصبح مُروّجًا؟" if lang == "ar" else "Become a promoter?"),
-                                 callback_data=CB["PROMO_INFO"]),
+            InlineKeyboardButton(
+                text="📣 " + _k(lang, "btn_be_promoter", "كيف تصبح مُروّجًا؟" if lang == "ar" else "Become a promoter?"),
+                callback_data=CB["PROMO_INFO"]
+            ),
+        )
+
+        # السطر 8 — زر SEVIP المجاني بالترويج
+        row(
+            InlineKeyboardButton(
+                text=("🎟️ الحصول على اشتراك مجانًا" if lang == "ar" else "🎟️ Get SEVIP for free"),
+                callback_data="promo:open",   # ✅ بدل free:open:{lang}
+            )
         )
 
     return kb.as_markup()
 
-
-# ===== (الإعدادات الحالية كقيم أولية – سنقوم بتطبيق override ديناميكي لاحقًا) =====
+# ===== إعدادات العرض =====
 cfg = get_cfg()
 THEME    = str(cfg.get("theme","neo"))
 DENSITY  = str(cfg.get("density","compact"))
@@ -304,6 +320,12 @@ SHOW_USERS     = (os.getenv("HOME_SHOW_USERS", "1") not in {"0","false","False"}
 SHOW_ALERTS    = (os.getenv("HOME_SHOW_ALERTS", "1") not in {"0","false","False"})  if "HOME_SHOW_ALERTS" in os.environ else SHOW_ALERTS
 
 _LAST_UID: Optional[int] = None
+
+
+def user_lang_from_update(event) -> str:
+    # fallback سريع لو ما كانت محفوظة
+    tl = getattr(getattr(event, "from_user", None), "language_code", "") or "en"
+    return (tl or "en")[:2]
 
 def _cfg_bool(d: dict, primary: str, alt: str, default: bool) -> bool:
     val = d.get(primary, d.get(alt, default))
@@ -419,6 +441,28 @@ def _hero_html(
     parts += ["", cta]
     return "\n".join([p for p in parts if p is not None and str(p).strip()!=""])
 
+
+def _pick_latest_unseen(uid: int, lang: str):
+    """يرجع (id, preview_text) لأحدث إشعار غير مقروء وغير متجاهَل/محذوف، أو None."""
+    try:
+        from utils.alerts_broadcast import get_active_alerts
+        items = get_active_alerts(lang) or []
+    except Exception:
+        items = []
+    st = _ubox_get(uid)
+    seen, ignored, deleted = set(st["seen"]), set(st["ignored"]), set(st["deleted"])
+    # الأحدث أولًا
+    items.sort(key=lambda x: int(x.get("ts", 0)), reverse=True)
+    for it in items:
+        aid = str(it.get("id"))
+        if aid in ignored or aid in deleted or aid in seen:
+            continue
+        # نص مختصر للعرض (نفس ترميز HTML لرسالة الواجهة)
+        body = it.get("text") or it.get("text_ar") or it.get("text_en") or "-"
+        preview = _truncate(body, 160)
+        return aid, preview
+    return None
+
 # --------- العرض ---------
 async def render_home_card(message: Message, *, lang: str | None = None):
     _lang = (lang or get_user_lang(message.from_user.id) or "en").strip().lower()
@@ -466,8 +510,334 @@ async def render_home_card(message: Message, *, lang: str | None = None):
         text,
         parse_mode="HTML",
         disable_web_page_preview=True,
-        reply_markup=_build_main_kb(_lang, is_vip=is_vip, is_promoter=is_prom, is_supplier=is_sup),
+        reply_markup=_build_main_kb(
+            _lang,
+            is_vip=is_vip,
+            is_promoter=is_prom,
+            is_supplier=is_sup,
+            unseen_alerts=unseen  # ← العدد غير المقروء المحسوب مسبقًا
+        ),  
     )
+
+# ========= Fallback ذكي لقائمة الإشعارات (منظم/صفحات/فلاتر) =========
+_INB_PAGE_SIZE = 5
+
+# تخزين بسيط لحالة المستخدم
+try:
+    import threading as _th
+    _U_LOCK = _th.Lock()
+except Exception:
+    class _Dummy:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+    _U_LOCK = _Dummy()
+
+def _ubox_load() -> dict:
+    try:
+        return json.loads(USERBOX_FILE.read_text("utf-8"))
+    except Exception:
+        return {}
+
+def _ubox_save(db: dict) -> None:
+    tmp = USERBOX_FILE.with_suffix(USERBOX_FILE.suffix + ".tmp")
+    tmp.write_text(json.dumps(db, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp.replace(USERBOX_FILE)
+
+def _ubox_get(uid: int) -> dict:
+    with _U_LOCK:
+        db = _ubox_load()
+        s = db.get(str(uid)) or {}
+        s.setdefault("seen", []); s.setdefault("ignored", []); s.setdefault("deleted", [])
+        return s
+
+def _ubox_put(uid: int, s: dict) -> None:
+    with _U_LOCK:
+        db = _ubox_load()
+        db[str(uid)] = s
+        _ubox_save(db)
+
+async def _safe_edit_text(msg_or_cb, text: str, *, reply_markup=None):
+    msg = msg_or_cb.message if isinstance(msg_or_cb, CallbackQuery) else msg_or_cb
+    try:
+        await msg.edit_text(text, reply_markup=reply_markup, disable_web_page_preview=True)
+    except TelegramBadRequest as e:
+        if "message is not modified" not in str(e).lower():
+            await msg.answer(text, reply_markup=reply_markup, disable_web_page_preview=True)
+
+def _fmt_time(ts: int) -> str:
+    try:
+        return time.strftime("%Y-%m-%d %H:%M", time.localtime(int(ts)))
+    except Exception:
+        return ""
+
+def _truncate(s: str, n: int = 60) -> str:
+    s = (s or "").strip()
+    return s if len(s) <= n else (s[:n-1] + "…")
+
+def _fetch_items(uid: int, lang: str):
+    try:
+        from utils.alerts_broadcast import get_active_alerts
+        items = get_active_alerts(lang) or []
+    except Exception:
+        items = []
+    st = _ubox_get(uid)
+    seen, ignored, deleted = set(st["seen"]), set(st["ignored"]), set(st["deleted"])
+    for it in items:
+        it["_seen"] = it["id"] in seen
+        it["_ignored"] = it["id"] in ignored
+        it["_deleted"] = it["id"] in deleted
+    return items, st
+
+def _apply_filter(items: list[dict], flt: str):
+    if flt == "u":
+        base = [x for x in items if not x.get("_deleted") and not x.get("_ignored") and not x.get("_seen")]
+    elif flt == "i":
+        base = [x for x in items if x.get("_ignored") and not x.get("_deleted")]
+    elif flt == "d":
+        base = [x for x in items if x.get("_deleted")]
+    else:
+        base = [x for x in items if not x.get("_deleted") and not x.get("_ignored")]
+    now = int(time.time())
+    base.sort(key=lambda x: ((0 if not x.get("_seen") else 1), -int(x.get("ts", now))))
+    return base
+
+def _list_header(lang: str, flt: str, total: int, unseen: int) -> str:
+    bell = "🔔"
+    if str(lang).lower().startswith("ar"):
+        title = f"{bell} إشعاراتك"
+        filt_map = {"a": "الكل", "u": "غير المفتوحة", "i": "المتجاهلة", "d": "المحذوفة"}
+        return f"{title}\nفلتر: {filt_map.get(flt,'الكل')} · غير المفتوحة: {unseen} · الكل: {total}\nاختر عنصرًا لعرضه:"
+    else:
+        title = f"{bell} Your alerts"
+        filt_map = {"a": "All", "u": "Unopened", "i": "Ignored", "d": "Deleted"}
+        return f"{title}\nFilter: {filt_map.get(flt,'All')} · Unopened: {unseen} · Total: {total}\nPick one to view:"
+
+def _list_kb(lang: str, page: int, pages: int, flt: str, page_items: list[dict]):
+    kb = InlineKeyboardBuilder()
+
+    # عناصر القائمة (تسمية عامة، لا نعرض نص الإشعار في الزر)
+    for idx, it in enumerate(page_items, start=1 + page*_INB_PAGE_SIZE):
+        kind = (it.get("kind") or "").strip()
+        kind_label = t(lang, f"alerts.type.{kind}") or (kind or ("إشعار" if lang == "ar" else "Alert"))
+        when = _fmt_time(it.get("ts", int(time.time())))
+        new_badge = " 🆕" if not it.get("_seen") else ""
+        if str(lang).lower().startswith("ar"):
+            label = f"🔔 إشعار #{idx} • {kind_label} • {when}{new_badge}"
+        else:
+            label = f"🔔 Alert #{idx} • {kind_label} • {when}{new_badge}"
+        kb.button(text=label, callback_data=f"ibox:open:{it['id']}:{page}:{flt}")
+    if page_items:
+        kb.adjust(1)
+
+    # تنقّل
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton(text=("« السابق" if lang == "ar" else "« Prev"),
+                                        callback_data=f"ibox:list:{page-1}:{flt}"))
+    if page < pages - 1:
+        nav.append(InlineKeyboardButton(text=("التالي »" if lang == "ar" else "Next »"),
+                                        callback_data=f"ibox:list:{page+1}:{flt}"))
+    if nav:
+        kb.row(*nav)
+
+    # فلاتر
+    kb.row(
+        InlineKeyboardButton(text=("الكل" if lang=="ar" else "All"), callback_data="ibox:list:0:a"),
+        InlineKeyboardButton(text=("غير المفتوحة" if lang=="ar" else "Unopened"), callback_data="ibox:list:0:u"),
+    )
+    kb.row(
+        InlineKeyboardButton(text=("المتجاهلة" if lang=="ar" else "Ignored"), callback_data="ibox:list:0:i"),
+        InlineKeyboardButton(text=("المحذوفة" if lang=="ar" else "Deleted"), callback_data="ibox:list:0:d"),
+    )
+
+    # عمليات جماعية + رجوع
+    kb.row(
+        InlineKeyboardButton(
+            text=("✔️ تحديد الظاهرة كمقروءة" if lang=="ar" else "✔️ Mark shown as read"),
+            callback_data=f"ibox:bulk:markread:{page}:{flt}"
+        )
+    )
+    kb.row(InlineKeyboardButton(text=("⬅️ رجوع" if lang=="ar" else "⬅️ Back"),
+                                callback_data="back_to_menu"))
+    return kb.as_markup()
+
+async def _render_list(cb_or_msg, uid: int, lang: str, *, page: int, flt: str):
+    if not is_enabled("alerts", user_id=uid):
+        return await (cb_or_msg.answer if isinstance(cb_or_msg, CallbackQuery) else cb_or_msg.reply)(
+            _feature_disabled_msg(lang), show_alert=True if isinstance(cb_or_msg, CallbackQuery) else None
+        )
+
+    items, st = _fetch_items(uid, lang)
+    total_active = len([x for x in items if not x.get("_deleted") and not x.get("_ignored")])
+    unseen_active = len([x for x in items if not x.get("_deleted") and not x.get("_ignored") and not x.get("_seen")])
+
+    vis = _apply_filter(items, flt)
+    if not vis:
+        empty = t(lang, "alerts.user.box.empty") or ("لا توجد إشعارات لهذا الفلتر." if lang=="ar" else "No alerts for this filter.")
+        return await _safe_edit_text(cb_or_msg, empty)
+
+    pages = max(1, (len(vis) + _INB_PAGE_SIZE - 1) // _INB_PAGE_SIZE)
+    page = max(0, min(page, pages-1))
+    start = page * _INB_PAGE_SIZE
+    chunk = vis[start:start + _INB_PAGE_SIZE]
+
+    header = _list_header(lang, flt, total_active, unseen_active)
+    await _safe_edit_text(cb_or_msg, header, reply_markup=_list_kb(lang, page, pages, flt, chunk))
+
+# ========== الهاندلرات ==========
+
+
+
+
+@router.callback_query(F.data == "ibox:back")
+async def ibox_back(cb: CallbackQuery):
+    lang = get_user_lang(cb.from_user.id) or "ar"
+    items, st = _fetch_items(cb.from_user.id, lang)
+    vis = _apply_filter(items, "a")
+    if not vis:
+        empty = t(lang, "alerts.user.box.empty") or ("لا توجد إشعارات حالياً." if lang=="ar" else "No active alerts.")
+        await _safe_edit_text(cb, empty)
+        return await cb.answer()
+    if len(vis) == 1:
+        it = vis[0]
+        if it["id"] not in st["seen"]:
+            st["seen"].append(it["id"]); _ubox_put(cb.from_user.id, st)
+        kb = InlineKeyboardBuilder()
+        kb.button(text=("✔️ مقروء" if lang=="ar" else "✔️ Mark read"), callback_data=f"ibox:markread:{it['id']}:0:a")
+        kb.button(text=("تجاهل 🙈" if lang=="ar" else "Ignore"), callback_data=f"ibox:ignore:{it['id']}:0:a")
+        kb.button(text=("حذف 🗑️" if lang=="ar" else "Delete"), callback_data=f"ibox:delete:{it['id']}:0:a")
+        kb.button(text=("◀️ رجوع" if lang=="ar" else "◀️ Back"), callback_data="ibox:list:0:a")
+        kb.adjust(2,2)
+        await _safe_edit_text(cb, it.get("text",""), reply_markup=kb.as_markup())
+        return await cb.answer()
+    await _render_list(cb, cb.from_user.id, lang, page=0, flt="a")
+    await cb.answer()
+
+@router.callback_query(F.data.regexp(r"^ibox:list:(\d+):(a|u|i|d)$"))
+async def ibox_list_nav(cb: CallbackQuery):
+    _, _, page, flt = cb.data.split(":")
+    lang = get_user_lang(cb.from_user.id) or "ar"
+    await _render_list(cb, cb.from_user.id, lang, page=int(page), flt=flt)
+    await cb.answer()
+
+@router.callback_query(F.data.regexp(r"^ibox:open:.+:\d+:(a|u|i|d)$"))
+async def ibox_open(cb: CallbackQuery):
+    lang = get_user_lang(cb.from_user.id) or "ar"
+
+    parts = cb.data.split(":")
+    flt = parts[-1]
+    page = int(parts[-2])
+    aid = ":".join(parts[2:-2])
+
+    def _get_all(_lang):
+        try:
+            from utils.alerts_broadcast import get_active_alerts
+            return get_active_alerts(_lang) or []
+        except Exception:
+            return []
+
+    items = _get_all(lang)
+    it = next((x for x in items if str(x.get("id")) == str(aid)), None)
+    if not it:
+        for L in ("ar", "en"):
+            if L == lang: continue
+            items2 = _get_all(L)
+            it = next((x for x in items2 if str(x.get("id")) == str(aid)), None)
+            if it: break
+    if not it:
+        return await cb.answer(
+            t(lang, "alerts.user.expired") or ("انتهت صلاحية الإشعار." if lang == "ar" else "Alert expired."),
+            show_alert=True
+        )
+
+    st = _ubox_get(cb.from_user.id)
+    if aid not in st["seen"]:
+        st["seen"].append(aid); _ubox_put(cb.from_user.id, st)
+
+    body = it.get("text") or it.get("text_ar") or it.get("text_en") or "-"
+
+    kb = InlineKeyboardBuilder()
+    kb.button(text=("✔️ مقروء" if lang=="ar" else "✔️ Mark read"), callback_data=f"ibox:markread:{aid}:{page}:{flt}")
+    if it.get("_ignored"):
+        kb.button(text=("استرجاع 👁️" if lang=="ar" else "Unignore"), callback_data=f"ibox:unignore:{aid}:{page}:{flt}")
+    else:
+        kb.button(text=("تجاهل 🙈" if lang=="ar" else "Ignore"), callback_data=f"ibox:ignore:{aid}:{page}:{flt}")
+    if it.get("_deleted"):
+        kb.button(text=("استرجاع ♻️" if lang=="ar" else "Restore"), callback_data=f"ibox:undelete:{aid}:{page}:{flt}")
+    else:
+        kb.button(text=("حذف 🗑️" if lang=="ar" else "Delete"), callback_data=f"ibox:delete:{aid}:{page}:{flt}")
+    kb.button(text=("◀️ رجوع" if lang=="ar" else "◀️ Back"), callback_data=f"ibox:list:{page}:{flt}")
+    kb.adjust(2,2)
+
+    await _safe_edit_text(cb, body, reply_markup=kb.as_markup())
+    await cb.answer()
+
+@router.callback_query(F.data.regexp(r"^ibox:markread:([^:]+):(\d+):(a|u|i|d)$"))
+async def ibox_mark_read(cb: CallbackQuery):
+    aid, page, flt = cb.data.split(":")[2], int(cb.data.split(":")[3]), cb.data.split(":")[4]
+    lang = get_user_lang(cb.from_user.id) or "ar"
+    st = _ubox_get(cb.from_user.id)
+    if aid not in st["seen"]:
+        st["seen"].append(aid); _ubox_put(cb.from_user.id, st)
+    await _render_list(cb, cb.from_user.id, lang, page=page, flt=flt)
+    await cb.answer()
+
+@router.callback_query(F.data.regexp(r"^ibox:ignore:([^:]+):(\d+):(a|u|i|d)$"))
+async def ibox_ignore(cb: CallbackQuery):
+    aid, page, flt = cb.data.split(":")[2], int(cb.data.split(":")[3]), cb.data.split(":")[4]
+    lang = get_user_lang(cb.from_user.id) or "ar"
+    st = _ubox_get(cb.from_user.id)
+    if aid not in st["ignored"]:
+        st["ignored"].append(aid); _ubox_put(cb.from_user.id, st)
+    await _render_list(cb, cb.from_user.id, lang, page=page, flt=flt)
+    await cb.answer("تم التجاهل" if lang=="ar" else "Ignored")
+
+@router.callback_query(F.data.regexp(r"^ibox:unignore:([^:]+):(\d+):(a|u|i|d)$"))
+async def ibox_unignore(cb: CallbackQuery):
+    aid, page, flt = cb.data.split(":")[2], int(cb.data.split(":")[3]), cb.data.split(":")[4]
+    lang = get_user_lang(cb.from_user.id) or "ar"
+    st = _ubox_get(cb.from_user.id)
+    if aid in st["ignored"]:
+        st["ignored"].remove(aid); _ubox_put(cb.from_user.id, st)
+    await _render_list(cb, cb.from_user.id, lang, page=page, flt=flt)
+    await cb.answer("تم الاسترجاع" if lang=="ar" else "Restored")
+
+@router.callback_query(F.data.regexp(r"^ibox:delete:([^:]+):(\d+):(a|u|i|d)$"))
+async def ibox_delete(cb: CallbackQuery):
+    aid, page, flt = cb.data.split(":")[2], int(cb.data.split(":")[3]), cb.data.split(":")[4]
+    lang = get_user_lang(cb.from_user.id) or "ar"
+    st = _ubox_get(cb.from_user.id)
+    if aid not in st["deleted"]:
+        st["deleted"].append(aid); _ubox_put(cb.from_user.id, st)
+    await _render_list(cb, cb.from_user.id, lang, page=page, flt=flt)
+    await cb.answer("تم الحذف" if lang=="ar" else "Deleted")
+
+@router.callback_query(F.data.regexp(r"^ibox:undelete:([^:]+):(\d+):(a|u|i|d)$"))
+async def ibox_undelete(cb: CallbackQuery):
+    aid, page, flt = cb.data.split(":")[2], int(cb.data.split(":")[3]), cb.data.split(":")[4]
+    lang = get_user_lang(cb.from_user.id) or "ar"
+    st = _ubox_get(cb.from_user.id)
+    if aid in st["deleted"]:
+        st["deleted"].remove(aid); _ubox_put(cb.from_user.id, st)
+    await _render_list(cb, cb.from_user.id, lang, page=page, flt=flt)
+    await cb.answer("تم الاسترجاع" if lang=="ar" else "Restored")
+
+@router.callback_query(F.data.regexp(r"^ibox:bulk:markread:(\d+):(a|u|i|d)$"))
+async def ibox_bulk_markread(cb: CallbackQuery):
+    page, flt = int(cb.data.split(":")[3]), cb.data.split(":")[4]
+    lang = get_user_lang(cb.from_user.id) or "ar"
+    items, st = _fetch_items(cb.from_user.id, lang)
+    vis = _apply_filter(items, flt)
+    pages = max(1, (len(vis) + _INB_PAGE_SIZE - 1) // _INB_PAGE_SIZE)
+    page = max(0, min(page, pages-1))
+    start = page * _INB_PAGE_SIZE
+    chunk = vis[start:start + _INB_PAGE_SIZE]
+    for it in chunk:
+        if it["id"] not in st["seen"]:
+            st["seen"].append(it["id"])
+    _ubox_put(cb.from_user.id, st)
+    await _render_list(cb, cb.from_user.id, lang, page=page, flt=flt)
+    await cb.answer("تم التعليم كمقروء" if lang=="ar" else "Marked as read")
 
 # --------- Aliases / fallbacks ---------
 @router.callback_query(F.data == "supplier_panel")
@@ -497,13 +867,12 @@ def _support_text(lang: str) -> str:
         "📎 Please attach a payment screenshot + your seller’s name."
     )
 
-
 def _support_kb(lang: str):
     kb = InlineKeyboardBuilder()
     kb.row(
         InlineKeyboardButton(
             text=("💬 الدردشة الحيّة الآن" if lang=="ar" else "💬 Live chat now"),
-            callback_data="bot:live"  # يتوافق مع live_chat.py
+            callback_data="bot:live"
         )
     )
     kb.row(
@@ -519,7 +888,6 @@ def _support_kb(lang: str):
         )
     )
     return kb.as_markup()
-
 
 def _feature_disabled_msg(lang: str) -> str:
     return (t(lang, "feature.disabled")
@@ -544,14 +912,9 @@ async def _alias_open_report(cb: CallbackQuery):
 
 @router.callback_query(F.data == "support:report")
 async def _support_do_report(cb: CallbackQuery, state: FSMContext):
-    """
-    يفتح قناة البلاغ مباشرة (تفعيل حالة FSM) ويحوّل بطاقة الدعم نفسها
-    إلى نص "أرسل وصف مشكلتك..." باللغة الصحيحة — بدون رسائل إضافية.
-    """
     lang = (get_user_lang(cb.from_user.id) or "en").lower()
     ar = lang.startswith("ar")
 
-    # === نفس فحوص report_cmd ولكن دون إرسال رسالة جديدة ===
     is_admin = await _is_admin(cb.from_user.id)
     st = load_settings()
 
@@ -577,19 +940,15 @@ async def _support_do_report(cb: CallbackQuery, state: FSMContext):
                       ).format(remaining=remain)
                 return await cb.answer(msg, show_alert=True)
 
-    # فعّل حالة انتظار نص البلاغ
     await state.set_state(ReportState.waiting_text)
 
-    # نص المطالبة حسب اللغة (مع دعم الترجمة من lang.t)
     prompt_ar = "✍️ أرسل وصف مشكلتك بالتفصيل. يمكنك أيضًا إرسال صورة/فيديو مع تعليق."
     prompt_en = "✍️ Describe your issue in detail. You may also send a photo/video with a caption."
     prompt = t(lang, "report.prompt") or (prompt_ar if ar else prompt_en)
 
-    # حوّل بطاقة الدعم الحالية إلى نص المطالبة (بدون كيبورد)
     try:
         await cb.message.edit_text(prompt, reply_markup=None)
     except TelegramBadRequest:
-        # لو ما ينفع التعديل (مثلاً كانت وسائط)، احذف الكيبورد وأرسل النص مرّة واحدة
         try:
             await cb.message.edit_reply_markup(None)
         except Exception:
@@ -598,71 +957,57 @@ async def _support_do_report(cb: CallbackQuery, state: FSMContext):
 
     await cb.answer()
 
-
-# ======== Feature-gates: نمنع قبل التنفيذ عندما يكون التبويب مقفول ========
-# ملاحظة: هذه الهاندلرات تُطابق فقط عند التعطيل؛ عند التفعيل لا تُطابق ويكمل للملفات الأصلية.
-
-# شراء/تنشيط VIP من زر القائمة
+# ======== Feature-gates ========
 @router.callback_query(lambda q: q.data == "shop:sevip" and not is_enabled("vip", user_id=q.from_user.id))
 async def _gate_vip(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
     await cb.answer(_feature_disabled_msg(lang), show_alert=True)
 
-# تحميل التطبيق
 @router.callback_query(lambda q: q.data == CB["APP_DOWNLOAD"] and not is_enabled("download", user_id=q.from_user.id))
 async def _gate_download(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
     await cb.answer(_feature_disabled_msg(lang), show_alert=True)
 
-# الجوائز
 @router.callback_query(lambda q: q.data == CB["REWARDS"] and not is_enabled("rewards", user_id=q.from_user.id))
 async def _gate_rewards(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
     await cb.answer(_feature_disabled_msg(lang), show_alert=True)
 
-# أدوات الألعاب
 @router.callback_query(lambda q: q.data == CB["TOOLS"] and not is_enabled("tools", user_id=q.from_user.id))
 async def _gate_tools(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
     await cb.answer(_feature_disabled_msg(lang), show_alert=True)
 
-# تحقّق من جهازك
 @router.callback_query(lambda q: q.data == CB["CHECK_DEVICE"] and not is_enabled("check", user_id=q.from_user.id))
 async def _gate_check(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
     await cb.answer(_feature_disabled_msg(lang), show_alert=True)
 
-# الموردون الموثوقون / دليل الموردين
 @router.callback_query(lambda q: q.data == CB["TRUSTED_SUPPLIERS"] and not is_enabled("suppliers", user_id=q.from_user.id))
 async def _gate_suppliers(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
     await cb.answer(_feature_disabled_msg(lang), show_alert=True)
 
-# دليل الاستخدام الآمن
 @router.callback_query(lambda q: q.data == CB["SAFE_USAGE"] and not is_enabled("safe_usage", user_id=q.from_user.id))
 async def _gate_safe(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
     await cb.answer(_feature_disabled_msg(lang), show_alert=True)
 
-# اللغة
 @router.callback_query(lambda q: q.data == CB["LANG"] and not is_enabled("language", user_id=q.from_user.id))
 async def _gate_lang(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
     await cb.answer(_feature_disabled_msg(lang), show_alert=True)
 
-# الدعم / البلاغ
 @router.callback_query(lambda q: q.data in {"support:report", "report", "report:open"} and not is_enabled("support", user_id=q.from_user.id))
 async def _gate_support(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
     await cb.answer(_feature_disabled_msg(lang), show_alert=True)
 
-# الدردشة الحيّة (زر "bot:live" إن وجد)
 @router.callback_query(lambda q: q.data == "bot:live" and not is_enabled("live", user_id=q.from_user.id))
 async def _gate_live(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
     await cb.answer(_feature_disabled_msg(lang), show_alert=True)
 
-# المروّجون (لوحة/معلومات/بث مباشر)
 @router.callback_query(lambda q: q.data in {CB["PROMO_PANEL"], CB["PROMO_INFO"], CB["PROMO_LIVE"]} and not is_enabled("promoters", user_id=q.from_user.id))
 async def _gate_promoters(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
@@ -673,14 +1018,12 @@ async def _back_to_menu(cb: CallbackQuery):
     await render_home_card(cb.message)
     await cb.answer()
 
-# حالة السيرفرات
 @router.callback_query(lambda q: q.data == CB["SERVER_STATUS"] and not is_enabled("server_status", user_id=q.from_user.id))
 async def _gate_server_status(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
     await cb.answer(_feature_disabled_msg(lang), show_alert=True)
 
-# صندوق الإشعارات (زر inb:back)
-@router.callback_query(lambda q: q.data == "inb:back" and not is_enabled("alerts", user_id=q.from_user.id))
+@router.callback_query(lambda q: q.data == "ibox:back" and not is_enabled("alerts", user_id=q.from_user.id))
 async def _gate_alerts(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
     await cb.answer(_feature_disabled_msg(lang), show_alert=True)

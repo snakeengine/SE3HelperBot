@@ -12,9 +12,8 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.filters import StateFilter
 
 from lang import t, get_user_lang
-import time
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-
+from aiogram.filters import Command 
 
 """
 لوحة إدارة البلاغات:
@@ -157,21 +156,41 @@ async def _safe_edit(msg: Message, text: str, kb: InlineKeyboardMarkup):
         if "message is not modified" not in str(e).lower():
             raise
 
-def _panel_text(lang: str) -> str:
+
+def _panel_text(lang: str, *, viewer_id: int | None = None) -> str:
     st = _load_settings()
     status = _tf(lang, "ra.enabled_on", "مُفعّل") if st["enabled"] else _tf(lang, "ra.enabled_off", "مُعطّل")
+
+    # حالة تنبيهات الأدمن الحالي
+    my_alerts_line = ""
+    if viewer_id is not None:
+        try:
+            muted = alerts_is_muted(viewer_id)
+        except Exception:
+            muted = False
+        my_alerts_line = f"\n• تنبيهاتي: <b>{'إيقاف' if muted else 'تشغيل'}</b>"
+
     return (
         f"🛠 <b>{_tf(lang, 'ra.title', 'إدارة البلاغات')}</b>\n\n"
         f"• {_tf(lang,'ra.status','الحالة')}: <b>{status}</b>\n"
         f"• {_tf(lang,'ra.cooldown_days','مدة التبريد (أيام)')}: <code>{st['cooldown_days']}</code>\n"
         f"• {_tf(lang,'ra.banned_count','عدد المحظورين')}: <code>{_blocked_count()}</code>\n"
         f"<i>القائمة القديمة (banned[]) ما تزال مدعومة، لكن يُفضل الحظر من الأزرار/الأوامر الجديدة.</i>"
+        f"{my_alerts_line}"
     )
 
-def _panel_kb(lang: str) -> InlineKeyboardMarkup:
+
+def _panel_kb(lang: str, *, viewer_id: int | None = None) -> InlineKeyboardMarkup:
     st = _load_settings()
     toggle_txt = ("🟢 " + _tf(lang, "ra.btn_disable", "إيقاف البلاغات")) if st["enabled"] \
                  else ("🔴 " + _tf(lang, "ra.btn_enable", "تشغيل البلاغات"))
+
+    # حالة تنبيهات هذا الأدمن
+    my_muted = alerts_is_muted(viewer_id) if viewer_id else False
+    my_alerts_txt = ("🔕 " + _tf(lang, "ra.btn_my_alerts_off", "تنبيهاتي: إيقاف")
+                     if not my_muted else
+                     "🔔 " + _tf(lang, "ra.btn_my_alerts_on", "تنبيهاتي: تشغيل"))
+
     rows = [
         [
             InlineKeyboardButton(text=toggle_txt, callback_data="ra:toggle"),
@@ -183,10 +202,13 @@ def _panel_kb(lang: str) -> InlineKeyboardMarkup:
         ],
         [InlineKeyboardButton(text="🧽 " + _tf(lang,"ra.btn_clearcd","مسح تبريد مستخدم"), callback_data="ra:clearcd")],
         [InlineKeyboardButton(text="📋 " + _tf(lang,"ra.btn_banned_list","قائمة المحظورين"), callback_data="ra:banned")],
+        # 👇 زر تنبيهاتي
+        [InlineKeyboardButton(text=my_alerts_txt, callback_data="ra:toggle_my_alerts")],
         [InlineKeyboardButton(text="🔄 " + _tf(lang,"ra.btn_refresh","تحديث اللوحة"), callback_data="ra:refresh")],
         [InlineKeyboardButton(text="⬅️ " + _tf(lang,"ra.btn_back","رجوع"), callback_data="ah:menu")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
 
 # ====== حالات الإدخال ======
 class RAStates(StatesGroup):
@@ -195,29 +217,89 @@ class RAStates(StatesGroup):
     waiting_cooldown = State()
     waiting_clearcd = State()     # "<uid>"
 
+# --- [ADD THIS NEAR THE OTHER IMPORTS] ---
+
+# --- [ADD THIS WITH THE OTHER DATA FILES DEFINITIONS] ---
+PREFS_FILE = DATA_DIR / "report_admin_prefs.json"  # {"muted_admins":[<uids>]}
+
+def _prefs_read() -> dict:
+    return _load_json(PREFS_FILE, {"muted_admins": []})
+
+def _prefs_write(d: dict) -> None:
+    _save_json(PREFS_FILE, d)
+
+def alerts_is_muted(uid: int) -> bool:
+    d = _prefs_read()
+    return int(uid) in {int(x) for x in d.get("muted_admins", []) if str(x).isdigit()}
+
+def alerts_set_muted(uid: int, muted: bool) -> None:
+    d = _prefs_read()
+    s = {int(x) for x in d.get("muted_admins", []) if str(x).isdigit()}
+    if muted:
+        s.add(int(uid))
+    else:
+        s.discard(int(uid))
+    d["muted_admins"] = sorted(s)
+    _prefs_write(d)
+
+# --- [ADD THESE HANDLERS ANYWHERE AFTER router IS DEFINED] ---
+@router.message(Command("alerts_off"))
+async def cmd_alerts_off(m: Message):
+    lang = L(m.from_user.id)
+    if not is_admin(m.from_user.id):
+        return await m.reply(_tf(lang, "admins_only", "هذه الأداة للأدمن فقط."))
+    alerts_set_muted(m.from_user.id, True)
+    await m.reply(_tf(lang, "ra.alerts_off_ok", "✅ تم إيقاف تنبيهات البلاغات لهذا الحساب."))
+
+@router.message(Command("alerts_on"))
+async def cmd_alerts_on(m: Message):
+    lang = L(m.from_user.id)
+    if not is_admin(m.from_user.id):
+        return await m.reply(_tf(lang, "admins_only", "هذه الأداة للأدمن فقط."))
+    alerts_set_muted(m.from_user.id, False)
+    await m.reply(_tf(lang, "ra.alerts_on_ok", "✅ تم تشغيل تنبيهات البلاغات لهذا الحساب."))
+
 # ====== فتح/تحديث اللوحة ======
+# 1) ra_open
 @router.callback_query(F.data == "ra:open")
 async def ra_open(cb: CallbackQuery):
     lang = L(cb.from_user.id)
     if not is_admin(cb.from_user.id):
         return await cb.answer(_tf(lang, "admins_only", "هذه الأداة للأدمن فقط."), show_alert=True)
-    await _safe_edit(cb.message, _panel_text(lang), _panel_kb(lang)); await cb.answer()
+    await _safe_edit(
+        cb.message,
+        _panel_text(lang, viewer_id=cb.from_user.id),           # <<< أضف viewer_id هنا
+        _panel_kb(lang, viewer_id=cb.from_user.id)
+    )
+    await cb.answer()
 
+# 2) ra_refresh
 @router.callback_query(F.data == "ra:refresh")
 async def ra_refresh(cb: CallbackQuery):
     lang = L(cb.from_user.id)
     if not is_admin(cb.from_user.id):
         return await cb.answer(_tf(lang, "admins_only", "هذه الأداة للأدمن فقط."), show_alert=True)
-    await _safe_edit(cb.message, _panel_text(lang), _panel_kb(lang)); await cb.answer("✅")
+    await _safe_edit(
+        cb.message,
+        _panel_text(lang, viewer_id=cb.from_user.id),           # <<< وهنا
+        _panel_kb(lang, viewer_id=cb.from_user.id)
+    )
+    await cb.answer("✅")
 
-# ====== تمكين/تعطيل ======
+# 3) ra_toggle
 @router.callback_query(F.data == "ra:toggle")
 async def ra_toggle(cb: CallbackQuery):
     lang = L(cb.from_user.id)
     if not is_admin(cb.from_user.id):
         return await cb.answer(_tf(lang, "admins_only", "هذه الأداة للأدمن فقط."), show_alert=True)
     st = _load_settings(); st["enabled"] = not st.get("enabled", True); _save_settings(st)
-    await _safe_edit(cb.message, _panel_text(lang), _panel_kb(lang)); await cb.answer("✅")
+    await _safe_edit(
+        cb.message,
+        _panel_text(lang, viewer_id=cb.from_user.id),           # <<< وهنا
+        _panel_kb(lang, viewer_id=cb.from_user.id)
+    )
+    await cb.answer("✅")
+
 
 # ====== قائمة المحظورين (قديمة + جديدة) ======
 @router.callback_query(F.data == "ra:banned")
@@ -269,7 +351,30 @@ async def ra_unban_one(cb: CallbackQuery):
     text, kb = _build_banned_text_and_kb(lang)
     await _safe_edit(cb.message, text, kb)
     await cb.answer(_tf(lang, "ra.saved", "تم الحفظ ✅"), show_alert=True)
+# أضِف هذا الهاندلر (أو عدّل القائم ليصبح هكذا)
+@router.callback_query(F.data.in_({"ra:toggle_my_alerts", "rpadm:toggle_my_alerts"}))
+async def ra_toggle_my_alerts(cb: CallbackQuery):
+    lang = L(cb.from_user.id)
+    if not is_admin(cb.from_user.id):
+        return await cb.answer(_tf(lang, "admins_only", "هذه الأداة للأدمن فقط."), show_alert=True)
 
+    uid = cb.from_user.id
+    muted_now = alerts_is_muted(uid)
+    alerts_set_muted(uid, not muted_now)
+
+    # حدّث اللوحة بالنص والأزرار
+    await _safe_edit(
+        cb.message,
+        _panel_text(lang, viewer_id=uid),
+        _panel_kb(lang, viewer_id=uid)
+    )
+
+    # تأكيد
+    if muted_now:
+        await cb.message.answer(_tf(lang, "ra.alerts_on_ok", "✅ تم تشغيل تنبيهات البلاغات لهذا الحساب."))
+    else:
+        await cb.message.answer(_tf(lang, "ra.alerts_off_ok", "✅ تم إيقاف تنبيهات البلاغات لهذا الحساب."))
+    await cb.answer("✅")
 
 # ====== الحظر/فك الحظر ======
 @router.callback_query(F.data == "ra:ban")

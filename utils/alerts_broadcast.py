@@ -11,6 +11,17 @@ from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest
 
 from utils.alerts_config import get_config
 from utils.paths import BASE
+import random
+from utils.alerts_policy import (
+    should_push, can_send_by_cap, inc_cap, pass_dedupe, mark_pushed,
+    best_send_window_now, jitter_delay
+)
+
+from utils.alerts_config import get_config
+from typing import Iterable
+
+
+
 
 # ─────────────────── مسارات التخزين الدائمة ───────────────────
 ALERTS_DIR: Path = BASE / "alerts"
@@ -28,6 +39,69 @@ LEGACY_DIRS: List[Path] = [
 ]
 
 _LOCK = threading.Lock()
+
+
+KNOWN_USERS_FILE: Path = ALERTS_DIR / "known_users.json"  # ملف بسيط: {"123": true, ...}
+
+# أعلى الملف بجانب بقية الملفات
+PINGS_FILE: Path = ALERTS_DIR / "alerts_pings.json"
+
+def _load_pings() -> Dict[str, Any]:
+    return _load_json(PINGS_FILE) or {}
+
+def _save_pings(d: Dict[str, Any]) -> None:
+    _save_json(PINGS_FILE, d)
+
+def _register_ping(uid: int, mid: int, aid: str) -> None:
+    d = _load_pings()
+    arr = d.get(str(uid), [])
+    arr.append({"mid": int(mid), "aid": str(aid), "ts": int(time.time())})
+    # حد أقصى بسيط للفوضى
+    arr = arr[-5:]
+    d[str(uid)] = arr
+    _save_pings(d)
+
+async def clear_user_pings(bot: Bot, uid: int) -> None:
+    """يمسح كل رسائل التنبيه المخزَّنة لهذا المستخدم (لو كانت موجودة)."""
+    try:
+        d = _load_pings()
+        arr = list(d.get(str(uid), []))
+        for it in arr:
+            mid = int(it.get("mid") or 0)
+            if mid:
+                try:
+                    await bot.delete_message(uid, mid)
+                except Exception:
+                    pass
+        if str(uid) in d:
+            del d[str(uid)]
+            _save_pings(d)
+    except Exception:
+        pass
+
+def _load_known_map() -> Dict[str, bool]:
+    return _load_json(KNOWN_USERS_FILE) or {}
+
+def _save_known_map(d: Dict[str, bool]) -> None:
+    _save_json(KNOWN_USERS_FILE, d)
+
+def track_user(user_id: int, lang: str | None = None) -> None:
+    """سجّل المستخدم كمستلم محتمل واشّر لغته للاستخدام لاحقًا."""
+    if not str(user_id).lstrip("-").isdigit():
+        return
+    with _LOCK:
+        m = _load_known_map()
+        if str(user_id) not in m:
+            m[str(user_id)] = True
+            _save_known_map(m)
+        # اختياري: خزن اللغة
+        try:
+            langs = _load_json(USER_LANGS) or {}
+            if lang:
+                langs[str(user_id)] = lang
+                _save_json(USER_LANGS, langs)
+        except Exception:
+            pass
 
 # ─────────────────── أدوات I/O ذرّية ───────────────────
 def _atomic_write(path: Path, data) -> None:
@@ -207,7 +281,7 @@ async def _auto_delete(bot: Bot, chat_id: int, message_id: int, after_seconds: i
         await bot.delete_message(chat_id, message_id)
     except Exception:
         pass
-
+# ─────────────────── API: الإرسال ───────────────────
 # ─────────────────── API: الإرسال ───────────────────
 async def broadcast(
     bot: Bot,
@@ -215,28 +289,33 @@ async def broadcast(
     text_en: Optional[str],
     text_ar: Optional[str],
     kind: str = "app_update",
-    delivery: str = "inbox",        # "inbox" (افتراضي: تنبيه + يفتح من الصندوق) أو "push"
-    ping_ttl: int = 0,              # حذف رسالة التنبيه بعد n ثوانٍ (0 = لا يحذف)
-    active_for: int = 7*24*3600     # بقاء الإشعار نشطًا في الصندوق (افتراضي أسبوع)
+    delivery: str = "inbox",
+    ping_ttl: int = 0,
+    active_for: int = 7*24*3600,
+    smart_target: bool = True,
+    target_segment: str = "all",
+    min_last_open_days: int = 0,
+    dedupe_key: Optional[str] = None,
+    dedupe_window: int = 14*24*3600,
+    retry_on_fail: int = 1,
+    jitter_ms: int = 200,
+    # جديد:
+    force_push: bool = False,      # ← افرض Push للجميع
+    ignore_quiet: bool = False,    # ← تجاهل ساعات الهدوء
 ) -> Tuple[int, int, int]:
+
     """
     Returns (sent, skipped, failed)
-
-    • delivery="inbox": يسجّل الإشعار في ACTIVE_FILE ويرسل تنبيهًا مختصرًا بزر فتح.
-    • delivery="push":  يرسل النص مباشرة للمستخدمين بلا صندوق.
     """
     cfg = get_config()
     if not cfg.get("enabled", True):
         return (0, 0, 0)
 
-    rl = max(1, int(cfg.get("rate_limit") or 10))  # رسائل/ثانية
-    delay = 1.0 / float(rl)
-
+    # 1) سجّل الإشعار في الصندوق دائماً (قبل أي فحص هدوء)
     now = int(time.time())
     alert_id = f"a{now}"
-
-    # سجّل الإشعار في الصندوق (مرة واحدة) بذَرّية + قفل
-    if delivery == "inbox":
+    if (delivery == "inbox") or smart_target or force_push:
+        # نسجله حتى لو push — يظهر في صندوق الإشعارات أيضاً
         with _LOCK:
             active = _gc_active(_load_active())
             active.append({
@@ -249,53 +328,123 @@ async def broadcast(
             })
             _save_active(active)
 
+    # 2) ساعات الهدوء — نتجاوزها لو ignore_quiet=True
+    quiet_enabled = bool(cfg.get("quiet_enabled", False))
+    if quiet_enabled and not ignore_quiet:
+        allowed_now, _ = best_send_window_now()
+        if not allowed_now:
+            # الصندوق سجل مسبقًا؛ تأجيل الإرسال اللحظي
+            return (0, 0, 0)
+
+    # 3) اختيار المستلمين
     subs = _load_subscriptions()
     known = _load_known_users()
-
-    # لو في اشتراكات فعّالة نستخدمها؛ وإلا ن fallback لكل المعروفين
     recipients: Set[int] = {int(uid) for uid, on in (subs or {}).items() if on} or known
-    # إزالة قيم غير صالحة
     recipients = {int(x) for x in recipients if str(x).lstrip("-").isdigit()}
-
     if not recipients:
         return (0, 0, 0)
 
+    from utils.alerts_policy import load_signals
+    signals = load_signals()
+
+    def _is_active(u: dict) -> bool:
+        last_open = int(u.get("last_open") or 0)
+        return (now - last_open) <= (14 * 24 * 3600)
+
+    def _is_dormant(u: dict) -> bool:
+        last_open = int(u.get("last_open") or 0)
+        return (now - last_open) > (21 * 24 * 3600)
+
+    filtered: List[int] = []
+    for uid in recipients:
+        u = signals.get(str(uid), {})
+        if target_segment == "active" and not _is_active(u):
+            continue
+        if target_segment == "dormant" and not _is_dormant(u):
+            continue
+        if min_last_open_days > 0:
+            last_open = int(u.get("last_open") or 0)
+            if (now - last_open) < (min_last_open_days * 24 * 3600):
+                continue
+        filtered.append(uid)
+
+    rl = max(1, int(cfg.get("rate_limit") or 10))
+    base_delay = 1.0 / float(rl)
+
     sent = skipped = failed = 0
 
-    for uid in recipients:
+    for uid in filtered:
+        # ✅ عند force_push: نتجاوز الحدّ الأسبوعي ومانع التكرار
+        if not force_push:
+            if not can_send_by_cap(uid, max_per_week=int(cfg.get("max_per_week") or 2)):
+                skipped += 1
+                await asyncio.sleep(jitter_delay(base_delay, jitter_ms=jitter_ms))
+                continue
+            if not pass_dedupe(uid, dedupe_key, window_seconds=dedupe_window):
+                skipped += 1
+                await asyncio.sleep(jitter_delay(base_delay, jitter_ms=jitter_ms))
+                continue
+
+        # لغة ونص
         lang = _pick_lang(uid)
         body = (text_en if lang == "en" else text_ar) or (text_ar or text_en)
-
         if not body:
             skipped += 1
+            await asyncio.sleep(jitter_delay(base_delay, jitter_ms=jitter_ms))
             continue
 
-        try:
-            if delivery == "push":
-                m = await bot.send_message(uid, body)
-                if ping_ttl > 0:
-                    asyncio.create_task(_auto_delete(bot, uid, m.message_id, ping_ttl))
-            else:
-                title = "🔔 إشعار جديد" if lang == "ar" else "🔔 New alert"
-                open_btn = "فتح الإشعار" if lang == "ar" else "Open alert"
-                inbox_btn = "📬 صندوق الإشعارات" if lang == "ar" else "📬 Alerts inbox"
+        # وضع التسليم: force_push يفرض push
+        mode = "push" if force_push else (delivery if not smart_target else ("push" if should_push(uid, now=now) else "inbox"))
+
+        # إرسال مع كيبورد يطابق الهاندلرات الموجودة
+        attempt = 0
+        ok = False
+        while attempt <= max(0, int(retry_on_fail)):
+            attempt += 1
+            try:
+                # نصوص الأزرار حسب اللغة
+                title_txt  = "🔔 إشعار جديد" if lang == "ar" else "🔔 New alert"
+                open_txt   = "فتح الإشعار"   if lang == "ar" else "Open alert"
+                inbox_txt  = "📬 الصندوق"     if lang == "ar" else "📬 Inbox"
+                ignore_txt = "🙈 تجاهل"      if lang == "ar" else "🙈 Ignore"
+                delete_txt = "🗑️ حذف"        if lang == "ar" else "🗑️ Delete"
+
                 kb = InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text=open_btn, callback_data=f"inb:open:{alert_id}")],
-                    [InlineKeyboardButton(text=inbox_btn, callback_data="inb:back")]
+                    [InlineKeyboardButton(text=open_txt,   callback_data=f"ibox:open:{alert_id}:0:a")],
+                    [
+                        InlineKeyboardButton(text=ignore_txt, callback_data=f"ibox:ignore:{alert_id}:0:a"),
+                        InlineKeyboardButton(text=delete_txt, callback_data=f"ibox:delete:{alert_id}:0:a"),
+                    ],
+                    [InlineKeyboardButton(text=inbox_txt,  callback_data="ibox:list:0:a")],
                 ])
-                m = await bot.send_message(uid, title, reply_markup=kb)
+
+                if mode == "push":
+                    m = await bot.send_message(uid, body, disable_web_page_preview=True, reply_markup=kb)
+                    mark_pushed(uid)
+                else:
+                    m = await bot.send_message(uid, title_txt, reply_markup=kb)
+
+                _register_ping(uid, m.message_id, alert_id)
+
                 if ping_ttl > 0:
                     asyncio.create_task(_auto_delete(bot, uid, m.message_id, ping_ttl))
 
+                ok = True
+                break
+            except (TelegramForbiddenError, TelegramBadRequest):
+                break
+            except Exception:
+                await asyncio.sleep(0.5 + random.random())
+
+        if ok:
+            # ✅ عند force_push: لا نزيد العداد كي لا يؤثر على الإرسال القادم
+            if not force_push:
+                inc_cap(uid)
             sent += 1
-
-        except (TelegramForbiddenError, TelegramBadRequest):
-            failed += 1
-        except Exception:
+        else:
             failed += 1
 
-        # احترام معدل الإرسال
-        await asyncio.sleep(delay)
+        await asyncio.sleep(jitter_delay(base_delay, jitter_ms=jitter_ms))
 
     _inc_stats(kind, sent)
     return (sent, skipped, failed)

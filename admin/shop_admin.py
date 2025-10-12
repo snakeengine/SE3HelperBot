@@ -132,6 +132,25 @@ _CUR_PROD: Dict[int, str] = {}
 
 INV_MIN_LEN = int(os.getenv("INV_MIN_LEN", "4"))
 
+from aiogram.filters import BaseFilter
+
+class AdminTextSession(BaseFilter):
+    async def __call__(self, message: Message) -> bool:
+        uid = (message.from_user and message.from_user.id) or 0
+        if uid not in ADMIN_IDS:
+            return False
+        # يُسمح بالنص فقط إذا عند الأدمن جلسة أسعار/نجوم/مخزون
+        return (uid in _PRICE_SESS) or (uid in _STAR_SESS) or (_INV_SESS.get(uid) is not None)
+
+class AdminDocSession(BaseFilter):
+    async def __call__(self, message: Message) -> bool:
+        uid = (message.from_user and message.from_user.id) or 0
+        if uid not in ADMIN_IDS:
+            return False
+        sess = _INV_SESS.get(uid)
+        # الملفات فقط أثناء جلسات المخزون (add/del_one/del_bulk)
+        return bool(sess and sess.get("mode") in {"add", "del_one", "del_bulk"})
+
 # =========================
 # أدوات مساعدة
 # =========================
@@ -237,6 +256,7 @@ except Exception:
         d = _jload(FLAGS_PATH)
         d["keys_stop_message"] = str(msg or "")
         _jsave(FLAGS_PATH, d)
+
 
 # =========================
 # أسعار USD
@@ -443,11 +463,62 @@ def _home_kb(uid: int):
     kb.button(text="📊 الإحصائيات", callback_data="sad:stats")
     kb.button(text="💰 الأسعار (USD)", callback_data="sad:prices")
     kb.button(text="⭐ أسعار النجوم", callback_data="sad:stars")
-    kb.button(text="💳 طرق الدفع", callback_data="sad:pay")   # ⬅️ أُضيفت
+    kb.button(text="💳 طرق الدفع", callback_data="sad:pay")
+    kb.button(text="⛔️ حالة المنتج", callback_data="sad:pstate")   # ← جديد
     kb.button(text="⚙️ الإعدادات", callback_data="sad:settings")
-    kb.adjust(2, 2, 2, 1, 1)  # عدّل توزيع الأعمدة ليلائم الزر الجديد
+    kb.adjust(2, 2, 2, 2, 1)
     return kb.as_markup()
 
+def _pstate_root_kb():
+    kb = InlineKeyboardBuilder()
+    for p in ["default"] + PRODUCTS:
+        kb.button(text=p, callback_data=f"sad:pstate:which:{p}")
+    kb.button(text="◀️ رجوع", callback_data="sad:home")
+    kb.adjust(3, 1)
+    return kb.as_markup()
+
+def _pstate_edit_kb(prod: str, enabled: bool):
+    kb = InlineKeyboardBuilder()
+    label = "✅ البيع مفعّل" if enabled else "⛔️ البيع متوقف"
+    kb.button(text=label, callback_data=f"sad:pstate:toggle:{prod}")
+    kb.button(text="◀️ رجوع", callback_data="sad:pstate")
+    kb.adjust(1, 1)
+    return kb.as_markup()
+
+@router.callback_query(F.data == "sad:pstate")
+async def pstate_root(cb: CallbackQuery):
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer("Admins only.", show_alert=True)
+    await _edit_or_answer(cb, "اختر المنتج لإيقاف/تشغيل البيع بالكامل:", reply_markup=_pstate_root_kb())
+    await cb.answer()
+
+@router.callback_query(F.data.startswith("sad:pstate:which:"))
+async def pstate_which(cb: CallbackQuery):
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer("Admins only.", show_alert=True)
+    prod = cb.data.split(":")[-1].lower()
+    en = is_product_enabled(prod)
+    txt = (
+        f"⛔️ حالة البيع ({prod}): {'مفعّل' if en else 'متوقف'}\n"
+        "اضغط الزر لتبديل الحالة."
+    )
+    await _edit_or_answer(cb, txt, reply_markup=_pstate_edit_kb(prod, en))
+    await cb.answer()
+
+@router.callback_query(F.data.startswith("sad:pstate:toggle:"))
+async def pstate_toggle(cb: CallbackQuery):
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer("Admins only.", show_alert=True)
+    prod = cb.data.split(":")[-1].lower()
+    en = is_product_enabled(prod)
+    set_product_enabled(prod, not en)
+    en2 = is_product_enabled(prod)
+    await _edit_or_answer(
+        cb,
+        f"تم التحديث. حالة البيع ({prod}): {'مفعّل' if en2 else 'متوقف'}",
+        reply_markup=_pstate_edit_kb(prod, en2)
+    )
+    await cb.answer("تم التحديث.")
 
 def _back_home_kb():
     kb = InlineKeyboardBuilder()
@@ -602,12 +673,6 @@ async def inv_cancel_cmd(msg: Message):
 
 # ---- helpers مرنة للتواقيع ----
 async def _inv_add_any(product: str, days: int, text_blob: str) -> Tuple[int, int]:
-    """
-    يحاول جميع التواقيع الشائعة للإضافة:
-      - add_keys_from_text(product, days, text)
-      - add_keys(product, days, keys)
-      - add_keys(days, keys)   (منتجات مفردة)
-    """
     # 1) نص مباشر
     fn = getattr(inv, "add_keys_from_text", None)
     if callable(fn):
@@ -618,23 +683,19 @@ async def _inv_add_any(product: str, days: int, text_blob: str) -> Tuple[int, in
 
     keys = _extract_loose(text_blob)
 
-    # 2) add_keys(product, days, keys)
+    # 2) add_keys(product, days, keys) / أشكال أخرى
     fn = getattr(inv, "add_keys", None)
     if callable(fn):
         try:
             return await _call_maybe_async(fn, product, days, keys)
         except TypeError:
             try:
-                # add_keys(days, product, keys)
                 return await _call_maybe_async(fn, days, product, keys)
             except TypeError:
-                # add_keys(days, keys)
                 return await _call_maybe_async(fn, days, keys)
-    # آخر حل: لا شيء
     return 0, 0
 
 async def _inv_del_any(product: str, keys: List[str]) -> Dict[int, int]:
-    """يجرب remove/delete/del/rm مع ترتيبات باراميترات مختلفة."""
     res = {3: 0, 10: 0, 30: 0}
     cand_names = ("remove_keys", "delete_keys", "del_keys", "rm_keys")
     for name in cand_names:
@@ -654,7 +715,6 @@ async def _inv_del_any(product: str, keys: List[str]) -> Dict[int, int]:
             except Exception:
                 res[d] = res.get(d, 0)
         return res
-    # لم نجد دالة حذف: نسجل blacklist
     _blacklist_add(keys)
     return res
 
@@ -706,25 +766,28 @@ async def _inv_save_from_message(msg: Message):
     await msg.answer("انتهت الجلسة.")
 
 # استقبال ملفات .txt داخل الجلسات
-@router.message(F.document)
+@router.message(F.document, AdminDocSession())
 async def inv_collect_doc(msg: Message):
     uid = msg.from_user.id
     sess = _INV_SESS.get(uid)
-    if not sess or sess.get("mode") == "stop_msg":
-        return
+    # (AdminDocSession يضمن إن فيه جلسة add/del_one/del_bulk)
+
     doc = msg.document
     if not doc:
         return
     if not ((doc.mime_type or "").startswith("text") or (doc.file_name or "").lower().endswith(".txt")):
         return await msg.answer("أرسل ملف .txt أو لصق المفاتيح كنص.")
+
     text = await _read_document_text(doc, msg.bot)
     if not text:
         return await msg.answer("⚠️ تعذّر قراءة الملف.")
+
     text_blob = sess.get("buf_text", "")
     text_blob += ("\n" if text_blob else "") + text
     sess["buf_text"] = text_blob
     approx = len(_extract_loose(text_blob))
     await msg.answer(f"📄 تم استلام ملف. الإجمالي المؤقت ~{approx} مفتاح.")
+
 
 # حفظ من الأزرار
 @router.callback_query(F.data == "sad:inv:save")
@@ -943,13 +1006,32 @@ async def pay_modes_root(cb: CallbackQuery):
 
 def _pay_edit_kb(prod: str, pm: dict):
     kb = InlineKeyboardBuilder()
+    # زر تمكين/تعطيل بيع المنتج
+    prod_on = is_product_enabled(prod)
+    kb.button(text=("⛔️ إيقاف بيع المنتج" if prod_on else "✅ تشغيل بيع المنتج"),
+              callback_data=f"sad:pay:prod:{prod}:{'off' if prod_on else 'on'}")
+
     stars_text  = ("✅ نجوم تيليجرام" if pm.get("stars", True) else "⛔️ نجوم تيليجرام")
     crypto_text = ("✅ كريبتو (USDT/TON)" if pm.get("crypto", True) else "⛔️ كريبتو (USDT/TON)")
     kb.button(text=stars_text,  callback_data=f"sad:pay:toggle:{prod}:stars")
     kb.button(text=crypto_text, callback_data=f"sad:pay:toggle:{prod}:crypto")
     kb.button(text="◀️ رجوع", callback_data="sad:pay")
-    kb.adjust(1, 1, 1)
+    kb.adjust(1, 1, 1, 1)
     return kb.as_markup()
+
+@router.callback_query(F.data.startswith("sad:pay:prod:"))
+async def pay_modes_prod_toggle(cb: CallbackQuery):
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer("Admins only.", show_alert=True)
+    _, _, _, prod, action = cb.data.split(":")
+    set_product_enabled(prod, action == "on")
+    pm = get_pay_modes(prod)
+    await cb.answer("تم التحديث.", show_alert=False)
+    await _edit_or_answer(
+        cb,
+        f"تم تحديث حالة بيع ({prod}) إلى {'مفعّل' if is_product_enabled(prod) else 'متوقف'}.",
+        reply_markup=_pay_edit_kb(prod, pm)
+    )
 
 @router.callback_query(F.data.startswith("sad:pay:which:"))
 async def pay_modes_which(cb: CallbackQuery):
@@ -1017,10 +1099,35 @@ async def stars_edit(cb: CallbackQuery):
     except Exception:
         pass
 
+# ---- إيقاف/تشغيل بيع المنتج بالكامل ----
+try:
+    from services.payments import (
+        is_product_enabled as _p_is_product_enabled,
+        set_product_enabled as _p_set_product_enabled,
+    )
+    def is_product_enabled(prod: str) -> bool: return _p_is_product_enabled(prod)
+    def set_product_enabled(prod: str, enabled: bool): return _p_set_product_enabled(prod, enabled)
+except Exception:
+    # تخزين بالحقل "product_enabled" في FLAGS_PATH
+    def _prod_enabled_all() -> dict:
+        return (_jload(FLAGS_PATH).get("product_enabled") or {})
+    def _prod_enabled_save(mp: dict):
+        d = _jload(FLAGS_PATH); d["product_enabled"] = mp; _jsave(FLAGS_PATH, d)
+    def is_product_enabled(prod: str) -> bool:
+        p = (prod or "default").lower().strip()
+        mp = _prod_enabled_all()
+        base = True
+        if "default" in mp: base = bool(mp["default"])
+        if p in mp: base = bool(mp[p])
+        return base
+    def set_product_enabled(prod: str, enabled: bool):
+        p = (prod or "default").lower().strip()
+        mp = _prod_enabled_all(); mp[p] = bool(enabled); _prod_enabled_save(mp)
+
 # =========================
 # مُبدّل نصوص (جلسات الأسعار/النجوم/المخزون)
 # =========================
-@router.message(F.text, NotCommand())
+@router.message(F.text, NotCommand(), AdminTextSession())
 async def text_mux(msg: Message):
     uid = msg.from_user.id
 
@@ -1085,6 +1192,7 @@ async def text_mux(msg: Message):
         sess["buf_text"] = text_blob
         approx = len(_extract_loose(text_blob))
         return await msg.answer(f"📥 تم الاستلام. الإجمالي المؤقت ~{approx} مفتاح.")
+
 
 # =========================
 # الطلبات
@@ -1228,10 +1336,13 @@ async def settings_page(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
         return await cb.answer("Admins only.", show_alert=True)
     prod = _cur_prod(cb.from_user.id)
-    pm = get_pay_modes(prod)  # ⬅️ جديد
+    pm = get_pay_modes(prod)
     mode = f"Crypto Pay ({', '.join(CRYPTO_ASSETS)})" if CRYPTOPAY_ON else "TON transfer"
     disabled = "لا" if keys_service_enabled() else "نعم"
     has_msg = "نعم" if (get_keys_stop_message() or "").strip() else "لا"
+
+    enabled_line = "مفعّل" if is_product_enabled(prod) else "متوقف"
+
     P_def = _prices_usd("default")
     P_cur = _prices_usd(prod)
     S_def = _prices_stars_effective("default")
@@ -1239,8 +1350,9 @@ async def settings_page(cb: CallbackQuery):
     txt = (
         "⚙️ الإعدادات الحالية\n"
         f"• المنتج الحالي: {prod}\n"
+        f"• حالة بيع المنتج: {enabled_line}\n"
         f"• الدفع: {mode}\n"
-        f"• طرق الدفع ({prod}): نجوم={'مفعّل' if pm.get('stars',True) else 'متوقف'} | كريبتو={'مفعّل' if pm.get('crypto',True) else 'متوقف'}\n"  # ⬅️ جديد
+        f"• طرق الدفع ({prod}): نجوم={'مفعّل' if pm.get('stars',True) else 'متوقف'} | كريبتو={'مفعّل' if pm.get('crypto',True) else 'متوقف'}\n"
         f"• مهلة الفاتورة: {INVOICE_TTL_MIN} دقيقة\n"
         f"• TON_WALLET: {TON_WALLET}\n"
         f"• خدمة المفاتيح متوقفة؟ {disabled}\n"
@@ -1249,16 +1361,7 @@ async def settings_page(cb: CallbackQuery):
         f"• الأسعار (USD {prod}): 3d=${_money(P_cur[3])} • 10d=${_money(P_cur[10])} • 30d=${_money(P_cur[30])}\n"
         f"• ⭐ النجوم (default): 3d=⭐{S_def[3]} • 10d=⭐{S_def[10]} • 30d=⭐{S_def[30]}\n"
         f"• ⭐ النجوم ({prod}): 3d=⭐{S_cur[3]} • 10d=⭐{S_cur[10]} • 30d=⭐{S_cur[30]}\n\n"
-        "يمكن تعديل الأسعار عبر لوحتي «💰 الأسعار» و«⭐ أسعار النجوم» أو أوامر الإدمن:\n"
-        "  /prices — عرض أسعار USD و/أو /stars — عرض أسعار النجوم\n"
-        "  /set_price 3 4.99                — تعيين سعر خطة واحدة (default)\n"
-        "  /set_price carrom 3 4.99         — تعيين سعر لمنتج محدد\n"
-        "  /set_prices 3=4.99 10=12.5 30=25 — مجموعة أسعار (default)\n"
-        "  /set_prices carrom:3=5 8bp:10=3.5 — متعدد المنتجات\n"
-        "  /set_star 3 13                   — تعيين نجوم خطة واحدة (default)\n"
-        "  /set_star carrom 10 27           — تعيين نجوم لمنتج محدد\n"
-        "  /set_stars 3=13 10=27 30=55      — مجموعة نجوم (default)\n"
-        "  /set_stars carrom:3=12 8bp:10=23 — متعدد المنتجات"
+        "يمكن تعديل الأسعار عبر اللوحات…"
     )
     await _edit_or_answer(cb, txt, reply_markup=_back_home_kb())
     await cb.answer()

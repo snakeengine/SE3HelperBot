@@ -586,6 +586,36 @@ def is_crypto_enabled_for(product: str) -> bool:
     local_ok  = bool(get_pay_modes(product).get("crypto", True))
     return global_ok and local_ok
 
+# ===================== Product enabled/disabled per game =====================
+def _prod_enabled_all() -> dict:
+    d = _load_json(FLAGS_PATH)
+    return dict(d.get("product_enabled") or {})
+
+def _save_prod_enabled(mp: dict) -> None:
+    d = _load_json(FLAGS_PATH)
+    d["product_enabled"] = mp
+    _save_json(FLAGS_PATH, d)
+
+def is_product_enabled(product: str) -> bool:
+    """
+    يرجّع هل البيع لهذا المنتج مفعّل أم لا.
+    يمكن تعيين default=bool لجميع المنتجات ثم تخصيص منتج بعينه.
+    """
+    p = _norm_prod(product)
+    mp = _prod_enabled_all()
+    base = True
+    if "default" in mp:
+        base = bool(mp["default"])
+    if p in mp:
+        base = bool(mp[p])
+    return base
+
+def set_product_enabled(product: str, enabled: bool) -> None:
+    p = _norm_prod(product)
+    mp = _prod_enabled_all()
+    mp[p] = bool(enabled)
+    _save_prod_enabled(mp)
+
 # ========== Public API (تستخدمها ملفات الأدمن/الهاندلرز) ==========
 def is_keys_service_enabled() -> bool:
     return not _keys_service_disabled()

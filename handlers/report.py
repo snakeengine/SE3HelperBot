@@ -39,6 +39,28 @@ THREADS_FILE   = DATA_DIR / "support_threads.json"
 FEEDBACK_FILE  = DATA_DIR / "report_feedback.json"
 BLOCKLIST_FILE = DATA_DIR / "report_blocklist.json"
 
+# ===== Alerts mute list (per-admin) =====
+ALERTS_MUTE_FILE = DATA_DIR / "report_alerts_mute.json"
+
+def _alerts_mute_read() -> set[int]:
+    try:
+        raw = _load_json(ALERTS_MUTE_FILE, [])
+        return {int(x) for x in (raw or []) if str(x).isdigit()}
+    except Exception:
+        return set()
+
+def _alerts_mute_write(s: set[int]) -> None:
+    _save_json(ALERTS_MUTE_FILE, sorted(list(s)))
+
+def _alerts_is_muted(uid: int) -> bool:
+    return int(uid) in _alerts_mute_read()
+
+def _alerts_mute(uid: int) -> None:
+    s = _alerts_mute_read(); s.add(int(uid)); _alerts_mute_write(s)
+
+def _alerts_unmute(uid: int) -> None:
+    s = _alerts_mute_read(); s.discard(int(uid)); _alerts_mute_write(s)
+
 # ===== إشعار إضافي اختياري (قناة/شات) =====
 ADMIN_ALERT_CHAT_ID = int(os.getenv("ADMIN_ALERT_CHAT_ID", "0") or 0)
 
@@ -292,6 +314,8 @@ async def _notify_admins_new_report(m: Message, user_id: int, text: str):
     targets = set(await admin_roles.get_admins("reports"))
     if ADMIN_ALERT_CHAT_ID:
         targets.add(ADMIN_ALERT_CHAT_ID)
+    muted = _alerts_mute_read()
+    targets = {aid for aid in targets if int(aid) not in muted}
     for aid in targets:
         try:
             a_lang = get_user_lang(aid) or "en"
@@ -398,6 +422,7 @@ async def report_block_commands(m: Message, state: FSMContext):
                       "You're currently writing a report. Send the details or use /cancel."))
 
 # ===== استلام رسالة البلاغ =====
+# ===== استلام رسالة البلاغ =====
 @router.message(ReportState.waiting_text)
 async def report_receive_any(m: Message, state: FSMContext):
     user_id = m.from_user.id
@@ -420,6 +445,10 @@ async def report_receive_any(m: Message, state: FSMContext):
         return await m.reply(_tx(lang, "report.too_short",
                                  "الرسالة قصيرة جدًا. أرسل تفاصيل أكثر.",
                                  "The message is too short. Please provide more details."))
+
+    # ✅ ثبّت التبريد أولًا (قبل أي إشعار) + انهي الحالة مباشرة لتفادي التكرار
+    st = load_state(); st.setdefault("last", {})[str(user_id)] = utcnow_iso(); save_state(st)
+    await state.clear()
 
     # سجّل البلاغ في اللوج
     append_log({
@@ -446,18 +475,14 @@ async def report_receive_any(m: Message, state: FSMContext):
     except Exception:
         pass
 
-    # لمس صندوق وارد إضافي (إن وُجد)
+    # لمس صندوق الوارد الإضافي
     display_text = text if text else "(media)"
     _rin_touch(user_id, m.from_user.full_name or m.from_user.username or str(user_id), display_text)
 
-    # إشعار الأدمنين
+    # إشعار الأدمنين (سيصل مرّة واحدة فقط؛ أي محاولة ثانية سيوقفها التبريد)
     await _notify_admins_new_report(m, user_id, display_text)
 
-    # حدّث آخر إرسال وانهِ الحالة
-    st = load_state(); st.setdefault("last", {})[str(user_id)] = utcnow_iso(); save_state(st)
-    await state.clear()
-
-    # رسالة تأكيد + الكول داون
+    # رسالة تأكيد + مدة التبريد
     cd_hours = _cooldown_hours()
     ar_fallback = f"تم استلام بلاغك ✅ سنراجعه قريبًا.\nيمكنك إرسال بلاغ جديد بعد: {cd_hours} ساعة."
     en_fallback = f"Your report was received ✅ We'll review it soon.\nYou can send a new report after: {cd_hours}h."
@@ -648,9 +673,32 @@ async def _notify_admins_feedback(bot, rec: dict):
     targets = set(await admin_roles.get_admins("reports"))
     if ADMIN_ALERT_CHAT_ID:
         targets.add(ADMIN_ALERT_CHAT_ID)
+    muted = _alerts_mute_read()
+    targets = {aid for aid in targets if int(aid) not in muted}
     for aid in targets:
         try: await bot.send_message(aid, msg)
         except Exception: pass
+
+@router.message(Command("alerts_off"))
+async def cmd_alerts_off(m: Message):
+    # فقط الأدمن الذين لديهم دور reports/default
+    if not (await _only_admin(m)): 
+        return
+    _alerts_mute(m.from_user.id)
+    await m.reply("🔕 تم إيقاف تنبيهات البلاغات لهذا الحساب.")
+
+@router.message(Command("alerts_on"))
+async def cmd_alerts_on(m: Message):
+    if not (await _only_admin(m)): 
+        return
+    _alerts_unmute(m.from_user.id)
+    await m.reply("🔔 تم تفعيل تنبيهات البلاغات لهذا الحساب.")
+
+@router.message(Command("alerts_status"))
+async def cmd_alerts_status(m: Message):
+    if not (await _only_admin(m)): 
+        return
+    await m.reply("الحالة: " + ("🔕 متوقفة" if _alerts_is_muted(m.from_user.id) else "🔔 مفعّلة"))
 
 @router.callback_query(F.data.in_(["rfb:yes", "rfb:no", "rfb:skip"]))
 async def rfb_choice(cb: CallbackQuery, state: FSMContext):

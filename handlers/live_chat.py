@@ -172,6 +172,79 @@ def _set_admin_rating(sid: str, stars: int):
     r = _load(RATINGS_FILE); row = r.get(sid) or {}
     row["admin_rating"] = int(stars); r[sid] = row; _save(RATINGS_FILE, r)
 
+def _format_period(seconds: int) -> str:
+    # تنسيق بسيط: أيام/ساعات/دقائق
+    s = int(seconds)
+    d, r = divmod(s, 86400)
+    h, r = divmod(r, 3600)
+    m, _ = divmod(r, 60)
+    parts = []
+    if d: parts.append(f"{d}d")
+    if h: parts.append(f"{h}h")
+    if m: parts.append(f"{m}m")
+    return " ".join(parts) or f"{s}s"
+
+def _block_user(uid: int, seconds: int, reason: str | None = None):
+    """يحظر المستخدم لمدة معيّنة بالثواني."""
+    bl = _load(BLOCKLIST_FILE)
+    bl[str(uid)] = {"until": _now() + max(1, int(seconds)), "reason": reason or ""}
+    _save(BLOCKLIST_FILE, bl)
+
+def _block_status(uid: int) -> tuple[bool, int, str | None]:
+    """
+    يرجع (is_blocked, remaining_seconds, reason).
+    ينظّف الحظر المنتهي تلقائياً.
+    """
+    row = _load(BLOCKLIST_FILE).get(str(uid))
+    if not row:
+        return False, 0, None
+    try:
+        until = float(row.get("until", 0) or 0)
+    except Exception:
+        until = 0
+    rem = max(0, int(until - _now()))
+    if rem <= 0:
+        bl = _load(BLOCKLIST_FILE); bl.pop(str(uid), None); _save(BLOCKLIST_FILE, bl)
+        return False, 0, None
+    return True, rem, (row.get("reason") or None)
+
+def _fmt_dur(sec: int, lang: str) -> str:
+    """تنسيق مختصر للمدة المتبقّية (أيام/ساعات/دقائق/ثوانٍ)."""
+    d, r = divmod(sec, 86400)
+    h, r = divmod(r, 3600)
+    m, s = divmod(r, 60)
+    parts = []
+    if d: parts.append(f"{d}" + (" يوم" if lang.startswith("ar") else "d"))
+    if h: parts.append(f"{h}" + (" ساعة" if lang.startswith("ar") else "h"))
+    if m and not d: parts.append(f"{m}" + (" دقيقة" if lang.startswith("ar") else "m"))
+    if s and not d and not h: parts.append(f"{s}" + (" ثانية" if lang.startswith("ar") else "s"))
+    return " ".join(parts) or ("ثوانٍ" if lang.startswith("ar") else "secs")
+
+def _get_strikes(uid: int) -> int:
+    bl = _load(BLOCKLIST_FILE)
+    row = bl.get(str(uid)) or {}
+    return int(row.get("strikes", 0))
+
+def _put_block(uid: int, seconds: int, reason: str | None = None):
+    bl = _load(BLOCKLIST_FILE)
+    row = bl.get(str(uid)) or {}
+    strikes = int(row.get("strikes", 0)) + 1
+    until = _now() + max(0, int(seconds))
+    bl[str(uid)] = {"until": until, "reason": reason or "", "strikes": strikes}
+    _save(BLOCKLIST_FILE, bl)
+
+def _clear_block(uid: int):
+    bl = _load(BLOCKLIST_FILE)
+    if str(uid) in bl:
+        bl.pop(str(uid), None)
+        _save(BLOCKLIST_FILE, bl)
+
+# (اختياري) تصعيد تلقائي إن أردت — مثال: ×2 لكل ضربة
+def _auto_penalty_seconds(base_seconds: int, strikes_after: int) -> int:
+    # strike1=1x, strike2=2x, strike3=4x, ...
+    factor = 2 ** max(0, strikes_after-1)
+    return int(base_seconds * factor)
+
 def _set_user_rating(sid: str, stars: int):
     r = _load(RATINGS_FILE); row = r.get(sid) or {}
     row["user_rating"] = int(stars); r[sid] = row; _save(RATINGS_FILE, r)
@@ -224,9 +297,30 @@ def _any_admin_online() -> bool:
         _save(ADMIN_SEEN, m)
     return any_online
 
+def _live_available() -> bool:
+    """الدردشة متاحة فقط إذا كانت مفعّلة ويوجد إدمن أونلاين."""
+    try:
+        return _support_enabled() and _any_admin_online()
+    except Exception:
+        return False
+
+
+def _admin_is_online(aid: int) -> bool:
+    m = _load(ADMIN_SEEN).get(str(aid))
+    if isinstance(m, dict):
+        ts = float(m.get("ts", 0) or 0)
+        online = bool(m.get("online", False))
+        return online and ts and (_now() - ts) <= ADMIN_ONLINE_TTL
+    try:
+        return (_now() - float(m)) <= ADMIN_ONLINE_TTL
+    except Exception:
+        return False
 
 async def _notify_admins_t(bot, key: str, ar: str, en: str, build_kb=None, **fmt):
     for aid in _targets():
+        # أرسل إشعار فقط للإدمن الأونلاين
+        if not _admin_is_online(aid):
+            continue
         try:
             alang = _L(aid)
             text = _tt(alang, key, ar, en).format(**fmt)
@@ -239,6 +333,7 @@ async def _notify_admins_t(bot, key: str, ar: str, en: str, build_kb=None, **fmt
             await bot.send_message(aid, text, reply_markup=kb)
         except Exception as e:
             log.warning("[live] notify %s failed: %s", aid, e)
+
 
 def _sid_pack(s: str) -> str:
     return str(s).replace(":", "~")
@@ -371,9 +466,75 @@ async def cb_live_back(cb: CallbackQuery):
         pass
     await cb.answer()
 
+def _kb_blocked(lang: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text=("⟳ تحديث الوقت" if lang.startswith("ar") else "⟳ Refresh"),
+                             callback_data="live:brefresh")
+    ]])
+
+@router.callback_query(F.data == "live:brefresh")
+async def cb_block_refresh(cb: CallbackQuery):
+    uid = cb.from_user.id
+    lang = _L(uid)
+    blocked, remain, _ = _block_status(uid)
+    if blocked:
+        txt = _tt(lang, "live.blocked.detail",
+                  "⛔ تم حظرك من الدردشة الحيّة.\nالوقت المتبقّي: {rem}",
+                  "⛔ You are blocked from live chat.\nTime remaining: {rem}").format(rem=_fmt_dur(remain, lang))
+        try:
+            await cb.message.edit_text(txt, reply_markup=_kb_blocked(lang))
+        except Exception:
+            pass
+        return await cb.answer()
+    # لم يعد محظوراً → نرجع لشاشة ما قبل الدردشة
+    try:
+        await cb.message.edit_text(_pre_header(lang), reply_markup=_kb_pre_live(lang), parse_mode="HTML")
+    except Exception:
+        try:
+            await cb.message.answer(_pre_header(lang), reply_markup=_kb_pre_live(lang), parse_mode="HTML")
+        except Exception:
+            pass
+    await cb.answer(_tt(lang, "live.unblocked", "تم رفع الحظر. يمكنك البدء الآن.", "Ban lifted. You can start now."))
+
 @router.callback_query(F.data.in_({"bot:live", "live:pre"}))
 async def cb_open_pre(cb: CallbackQuery):
     lang = _L(cb.from_user.id)
+
+    # 🔒 حظر: اعرض رسالة تفصيلية مع الوقت المتبقّي
+    blocked, remain, _ = _block_status(cb.from_user.id)
+    if blocked:
+        txt = _tt(lang, "live.blocked.detail",
+                  "⛔ تم حظرك من الدردشة الحيّة.\nالوقت المتبقّي: {rem}",
+                  "⛔ You are blocked from live chat.\nTime remaining: {rem}").format(rem=_fmt_dur(remain, lang))
+        try:
+            await cb.message.edit_text(txt, reply_markup=_kb_blocked(lang))
+        except Exception:
+            try:
+                await cb.message.answer(txt, reply_markup=_kb_blocked(lang))
+            except Exception:
+                pass
+        return await cb.answer()
+
+    # ⛔ غير متاحة الآن
+    if not _live_available():
+        try:
+            await cb.message.edit_text(
+                _tt(lang, "live.unavailable",
+                    "❕ الدردشة الحيّة غير متاحة الآن. حاول لاحقًا.",
+                    "❕ Live chat is currently unavailable. Please try later.")
+            )
+        except Exception:
+            try:
+                await cb.message.answer(
+                    _tt(lang, "live.unavailable",
+                        "❕ الدردشة الحيّة غير متاحة الآن. حاول لاحقًا.",
+                        "❕ Live chat is currently unavailable. Please try later.")
+                )
+            except Exception:
+                pass
+        return await cb.answer()
+
+    # ✅ متاحة → اعرض شاشة التصنيفات
     try:
         await cb.message.edit_text(_pre_header(lang), reply_markup=_kb_pre_live(lang), parse_mode="HTML")
     except Exception:
@@ -383,9 +544,46 @@ async def cb_open_pre(cb: CallbackQuery):
             pass
     await cb.answer()
 
+
 @router.callback_query(F.data.startswith("live:cat:"))
 async def cb_pick_category(cb: CallbackQuery):
     lang = _L(cb.from_user.id)
+
+    # 🔒 حظر
+    blocked, remain, _ = _block_status(cb.from_user.id)
+    if blocked:
+        txt = _tt(lang, "live.blocked.detail",
+                  "⛔ تم حظرك من الدردشة الحيّة.\nالوقت المتبقّي: {rem}",
+                  "⛔ You are blocked from live chat.\nTime remaining: {rem}").format(rem=_fmt_dur(remain, lang))
+        try:
+            await cb.message.edit_text(txt, reply_markup=_kb_blocked(lang))
+        except Exception:
+            try:
+                await cb.message.answer(txt, reply_markup=_kb_blocked(lang))
+            except Exception:
+                pass
+        return await cb.answer()
+
+    # ⛔ غير متاحة
+    if not _live_available():
+        try:
+            await cb.message.edit_text(
+                _tt(lang, "live.unavailable",
+                    "❕ الدردشة الحيّة غير متاحة الآن. حاول لاحقًا.",
+                    "❕ Live chat is currently unavailable. Please try later.")
+            )
+        except Exception:
+            try:
+                await cb.message.answer(
+                    _tt(lang, "live.unavailable",
+                        "❕ الدردشة الحيّة غير متاحة الآن. حاول لاحقًا.",
+                        "❕ Live chat is currently unavailable. Please try later.")
+                )
+            except Exception:
+                pass
+        return await cb.answer()
+
+    # ✅ أعرض الشروط حسب التصنيف
     code = cb.data.split(":")[2]
     title = _cat_label(lang, code)
     text = f"🗂️ <b>{title}</b>\n{_cat_hint(lang, code)}\n\n{_terms_text(lang)}"
@@ -398,9 +596,12 @@ async def cb_pick_category(cb: CallbackQuery):
             pass
     await cb.answer()
 
+
 class LiveChat(StatesGroup):
-    active = State()  # حالة المستخدم
-    admin  = State()  # وضع الإدمن المعزول للرد
+    active = State()   # حالة المستخدم
+    admin  = State()   # وضع الإدمن المعزول للرد
+    block_wait = State()  # الإدمن ينتظر إدخال مدة الحظر المخصصة
+
 
 @router.callback_query(F.data.startswith("live:start:"))
 async def cb_start_live_after_terms(cb: CallbackQuery, state: FSMContext):
@@ -408,39 +609,64 @@ async def cb_start_live_after_terms(cb: CallbackQuery, state: FSMContext):
     lang = _L(uid)
     category = cb.data.split(":")[2]
 
-    if _blocked(uid):
-        return await cb.answer(_tt(lang,"live.blocked","لا يمكنك بدء دردشة حالياً.","You can't start a chat now."), show_alert=True)
-
-    if not _support_enabled() or not _any_admin_online():
-        await cb.message.edit_text(_tt(lang, "live.unavailable","❕ الدردشة الحيّة غير متاحة الآن. حاول لاحقًا.","❕ Live chat is currently unavailable. Please try later."))
+    # 🔒 محظور → رسالة مع وقت متبقّي + زر تحديث
+    blocked, remain, _ = _block_status(uid)
+    if blocked:
+        txt = _tt(lang, "live.blocked.detail",
+                  "⛔ تم حظرك من الدردشة الحيّة.\nالوقت المتبقّي: {rem}",
+                  "⛔ You are blocked from live chat.\nTime remaining: {rem}").format(rem=_fmt_dur(remain, lang))
+        try:
+            await cb.message.edit_text(txt, reply_markup=_kb_blocked(lang))
+        except Exception:
+            try:
+                await cb.message.answer(txt, reply_markup=_kb_blocked(lang))
+            except Exception:
+                pass
         return await cb.answer()
 
+    # ⛔ لا إدمن أونلاين أو الدعم مقفول
+    if not _live_available():
+        await cb.message.edit_text(
+            _tt(lang, "live.unavailable",
+                "❕ الدردشة الحيّة غير متاحة الآن. حاول لاحقًا.",
+                "❕ Live chat is currently unavailable. Please try later.")
+        )
+        return await cb.answer()
+
+    # ✅ افتح الطلب وادخل قائمة الانتظار
     sid  = f"{uid}:{int(_now())}"
     sess = {"status":"waiting","start_ts":_now(),"last_ts":_now(),"queue":[],"admin_id":None,"sid":sid,"category":category}
     _put_session(uid, sess)
     _ensure_history(sid, uid, None, sess["start_ts"])
     _update_history(sid, category=category)
 
-    # → صندوق الوارد: إدراج عنصر
     preview = f"[{_cat_label(lang, category)}] " + _tt(lang, "live.inbox.new", "طلب دردشة جديد", "New live chat request")
     _inbox_call("enqueue", "live", uid, preview)
 
     await state.set_state(LiveChat.active)
     await cb.message.edit_text(
-        _tt(lang, "live.opened", "💬 تم فتح طلب دردشة.\nالرجاء الانتظار حتى ينضم الدعم…","💬 Chat request opened.\nPlease wait for support to join…"),
+        _tt(lang, "live.opened",
+            "💬 تم فتح طلب دردشة.\nالرجاء الانتظار حتى ينضم الدعم…",
+            "💬 Chat request opened.\nPlease wait for support to join…"),
         reply_markup=_kb_user_wait(lang)
     )
     await cb.answer()
 
     def _mk(alang: str):
         return _kb_admin_request(uid, alang)
+
     await _notify_admins_t(
         cb.bot,
         "live.admin.notify.request",
         "🆕 طلب دردشة حيّة\n• المستخدم: {name} @{username}\n• المعرّف: {uid}\n• الفئة: {cat}",
         "🆕 Live chat request\n• User: {name} @{username}\n• ID: {uid}\n• Category: {cat}",
-        build_kb=_mk, name=cb.from_user.full_name, username=cb.from_user.username or "-", uid=uid, cat=_cat_label(_L(cb.from_user.id), category)
+        build_kb=_mk,
+        name=cb.from_user.full_name,
+        username=cb.from_user.username or "-",
+        uid=uid,
+        cat=_cat_label(_L(cb.from_user.id), category)
     )
+
 
 def _kb_admin_request(uid: int, lang: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
@@ -456,11 +682,220 @@ def _kb_admin_controls(uid: int, lang: str, sid: str) -> InlineKeyboardMarkup:
         InlineKeyboardButton(text=_tt(lang,"live.tag.follow","⏳ متابعة","⏳ Follow-up"), callback_data=f"live:atag:{uid}:{psid}:follow"),
         InlineKeyboardButton(text=_tt(lang,"live.tag.bug","🐞 عيب","🐞 Bug"), callback_data=f"live:atag:{uid}:{psid}:bug"),
     ]
+    # أزرار الحظر السريعة
+    blocks = [
+        InlineKeyboardButton(text="🚫 1h",  callback_data=f"live:ablock:{uid}:{psid}:3600"),
+        InlineKeyboardButton(text="🚫 24h", callback_data=f"live:ablock:{uid}:{psid}:86400"),
+        InlineKeyboardButton(text="🚫 7d",  callback_data=f"live:ablock:{uid}:{psid}:604800"),
+        InlineKeyboardButton(text="⛔ دائم", callback_data=f"live:ablock:{uid}:{psid}:0"),
+    ]
+    custom = InlineKeyboardButton(
+        text=("⏱️ حظر مُخصص" if lang.startswith("ar") else "⏱️ Custom block"),
+        callback_data=f"live:ablock_custom:{uid}:{psid}"
+    )
+
+    # زر رفع الحظر
+    unban_btn = InlineKeyboardButton(
+        text=("🔓 رفع الحظر" if lang.startswith("ar") else "🔓 Unban"),
+        callback_data=f"live:aunblock:{uid}:{psid}"
+    )
+
     return InlineKeyboardMarkup(inline_keyboard=[
         stars, tags,
+        blocks,
+        [custom],
+        [unban_btn],  # ← هذا الصف الجديد
         [InlineKeyboardButton(text=_tt(lang,"live.btn.info","ℹ️ معلومات","ℹ️ Info"), callback_data=f"live:ainfo:{uid}:{psid}"),
          InlineKeyboardButton(text=_tt(lang,"live.btn.end.red","🔴 إنهاء الدردشة","🔴 End chat"), callback_data=f"live:end:{uid}:{psid}")]
     ])
+
+
+@router.callback_query(F.data.startswith("live:ablock:"))
+async def cb_admin_block_quick(cb: CallbackQuery, state: FSMContext):
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer("Admins only.", show_alert=True)
+
+    uid, sid, seconds = _parse_uid_sid_stars(cb.data)  # استعملنا نفس البارسر: آخر جزء كأنه "نجوم" لكن هنا ثواني
+    # ملاحظة: فوق استعملنا live:ablock:{uid}:{psid}:{seconds} لذلك الدالة تعمل تمام
+    seconds = int(seconds)
+    # تصعيد تلقائي (اختياري):
+    strikes_after = _get_strikes(uid) + 1
+    if seconds > 0:
+        seconds = _auto_penalty_seconds(seconds, strikes_after)
+
+    # دوّن الحظر
+    _put_block(uid, seconds if seconds>0 else 10*365*24*3600, reason="quick")  # 0 = دائم → 10 سنوات مثلاً
+
+    # أنهِ الجلسة لو موجودة
+    sess = _get_session(uid)
+    if sess:
+        _del_session(uid)
+    try:
+        await state.clear()
+    except Exception:
+        pass
+
+    # وسم + إشعارات
+    _update_history(sid, tag="blocked")
+    lang_user = _L(uid)
+    period = "permanent" if seconds==0 else _format_period(seconds)
+    try:
+        await cb.bot.send_message(uid,
+            _tt(lang_user, "live.blocked.msg",
+                f"⛔ تم حظرك من الدردشة لمدة: {period}.",
+                f"⛔ You have been blocked from live chat for: {period}."))
+    except Exception:
+        pass
+
+    alang = _L(cb.from_user.id)
+    try:
+        await cb.message.edit_text(
+            _tt(alang, "live.admin.blocked.ok",
+                f"⛔ تم حظر المستخدم {uid} ({period}) وإنهاء الجلسة.",
+                f"⛔ User {uid} blocked ({period}) and session ended."),
+            reply_markup=None
+        )
+    except Exception:
+        pass
+
+    await _notify_admins_t(cb.bot,
+        "live.admin.notify.block",
+        "⛔ حظر الإدمن {admin_id} المستخدم {uid} لمدة {period}\nSID={sid}",
+        "⛔ Admin {admin_id} blocked user {uid} for {period}\nSID={sid}",
+        admin_id=cb.from_user.id, uid=uid, sid=sid, period=period)
+
+    await cb.answer("Blocked")
+
+@router.callback_query(F.data.startswith("live:aunblock:"))
+async def cb_admin_unblock(cb: CallbackQuery):
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer("Admins only.", show_alert=True)
+
+    # نفس تنسيق live:aunblock:{uid}:{psid} → نستخدم البارسر العام
+    uid, sid = _parse_uid_sid(cb.data)
+
+    # لو المستخدم غير محظور، نخبر الإدمن بشكل ودّي
+    was_blocked, _, _ = _block_status(uid)
+    _clear_block(uid)
+
+    alang = _L(cb.from_user.id)
+    msg_admin = ("🔓 تم رفع الحظر عن المستخدم {uid}."
+                 if alang.startswith("ar") else
+                 "🔓 Unban completed for user {uid}.")
+    try:
+        await cb.message.edit_text(msg_admin.format(uid=uid),
+                                   reply_markup=_kb_admin_controls(uid, alang, sid))
+    except Exception:
+        pass
+
+    # أخبر المستخدم أنه تم رفع الحظر
+    try:
+        await cb.bot.send_message(
+            uid,
+            _tt(_L(uid),
+                "live.unblocked",
+                "✅ تم رفع الحظر. يمكنك فتح دردشة جديدة من «الدعم».",
+                "✅ Your ban was lifted. You can start a new chat from Support.")
+        )
+    except Exception:
+        pass
+
+    # إشعار لباقي الإدمنز الأونلاين
+    await _notify_admins_t(
+        cb.bot,
+        "live.admin.notify.unblock",
+        "🔓 رفع الإدمن {admin_id} الحظر عن المستخدم {uid} | SID={sid}",
+        "🔓 Admin {admin_id} unblocked user {uid} | SID={sid}",
+        admin_id=cb.from_user.id, uid=uid, sid=sid
+    )
+
+    # رد قصير لواجهة الزر
+    await cb.answer("Unblocked" if not alang.startswith("ar") else "تم رفع الحظر")
+
+@router.message(Command("unban"))
+async def cmd_unban(m: Message):
+    if not _is_admin(m.from_user.id):
+        return
+    parts = (m.text or "").split(maxsplit=1)
+    if len(parts) < 2 or not parts[1].isdigit():
+        return await m.reply("استخدم: /unban <uid>\nExample: /unban 123456789")
+    uid = int(parts[1])
+    was_blocked, _, _ = _block_status(uid)
+    _clear_block(uid)
+    await m.reply(("🔓 تم رفع الحظر عن " if _L(m.from_user.id).startswith("ar") else "🔓 Unbanned ") + str(uid))
+    try:
+        await m.bot.send_message(uid,
+            _tt(_L(uid),
+                "live.unblocked",
+                "✅ تم رفع الحظر. يمكنك فتح دردشة جديدة من «الدعم».",
+                "✅ Your ban was lifted. You can start a new chat from Support."))
+    except Exception:
+        pass
+
+
+@router.callback_query(F.data.startswith("live:ablock_custom:"))
+async def cb_admin_block_custom_open(cb: CallbackQuery, state: FSMContext):
+    if not _is_admin(cb.from_user.id):
+        return await cb.answer("Admins only.", show_alert=True)
+    # خزّن الهدف في FSM ثم اطلب من الإدمن إدخال الثواني|سبب (السبب اختياري)
+    parts = cb.data.split(":")
+    uid = int(parts[2]); sid = _sid_unpack(parts[3])
+    await state.update_data(block_target_uid=uid, block_target_sid=sid)
+    await state.set_state(LiveChat.block_wait)
+    await cb.message.answer("⏱️ أرسل مدة الحظر بالثواني، ويمكن إضافة سبب بعد فاصلة عمودية:\nمثال: `3600|سبام`\nExample: `86400|spam`", parse_mode="Markdown")
+    await cb.answer()
+
+@router.message(StateFilter(LiveChat.block_wait))
+async def admin_block_custom_apply(m: Message, state: FSMContext):
+    if not _is_admin(m.from_user.id):
+        return
+    text = (m.text or "").strip()
+    if not text:
+        return await m.reply("أرسل الثواني أو `seconds|reason`.")
+    try:
+        if "|" in text:
+            s, reason = text.split("|", 1)
+            seconds = int(s.strip())
+            reason = reason.strip()
+        else:
+            seconds = int(text)
+            reason = ""
+    except Exception:
+        return await m.reply("تنسيق غير صحيح. مثال: `3600|سبام`", parse_mode="Markdown")
+
+    data = await state.get_data()
+    uid = int(data.get("block_target_uid"))
+    sid = data.get("block_target_sid")
+
+    # تصعيد تلقائي (اختياري)
+    strikes_after = _get_strikes(uid) + 1
+    if seconds > 0:
+        seconds = _auto_penalty_seconds(seconds, strikes_after)
+
+    _put_block(uid, seconds if seconds>0 else 10*365*24*3600, reason=reason or "custom")
+
+    # إنهِ أي جلسة
+    if _get_session(uid):
+        _del_session(uid)
+
+    await state.clear()
+
+    period = "permanent" if seconds==0 else _format_period(seconds)
+    try:
+        await m.bot.send_message(uid,
+            _tt(_L(uid), "live.blocked.msg",
+                f"⛔ تم حظرك من الدردشة لمدة: {period}.",
+                f"⛔ You have been blocked from live chat for: {period}."))
+    except Exception:
+        pass
+
+    _update_history(sid, tag="blocked")
+    await m.reply(f"تم الحظر: UID={uid} | {period} | reason={reason or '-'}")
+    await _notify_admins_t(m.bot,
+        "live.admin.notify.block",
+        "⛔ حظر الإدمن {admin_id} المستخدم {uid} لمدة {period}\nSID={sid}\nسبب: {reason}",
+        "⛔ Admin {admin_id} blocked user {uid} for {period}\nSID={sid}\nReason: {reason}",
+        admin_id=m.from_user.id, uid=uid, sid=sid, period=period, reason=(reason or "-"))
 
 @router.callback_query(F.data == "live:cancel")
 async def cb_user_cancel(cb: CallbackQuery, state: FSMContext):

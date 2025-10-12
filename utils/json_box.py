@@ -79,8 +79,11 @@ def _snapshot(path: Path) -> None:
 def _atomic_write_json(path: Path, data: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     _snapshot(path)
+
     tmp = path.with_suffix(path.suffix + ".tmp")
     payload = json.dumps(data, ensure_ascii=False, indent=2)
+
+    # اكتب للمؤقت أولاً
     with open(tmp, "w", encoding="utf-8", newline="\n") as f:
         f.write(payload)
         try:
@@ -88,7 +91,44 @@ def _atomic_write_json(path: Path, data: Any) -> None:
             os.fsync(f.fileno())
         except Exception:
             pass
-    os.replace(tmp, path)
+
+    # جرّب الاستبدال عدة مرات (لمشاكل قفل OneDrive)
+    tries = 12       # إجمالي ~3 ثوانٍ
+    delay = 0.25
+    for _ in range(tries):
+        try:
+            os.replace(tmp, path)
+            return
+        except PermissionError:
+            time.sleep(delay)
+
+    # خطة احتياط لو بقي القفل: أنشئ نسخة bak ثم حرّك الملف المؤقت
+    bak = path.with_suffix(path.suffix + ".bak")
+    try:
+        if bak.exists():
+            try:
+                bak.unlink()
+            except Exception:
+                pass
+        if path.exists():
+            try:
+                shutil.copy2(path, bak)
+            except Exception:
+                pass
+            try:
+                path.unlink()
+            except Exception:
+                # لو لم يُحذف بسبب القفل، سنجرب التحريك فوقه
+                pass
+        shutil.move(str(tmp), str(path))
+    finally:
+        # تنظيف المؤقت إن بقي لأي سبب
+        if tmp.exists():
+            try:
+                tmp.unlink()
+            except Exception:
+                pass
+
 
 def load_json(path: str | Path, default: Any = None) -> Any:
     p = Path(path)

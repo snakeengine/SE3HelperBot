@@ -135,8 +135,8 @@ def _summary(lang: str, d: dict) -> str:
 def _fee_note(lang: str) -> str:
     return _tr(
         lang, "supplier_fee_note",
-        "Note: There is a <b>$500</b> fee to activate your supplier account in-app (credited to your wallet for key/ID activations).",
-        "ملاحظة: توجد رسوم قدرها <b>500$</b> لتفعيل حساب المورد داخل التطبيق (تُضاف لمحفظتك لتفعيل المفاتيح/المعرّفات)."
+        "Note: There is a <b>$300</b> fee to activate your supplier account in-app (credited to your wallet for key/ID activations).",
+        "ملاحظة: توجد رسوم قدرها <b>300$</b> لتفعيل حساب المورد داخل التطبيق (تُضاف لمحفظتك لتفعيل المفاتيح/المعرّفات)."
     )
 
 def _is_admin(user_id: int) -> bool:

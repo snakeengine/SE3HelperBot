@@ -1,4 +1,4 @@
-# bot.py
+﻿# bot.py
 # =========================================
 # S.E Support Bot (Aiogram v3) — Clean & Ready (Merged)
 # =========================================
@@ -79,7 +79,7 @@ alerts_user_router = None
 init_alerts_scheduler = None
 try:
     from admin.alerts_admin import router as alerts_admin_router
-    from handlers.alerts_user import router as alerts_user_router
+    from handlers.alerts_userف import router as alerts_user_router
     from utils.alerts_scheduler import init_alerts_scheduler
     logging.info("Alerts modules loaded (admin+user+scheduler).")
 except Exception as e:
@@ -145,8 +145,8 @@ from handlers.reseller_apply import router as reseller_apply_router
 from handlers.supplier_directory import router as supplier_directory_router
 from handlers.admin_manage import router as admin_manage
 from admin.admin_access import router as admin_access
-from admin import admin_roles_panel
-
+from aiogram import Router, F
+# استدعِ دالة الهاندلر نفسها من ملفك
 from handlers.promoter import router as promoter_router
 from handlers.promoter_panel import router as promoter_panel_router
 from handlers.anti_groups import router as anti_groups_router
@@ -159,6 +159,7 @@ from utils.vip_cron import run_vip_cron
 from lang import t as _t_passthrough  # noqa
 from handlers.live_chat import router as live_chat_router
 from admin import shop_admin as _shop_admin
+
 from middlewares.ephemeral_kb import EphemeralKBGuard
 from handlers.support_inbox_admin import router as support_inbox_router
 from admin.admin_features import router as features_router
@@ -167,6 +168,22 @@ from middlewares.force_join import ForceJoinMiddleware
 from handlers.force_join_check import router as fj_router
 from handlers.rewards_profile_pro import router as rewards_profile_router
 from handlers.debug_storage import router as debug_storage_router
+from middlewares.seen_user import SeenUserMiddleware
+from aiogram import Router, F
+from aiogram.types import CallbackQuery
+from aiogram.fsm.context import FSMContext
+# --- Promo system (Free SEVIP) ---
+from handlers.promo_free_sevip import router as promo_free_router        # واجهة المستخدم للترويج (الشروط/المنصات/الرابط/اللقطة/الكود)
+from handlers.promo_flow_extras import router as promo_flow_router       # أدوات الإدارة + فتح الدردشة + جمع Snake ID
+from admin.promo_panel_ui import router as promo_panel_ui_router
+         # (اختياري) لوحة مراجعة الطلبات
+# لا تستورد promo_open/terms/choose_platform كدوال منفصلة — هذه مُسجّلة داخل الراوترات
+from admin.promo_panel_ui import router as promo_panel_ui_router
+from handlers import paydiag as _paydiag
+
+# الصحيح:
+from admin.admin_center import router as admin_center_router   # يملك Router
+import admin.live_exclusive_only                            # 2) فعّل الـ patch (بدون include_router)
 
 
 # ===== Rewards (optional) =====
@@ -257,7 +274,7 @@ for part in _admin_ids_env.split(","):
     if part.isdigit():
         ADMIN_IDS.append(int(part))
 if not ADMIN_IDS:
-    ADMIN_IDS = [7360982123]
+    ADMIN_IDS = [7360982123,8371697148]
 
 # ============ Commands ============
 def _public_cmds(lang: str = "en") -> list[BotCommand]:
@@ -526,7 +543,7 @@ def register_routers(dp: Dispatcher):
 
     #persistent_menu_router.message.filter(~F.text.startswith("/"))
     dp.include_router(report_router);           logging.info("Loaded handlers.report (PRIORITY)")
-
+   
     # Menus & panel
     dp.include_router(reseller_apply_router);   logging.info("Loaded handlers.reseller_apply (PRIORITY)")
     dp.include_router(promoter_router);         logging.info("Loaded handlers.promoter")
@@ -535,7 +552,6 @@ def register_routers(dp: Dispatcher):
     dp.include_router(bot_panel_router);        logging.info("Loaded handlers.bot_panel")
     dp.include_router(menu_buttons_router);     logging.info("Loaded handlers.menu_buttons")
     dp.include_router(persistent_menu_router);  logging.info("Loaded handlers.persistent_menu")
-    #dp.include_router(live_chat_router);        logging.info("Loaded handlers.live_chat (PRIVATE & SANDBOXED)")
     dp.include_router(support_inbox_router);    logging.info("Loaded handlers.support_inbox_admin")
     dp.include_router(_shop_admin.router);      logging.info("Loaded handlers.shop_admin")
 
@@ -549,7 +565,6 @@ def register_routers(dp: Dispatcher):
 
     # Core
     dp.include_router(_supplier_payment.router); logging.info("Loaded handlers.supplier_payment")
-    from handlers import paydiag as _paydiag
     dp.include_router(_paydiag.router)
     dp.include_router(human_router);             logging.info("Loaded handlers.human_check")
     dp.include_router(inventory_admin_router);   logging.info("Loaded handlers.inventory_admin")
@@ -560,6 +575,13 @@ def register_routers(dp: Dispatcher):
     dp.callback_query.outer_middleware(ForceJoinMiddleware())
     dp.include_router(fj_router)   # ← هذا الذي يجعل fj_check يعمل
     dp.include_router(debug_storage_router)
+    dp.update.middleware(SeenUserMiddleware())        # applies على كل التحديثات
+
+    dp.include_router(promo_free_router)
+    dp.include_router(promo_flow_router)
+
+    dp.include_router(admin_center_router)
+    dp.include_router(promo_panel_ui_router)
 
 
     # Rewards (fallback: لو لأي سبب ما رُكّبت مبكراً)
@@ -568,7 +590,7 @@ def register_routers(dp: Dispatcher):
 
     # أولوية عالية
     
-
+   
     dp.include_router(admin_manage)
     dp.include_router(admin_access)
 
@@ -749,6 +771,8 @@ async def main():
         logging.warning(f"VIP reminder task failed to start: {e}")
 
     logging.info("🚀 Bot is starting polling...")
+    logging.info("Loaded handlers.promo_flow_extras")
+    logging.info("Loaded handlers.promo_free_sevip")
     updates = set(dp.resolve_used_update_types() or [])
     updates.update({"message", "callback_query", "pre_checkout_query"})  # ⭐ مهم لنجوم تيليجرام
     updates.update({"chat_member", "my_chat_member"})
