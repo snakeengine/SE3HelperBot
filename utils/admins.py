@@ -86,13 +86,18 @@ def _migrate_legacy_if_needed():
 
 # ───────────── الحالة (state) ─────────────
 # المالكين من البيئة (محميون من الحذف)
-_OWNERS_ENV = (
-    os.getenv("OWNER_IDS")
-    or os.getenv("ADMIN_IDS")
-    or os.getenv("ADMIN_ID")
-    or ""
+# المالكين من البيئة (دمج كل المتغيرات بدل أولوية)
+_OWNERS_ENV = ",".join(
+    x.strip()
+    for x in [
+        os.getenv("OWNER_IDS", ""),
+        os.getenv("ADMIN_IDS", ""),
+        os.getenv("ADMIN_ID", ""),
+    ]
+    if x and x.strip()
 )
 OWNERS: Set[int] = set(_parse_ids_env(_OWNERS_ENV))
+
 
 def _load_file_ids() -> Set[int]:
     arr = _load_json(STORE, [])
@@ -172,3 +177,4 @@ try:
     ADMIN_IDS: set[int] = set(_current_admins())
 except Exception:
     ADMIN_IDS = set()
+
