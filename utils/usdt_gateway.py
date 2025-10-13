@@ -1,5 +1,7 @@
-# utils/usdt_gateway.py
 from __future__ import annotations
+
+# utils/usdt_gateway.py
+
 
 import os
 import time

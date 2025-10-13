@@ -1,5 +1,7 @@
-# handlers/home_hero.py
 from __future__ import annotations
+
+# handlers/home_hero.py
+
 
 import os, time, json
 from typing import Optional

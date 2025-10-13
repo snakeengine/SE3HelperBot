@@ -1,5 +1,7 @@
-# handlers/basic_cmds.py
 from __future__ import annotations
+
+# handlers/basic_cmds.py
+
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message

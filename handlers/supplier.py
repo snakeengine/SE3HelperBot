@@ -1,6 +1,8 @@
-﻿from utils.admins import get_admin_ids, is_admin, get_owner_ids
-# handlers_supplier.py
 from __future__ import annotations
+
+from utils.admins import get_admin_ids, is_admin, get_owner_ids
+# handlers_supplier.py
+
 
 import os, json, time
 from typing import Dict, Any, Optional, Tuple

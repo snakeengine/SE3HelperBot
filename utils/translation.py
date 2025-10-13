@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 # 📁 utils/translation.py
 """
 Thin wrapper around `lang.py` so old imports keep working.
@@ -6,7 +8,6 @@ Primary path: use `lang.t` / `lang.get_user_lang`.
 Fallback path: lightweight loader from ../locales with safe caching & mtime watch.
 """
 
-from __future__ import annotations
 import os
 import json
 import threading

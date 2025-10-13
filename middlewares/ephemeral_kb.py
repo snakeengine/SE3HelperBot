@@ -1,5 +1,7 @@
-# middlewares/ephemeral_kb.py
 from __future__ import annotations
+
+# middlewares/ephemeral_kb.py
+
 from aiogram import BaseMiddleware
 from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
 from utils.ephemeral_kb import (

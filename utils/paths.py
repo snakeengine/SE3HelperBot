@@ -1,5 +1,7 @@
-# utils/paths.py
 from __future__ import annotations
+
+# utils/paths.py
+
 import os
 from pathlib import Path
 

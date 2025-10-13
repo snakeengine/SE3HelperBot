@@ -1,5 +1,7 @@
-# utils/alerts_inbox.py
 from __future__ import annotations
+
+# utils/alerts_inbox.py
+
 
 import json, time, threading, os
 from pathlib import Path

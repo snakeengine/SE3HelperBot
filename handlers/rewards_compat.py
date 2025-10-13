@@ -1,5 +1,7 @@
-# handlers/rewards_compat.py
 from __future__ import annotations
+
+# handlers/rewards_compat.py
+
 
 from aiogram import Router, F
 from aiogram.filters import Command, StateFilter

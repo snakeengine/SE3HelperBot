@@ -1,5 +1,7 @@
-# 📁 handlers/verified_resellers.py
 from __future__ import annotations
+
+# 📁 handlers/verified_resellers.py
+
 
 import os, json, math
 from pathlib import Path

@@ -1,5 +1,7 @@
-# handlers/supplier_panel_alias.py
 from __future__ import annotations
+
+# handlers/supplier_panel_alias.py
+
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder

@@ -1,5 +1,7 @@
-# admin/rewards_admin.py
 from __future__ import annotations
+
+# admin/rewards_admin.py
+
 
 import json, os, math, re
 from pathlib import Path

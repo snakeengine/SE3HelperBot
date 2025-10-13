@@ -1,6 +1,8 @@
-﻿from utils.admins import get_admin_ids, is_admin, get_owner_ids
-# admin/promo_panel_ui.py
 from __future__ import annotations
+
+from utils.admins import get_admin_ids, is_admin, get_owner_ids
+# admin/promo_panel_ui.py
+
 import os, time
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardButton

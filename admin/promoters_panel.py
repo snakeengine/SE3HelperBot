@@ -1,6 +1,8 @@
-﻿from utils.admins import get_admin_ids, is_admin, get_owner_ids
-# admin/promoters_panel.py
 from __future__ import annotations
+
+from utils.admins import get_admin_ids, is_admin, get_owner_ids
+# admin/promoters_panel.py
+
 
 import os, json, time, logging
 from pathlib import Path

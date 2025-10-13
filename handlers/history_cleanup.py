@@ -1,5 +1,7 @@
-# handlers/history_cleanup.py
 from __future__ import annotations
+
+# handlers/history_cleanup.py
+
 
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, InlineKeyboardButton

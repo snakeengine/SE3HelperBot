@@ -1,5 +1,7 @@
-# utils/json_box.py
 from __future__ import annotations
+
+# utils/json_box.py
+
 
 import json
 import os

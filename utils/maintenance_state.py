@@ -1,5 +1,7 @@
-# utils/maintenance_state.py
 from __future__ import annotations
+
+# utils/maintenance_state.py
+
 import os, json, tempfile
 from pathlib import Path
 

@@ -1,5 +1,7 @@
-# utils/escalation_guard.py
 from __future__ import annotations
+
+# utils/escalation_guard.py
+
 
 import os, json, threading
 from datetime import datetime, timedelta, timezone

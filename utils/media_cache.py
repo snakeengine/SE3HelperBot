@@ -1,5 +1,7 @@
-# utils/media_cache.py
 from __future__ import annotations
+
+# utils/media_cache.py
+
 import hashlib, os
 from pathlib import Path
 from typing import Optional

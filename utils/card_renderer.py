@@ -1,5 +1,7 @@
-# utils/card_renderer.py
 from __future__ import annotations
+
+# utils/card_renderer.py
+
 import io, os, random
 from typing import Tuple
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps

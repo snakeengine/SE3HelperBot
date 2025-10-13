@@ -1,5 +1,7 @@
-# utils/suppliers.py
 from __future__ import annotations
+
+# utils/suppliers.py
+
 
 import os, json, time, threading, contextlib
 from pathlib import Path

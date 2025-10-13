@@ -1,5 +1,7 @@
-# utils/rewards_store.py
 from __future__ import annotations
+
+# utils/rewards_store.py
+
 
 import json, time, threading, os
 from pathlib import Path

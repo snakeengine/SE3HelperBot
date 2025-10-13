@@ -1,5 +1,7 @@
-# middlewares/user_tracker.py
 from __future__ import annotations
+
+# middlewares/user_tracker.py
+
 import json
 import logging
 from pathlib import Path

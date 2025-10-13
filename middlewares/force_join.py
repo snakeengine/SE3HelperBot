@@ -1,5 +1,7 @@
-﻿# middlewares/force_join.py
 from __future__ import annotations
+
+# middlewares/force_join.py
+
 
 import os
 import time

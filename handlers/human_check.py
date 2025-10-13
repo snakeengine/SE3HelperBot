@@ -1,5 +1,7 @@
-# handlers/human_check.py
 from __future__ import annotations
+
+# handlers/human_check.py
+
 from typing import Callable, Awaitable, Dict, Union
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardButton

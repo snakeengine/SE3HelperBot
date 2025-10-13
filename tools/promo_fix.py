@@ -1,4 +1,4 @@
-﻿import os, sqlite3, sys, textwrap
+import os, sqlite3, sys, textwrap
 
 DB = os.path.join("data", "shop.db")
 

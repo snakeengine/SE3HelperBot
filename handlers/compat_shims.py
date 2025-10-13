@@ -1,5 +1,7 @@
-# handlers/compat_shims.py
 from __future__ import annotations
+
+# handlers/compat_shims.py
+
 import re, logging
 from aiogram import Router, F
 from aiogram.filters import Command

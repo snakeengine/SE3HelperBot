@@ -1,5 +1,7 @@
-# utils/router_guard.py
 from __future__ import annotations
+
+# utils/router_guard.py
+
 from typing import Iterable, Tuple
 from aiogram import F, Router
 from aiogram.filters import StateFilter

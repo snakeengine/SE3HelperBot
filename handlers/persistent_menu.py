@@ -1,5 +1,7 @@
-# handlers/persistent_menu.py
 from __future__ import annotations
+
+# handlers/persistent_menu.py
+
 
 import logging, re, unicodedata
 from typing import Optional

@@ -1,5 +1,7 @@
-# handlers/supplier_vault.py
 from __future__ import annotations
+
+# handlers/supplier_vault.py
+
 
 import os, json, io, datetime
 from typing import Any

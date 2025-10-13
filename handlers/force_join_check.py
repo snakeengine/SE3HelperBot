@@ -1,5 +1,7 @@
-﻿# handlers/force_join_auto.py
 from __future__ import annotations
+
+# handlers/force_join_auto.py
+
 import logging
 from typing import Optional, Iterable, Tuple
 

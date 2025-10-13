@@ -1,5 +1,7 @@
-# middlewares/force_start.py
 from __future__ import annotations
+
+# middlewares/force_start.py
+
 import json, os
 from pathlib import Path
 from typing import Callable, Any, Dict, Awaitable

@@ -1,5 +1,7 @@
-# middlewares/auto_subscribe.py
 from __future__ import annotations
+
+# middlewares/auto_subscribe.py
+
 from aiogram import BaseMiddleware
 from aiogram.types import Message, CallbackQuery, TelegramObject
 from typing import Callable, Awaitable, Dict, Any

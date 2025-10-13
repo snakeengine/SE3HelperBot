@@ -1,6 +1,8 @@
-﻿from utils.admins import get_admin_ids, is_admin, get_owner_ids
-# handlers/language.py
 from __future__ import annotations
+
+from utils.admins import get_admin_ids, is_admin, get_owner_ids
+# handlers/language.py
+
 
 import os
 from typing import List, Tuple

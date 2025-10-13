@@ -1,5 +1,7 @@
-# utils/filters_common.py
 from __future__ import annotations
+
+# utils/filters_common.py
+
 from aiogram.filters import BaseFilter
 from aiogram.types import Message
 

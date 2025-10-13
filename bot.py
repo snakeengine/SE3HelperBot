@@ -1,4 +1,4 @@
-﻿from utils.admins import get_admin_ids, is_admin, get_owner_ids
+from utils.admins import get_admin_ids, is_admin, get_owner_ids
 # bot.py
 # =========================================
 # S.E Support Bot (Aiogram v3) — Clean & Ready (Merged)

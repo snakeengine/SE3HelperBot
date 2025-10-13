@@ -1,5 +1,7 @@
-# 📁 utils/updates.py
 from __future__ import annotations
+
+# 📁 utils/updates.py
+
 
 import json
 import os

@@ -1,5 +1,7 @@
-# utils/alerts_config.py
 from __future__ import annotations
+
+# utils/alerts_config.py
+
 
 import os, json, threading, time
 from pathlib import Path

@@ -1,5 +1,7 @@
-# admin/admin_roles_panel.py
 from __future__ import annotations
+
+# admin/admin_roles_panel.py
+
 
 import json
 from pathlib import Path

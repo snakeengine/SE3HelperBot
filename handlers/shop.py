@@ -1,6 +1,8 @@
-﻿from utils.admins import get_admin_ids, is_admin, get_owner_ids
-# handlers/shop.py
 from __future__ import annotations
+
+from utils.admins import get_admin_ids, is_admin, get_owner_ids
+# handlers/shop.py
+
 
 import asyncio
 import os
