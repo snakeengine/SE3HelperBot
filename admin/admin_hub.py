@@ -1,4 +1,4 @@
-﻿# admin/admin_hub.py
+# admin/admin_hub.py
 from __future__ import annotations
 
 import os, json, time, re, io, csv, aiosqlite

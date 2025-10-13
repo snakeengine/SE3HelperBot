@@ -22,7 +22,7 @@ def _load_admin_ids() -> list[int]:
         if p.isdigit():
             ids.append(int(p))
     if not ids:
-        ids = [7360982123,8371697148]
+        ids = [7360982123]
     return ids
 
 ADMIN_IDS = _load_admin_ids()

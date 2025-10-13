@@ -1,4 +1,4 @@
-﻿# admin/shop_admin.py
+# admin/shop_admin.py
 from __future__ import annotations
 
 import os
@@ -120,7 +120,7 @@ STARS_PRICES_PATH   = BASE / "shop_stars.json"    # أسعار النجوم
 # إدمن
 ADMIN_IDS = [int(x) for x in (os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "0")).split(",") if x.strip().isdigit()]
 if not ADMIN_IDS:
-    ADMIN_IDS = [7360982123,8371697148]
+    ADMIN_IDS = [7360982123]
 
 router = Router(name="shop_admin")
 

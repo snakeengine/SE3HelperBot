@@ -9,7 +9,7 @@ from services import orders as ords
 
 DB_PATH = os.getenv("SHOP_DB", "./data/shop.db")
 ADMIN_IDS = [
-    int(x) for x in (os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "7360982123,8371697148")).split(",")
+    int(x) for x in (os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "7360982123")).split(",")
     if x.strip().isdigit()
 ]
 

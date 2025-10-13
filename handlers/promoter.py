@@ -30,7 +30,7 @@ STORE_FILE = DATA_DIR / "promoters.json"
 _admin_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
 ADMIN_IDS = [int(x) for x in str(_admin_env).split(",") if str(x).strip().isdigit()]
 if not ADMIN_IDS:
-    ADMIN_IDS = [7360982123,8371697148]
+    ADMIN_IDS = [7360982123]
 
 _DEFAULT_DAILY_LIMIT = 5  # حد افتراضي إذا لم يوجد في settings
 

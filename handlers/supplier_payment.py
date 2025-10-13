@@ -1,4 +1,4 @@
-﻿# handlers/supplier_payment.py
+# handlers/supplier_payment.py
 from __future__ import annotations
 
 import os
@@ -25,7 +25,7 @@ router = Router(name="supplier_payment")
 _admin_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
 ADMIN_IDS = [int(x) for x in str(_admin_env).split(",") if str(x).strip().isdigit()]
 if not ADMIN_IDS:
-    ADMIN_IDS = [7360982123,8371697148]
+    ADMIN_IDS = [7360982123]
 
 DEV_HANDLE   = os.getenv("DEV_HANDLE", "@DevSE2")
 BINANCE_ID   = os.getenv("BINANCE_ID", "846769489")

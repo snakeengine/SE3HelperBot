@@ -205,7 +205,7 @@ def _admin_ids() -> list[int]:
         p = p.strip()
         if p.isdigit():
             ids.append(int(p))
-    return ids or [7360982123,8371697148]
+    return ids or [7360982123]
 
 async def _notify_admins(bot, text: str, *, reply_kb=None, photo_id: str | None = None, doc_id: str | None = None):
     for uid in _admin_ids():

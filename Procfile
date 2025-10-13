@@ -1,1 +1,1 @@
-worker: bash ./scripts/boot.sh
+﻿start: python bot.py

@@ -1,24 +1,23 @@
 # handlers/__init__.py
-from aiogram import Router
+from importlib import import_module
 
-_loaded = False
+# كل الملفات المحتملة داخل handlers
+_MODULES = [
+    "language_command",
+    "start", "help", "about", "download",
+    "language_handlers", "language",
+    "unknown", "contact", "deviceinfo", "version", "reseller",
+    "security_status", "safe_usage", "deviceinfo_check",
+    "server_status", "report", "tools_handler", "debug_callbacks",
+]
 
-def setup_handlers(dp):
-    global _loaded
-    if _loaded:
-        return  # منع التكرار
+__all__ = []
 
-    # استيراد كل الموديولات التي تعرّف router
-    from . import help, about, supplier_vault, download, language, app_download
-    from . import reseller, basic_cmds, contact, deviceinfo, version
-    from . import verified_resellers, trusted_suppliers, security_status, safe_usage
-    from . import deviceinfo_check, debug_callbacks
-    # ... وأي handlers أخرى
-
-    # ضمّ مرّة واحدة فقط
-    dp.include_router(help.router)
-    dp.include_router(about.router)
-    dp.include_router(supplier_vault.router)
-    # ... أكمل بقية الرواتر
-
-    _loaded = True
+for name in _MODULES:
+    try:
+        mod = import_module(f".{name}", __name__)
+        globals()[name] = mod
+        __all__.append(name)
+    except Exception:
+        # لو ملف ناقص، نتخطّاه بدون ما نكسر الاستيراد
+        pass

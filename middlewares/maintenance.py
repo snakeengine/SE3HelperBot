@@ -16,7 +16,7 @@ def _load_admin_ids() -> set[int]:
             ids.add(int(part))
     # fallback الافتراضي (نفس الذي وضعته في bot.py)
     if not ids:
-        ids = {7360982123,8371697148}
+        ids = {7360982123}
     return ids
 
 DEFAULT_NOTICE = (

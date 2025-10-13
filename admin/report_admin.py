@@ -1,4 +1,4 @@
-﻿# admin/report_admin.py
+# admin/report_admin.py
 from __future__ import annotations
 
 import os, json, logging, time
@@ -36,7 +36,7 @@ DEFAULTS = {"enabled": True, "cooldown_days": 3, "banned": []}
 
 # ====== صلاحيات الأدمن ======
 _admin_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
-ADMIN_IDS = [int(x) for x in str(_admin_env).split(",") if str(x).strip().isdigit()] or [7360982123,8371697148]
+ADMIN_IDS = [int(x) for x in str(_admin_env).split(",") if str(x).strip().isdigit()] or [7360982123]
 
 def is_admin(uid: int) -> bool: return uid in ADMIN_IDS
 def L(uid: int) -> str: return get_user_lang(uid) or "en"

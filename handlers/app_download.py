@@ -23,7 +23,7 @@ def _locale(uid: int) -> str:
     return get_user_lang(uid) or "ar"
 
 _admin_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
-ADMIN_IDS = [int(x) for x in str(_admin_env).split(",") if str(x).strip().isdigit()] or [7360982123,8371697148]
+ADMIN_IDS = [int(x) for x in str(_admin_env).split(",") if str(x).strip().isdigit()] or [7360982123]
 
 def _is_admin(uid: int) -> bool:
     return uid in ADMIN_IDS

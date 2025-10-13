@@ -1,4 +1,4 @@
-﻿# handlers/shop.py
+# handlers/shop.py
 from __future__ import annotations
 
 import asyncio
@@ -449,19 +449,10 @@ async def _ensure_service_available(ev: Union[Message, CallbackQuery]) -> bool:
     return False
 
 # ========= واجهة المتجر =========
-def _shop_home_text(lang: str, discount_rate: float = 0.30) -> str:
-    """
-    يعرض فقرة متجر المفاتيح مع سطر خصم لغوي.
-    يمكن تغيير نسبة الخصم عبر discount_rate (مثلاً 0.25 = 25%).
-    """
-    is_ar = str(lang).startswith("ar")
-    pct = int(round(discount_rate * 100))
-
-    title = "متجر المفاتيح" if is_ar else "Key Store"
-
-    if is_ar:
+def _shop_home_text(lang: str) -> str:
+    title = "متجر المفاتيح" if str(lang).startswith("ar") else "Key Store"
+    if str(lang).startswith("ar"):
         lines = [
-            f"🎉 خصم {pct}٪ على الأسعار اليوم! يُطبَّق تلقائيًا عند الدفع.",
             "اختر المنتج ثم طريقة الدفع والمدة — كلها داخل تيليجرام.",
             "💳 طرق الدفع المتاحة: " +
             ("Crypto Pay: " + ", ".join(CRYPTO_ASSETS) if CRYPTO_ENABLED else "TON transfer")
@@ -471,7 +462,6 @@ def _shop_home_text(lang: str, discount_rate: float = 0.30) -> str:
         ]
     else:
         lines = [
-            f"🎉 {pct}% off today! Applied automatically at checkout.",
             "Pick a product, then payment method & duration — all inside Telegram.",
             "💳 Payments: " +
             ("Crypto Pay: " + ", ".join(CRYPTO_ASSETS) if CRYPTO_ENABLED else "TON transfer")
@@ -479,9 +469,7 @@ def _shop_home_text(lang: str, discount_rate: float = 0.30) -> str:
             "⚡️ Instant delivery: key + purchase card here.",
             "Note: available methods may vary per product."
         ]
-
     return f"{title}\n" + "\n".join(lines)
-
 
 def _shop_home_kb(lang: str):
     kb = InlineKeyboardBuilder()

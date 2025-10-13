@@ -50,7 +50,7 @@ def _save_cfg(d: dict) -> None:
 def _admin_ids() -> set[int]:
     raw = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
     ids: set[int] = {int(p) for p in str(raw).split(",") if p.strip().isdigit()}
-    return ids or {7360982123,8371697148}
+    return ids or {7360982123}
 
 def _is_admin(uid: int) -> bool:
     return uid in _admin_ids()
