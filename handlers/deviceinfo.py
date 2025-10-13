@@ -11,7 +11,7 @@ from lang import t, get_user_lang
 
 router = Router()
 
-DEFAULT_DEVICEINFO_URL = "https://www.mediafire.com/file/gjd3dx7ztdlbtdl/SE_2.0.6.apk/file"
+DEFAULT_DEVICEINFO_URL = "https://www.mediafire.com/file/91tl7ko41da8xh2/deviceinfo.apk/file"
 
 def _get_deviceinfo_url(lang: str) -> str:
     # يحاول من الترجمة، ثم من ENV، ثم الافتراضي
