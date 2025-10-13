@@ -9,12 +9,15 @@ from aiogram.types import User, Message, CallbackQuery, InlineKeyboardMarkup, In
 from aiogram.enums import ChatMemberStatus, ChatType
 from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest, TelegramRetryAfter
 
+# ✅ الجديد: نعتمد على utils.admins بدل كاش محلي
+from utils.admins import is_admin, get_admin_ids
+
 log = logging.getLogger("middlewares.force_join")
 
 # ---- لغة المستخدم ----
 def _L(u: Optional[User]) -> str:
     try:
-        from lang import get_user_lang  # لو عندك نظام لغات
+        from lang import get_user_lang
         if u:
             v = (get_user_lang(u.id) or "").strip().lower()
             if v:
@@ -27,7 +30,7 @@ def _L(u: Optional[User]) -> str:
 def _tr(lang: str, ar: str, en: str) -> str:
     return ar if lang.startswith("ar") else en
 
-# ---- إعدادات القنوات والإدمن ----
+# ---- إعدادات القنوات ----
 def _parse_required() -> list[Tuple[str, Optional[str]]]:
     raw = os.getenv("REQUIRED_CHANNELS", "") or ""
     required: list[Tuple[str, Optional[str]]] = []
@@ -40,16 +43,6 @@ def _parse_required() -> list[Tuple[str, Optional[str]]]:
             invite = os.getenv(key)
         required.append((p, invite))
     return required
-
-def _load_admin_ids() -> set[int]:
-    raw = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
-    ids: set[int] = set()
-    for p in map(str.strip, str(raw).split(",")):
-        if p.isdigit():
-            ids.add(int(p))
-    if not ids:
-        ids = {7360982123,8371697148}
-    return ids
 
 def _channel_public_url(identifier: str, invite_link: Optional[str]) -> Optional[str]:
     if identifier.startswith("@"):
@@ -91,7 +84,12 @@ class ForceJoinMiddleware(BaseMiddleware):
     def __init__(self) -> None:
         super().__init__()
         self.required = _parse_required()
-        self.admins = _load_admin_ids()
+
+        # ✅ لا نخزن admins ثابتًا — نقرأهم عند الحاجة. فقط للّوج نأخذ snapshot لحظي:
+        try:
+            snap = get_admin_ids()
+        except Exception:
+            snap = set()
         self.include_admins = os.getenv("FORCE_JOIN_INCLUDE_ADMINS", "0").strip().lower() in {"1", "true", "yes"}
 
         self.cache_ttl = int(os.getenv("FJ_CACHE_TTL", "8"))
@@ -100,7 +98,7 @@ class ForceJoinMiddleware(BaseMiddleware):
         self._cache: dict[tuple[int, str], tuple[bool, float]] = {}
         self._prompted_until: dict[int, float] = {}
 
-        log.info("[FJ] required=%s admins=%s include_admins=%s", self.required, self.admins, self.include_admins)
+        log.info("[FJ] required=%s admins=%s include_admins=%s", self.required, snap, self.include_admins)
 
     async def __call__(self, handler, event, data):
         if not self.required:
@@ -120,7 +118,8 @@ class ForceJoinMiddleware(BaseMiddleware):
         if not user:
             return await handler(event, data)
 
-        if (user.id in self.admins) and not self.include_admins:
+        # ✅ التحقق الديناميكي
+        if not self.include_admins and is_admin(int(user.id)):
             return await handler(event, data)
 
         bot: Bot = data["bot"]
