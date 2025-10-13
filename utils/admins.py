@@ -1,174 +1,137 @@
 ﻿# utils/admins.py
 from __future__ import annotations
 
-import json, os, threading, time
+import os, json
 from pathlib import Path
-from typing import Iterable, List, Set
-from utils.paths import BASE
-from utils.admin_roles import load_roles
+from typing import Iterable
 
-# ───────────── مواقع التخزين ─────────────
-ADMIN_DIR: Path = BASE / "admin"
-ADMIN_DIR.mkdir(parents=True, exist_ok=True)
-STORE: Path = ADMIN_DIR / "admin_ids.json"
+# مسار ملف تخزين الأدمنز (للقابلية للتعديل أثناء التشغيل)
+DATA_DIR = Path(os.getenv("DATA_DIR") or os.getenv("BASE") or "data")
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+ADMINS_FILE = DATA_DIR / "admins.json"
 
-# توافق قديم: data/admin_ids.json
-LEGACY_STORE: Path = (BASE / ".." / "data" / "admin_ids.json").resolve()
-
-_LOCK = threading.Lock()
-
-# ───────────── أدوات مساعدة ─────────────
-def _parse_ids_env(val: str | None) -> List[int]:
-    if not val:
-        return []
-    raw = val.replace(";", ",")
-    out: List[int] = []
-    for tok in raw.split(","):
-        tok = tok.strip()
-        if tok and tok.lstrip("-").isdigit():
-            try:
-                out.append(int(tok))
-            except Exception:
-                pass
-    # إزالة التكرار مع الحفاظ على الترتيب
-    seen = set(); dedup: List[int] = []
-    for v in out:
-        if v not in seen:
-            seen.add(v); dedup.append(v)
-    return dedup
-
-def _atomic_write(path: Path, data) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    payload = json.dumps(data, ensure_ascii=False, indent=2)
-    tmp = path.with_name(f"{path.name}.{int(time.time()*1000)}.{os.getpid()}.tmp")
-    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
-        f.write(payload); f.flush()
-        try: os.fsync(f.fileno())
-        except Exception: pass
-    last_err = None
-    for i in range(6):
-        try:
-            try:
-                if path.exists():
-                    path.chmod(0o666)
-            except Exception:
-                pass
-            os.replace(tmp, path)
-            return
-        except Exception as e:
-            last_err = e
-            time.sleep(0.1 * (i + 1))
+# ---------- أدوات داخلية ----------
+def _parse_ids(val: str | Iterable[int] | None) -> list[int]:
+    out: list[int] = []
+    if val is None:
+        return out
+    if isinstance(val, str):
+        for p in val.replace(";", ",").split(","):
+            p = p.strip()
+            if p.isdigit():
+                out.append(int(p))
+        return sorted(set(out))
     try:
-        os.replace(tmp, path)
+        for v in val:  # type: ignore
+            if isinstance(v, int):
+                out.append(v)
+            elif isinstance(v, str) and v.isdigit():
+                out.append(int(v))
     except Exception:
-        try:
-            if tmp.exists(): tmp.unlink()
-        finally:
-            if last_err: raise last_err
-            raise
+        pass
+    return sorted(set(out))
 
-def _load_json(path: Path, default):
-    if not path.exists():
-        return default
+def _load_json(p: Path) -> dict:
     try:
-        raw = path.read_text(encoding="utf-8")
-        return json.loads(raw or "null") or default
+        if p.exists():
+            return json.loads(p.read_text(encoding="utf-8")) or {}
     except Exception:
-        return default
+        pass
+    return {}
 
-def _migrate_legacy_if_needed():
+def _save_json(p: Path, obj: dict) -> None:
     try:
-        if LEGACY_STORE.exists() and not STORE.exists():
-            data = _load_json(LEGACY_STORE, [])
-            _atomic_write(STORE, data)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        tmp = p.with_suffix(".tmp")
+        tmp.write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")
+        os.replace(tmp, p)
     except Exception:
         pass
 
-# ───────────── الحالة (state) ─────────────
-# المالكين من البيئة (محميون من الحذف)
-_OWNERS_ENV = (
-    os.getenv("OWNER_IDS")
-    or os.getenv("ADMIN_IDS")
-    or os.getenv("ADMIN_ID")
-    or ""
-)
-OWNERS: Set[int] = set(_parse_ids_env(_OWNERS_ENV))
+# ---------- تحميل من البيئة + الملف ----------
+_env_admins = _parse_ids(os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID"))
+_env_owners = _parse_ids(os.getenv("OWNER_IDS") or os.getenv("OWNER_ID"))
 
-def _load_file_ids() -> Set[int]:
-    arr = _load_json(STORE, [])
-    out: Set[int] = set()
-    for x in arr or []:
-        s = str(x).strip()
-        if s.lstrip("-").isdigit():
-            try: out.add(int(s))
-            except Exception: pass
-    return out
+_store = _load_json(ADMINS_FILE)
+_file_admins = _parse_ids((_store.get("admins") if isinstance(_store.get("admins"), list) else []))
+_file_owners = _parse_ids((_store.get("owners") if isinstance(_store.get("owners"), list) else []))
 
-def _save_file_ids(ids: Iterable[int]) -> None:
-    # لا نخزن المالكين في الملف (يبقون من البيئة)
-    data = sorted({int(x) for x in ids if int(x) not in OWNERS})
-    _atomic_write(STORE, data)
+# اجمع الاثنين (البيئة + الملف)
+_all_admins = sorted(set(_env_admins + _file_admins))
+_all_owners = sorted(set(_env_owners + _file_owners))
 
-def _union_with_roles(admins: Set[int]) -> Set[int]:
+# ---------- واجهة توافقية (متغيّرات) ----------
+# ملاحظة: نخليهم "قوائم" لتكون قابلة للتقطيع/العرض بدون أخطاء
+ADMIN_IDS: list[int] = _all_admins[:]   # كان set ببعض المشاريع؛ هنا نخليها list لراحة الاستخدام
+OWNERS:    list[int] = _all_owners[:]
+
+# لأغراض أداء العضوية (اختياري)
+_ADMIN_SET = set(ADMIN_IDS) | set(OWNERS)
+
+# ---------- دوال مطلوبة/قديمة ----------
+def get_admin_ids() -> list[int]:
+    """قائمة كل الأدمن (تشمل المالكين)."""
+    return sorted(set(ADMIN_IDS) | set(OWNERS))
+
+def get_owner_ids() -> list[int]:
+    """قائمة المالكين (Owners)."""
+    return OWNERS[:]
+
+def is_admin(user_id: int) -> bool:
+    """تحقق هل المستخدم أدمن (أو مالك)."""
     try:
-        roles = load_roles()
-        default_role = set(int(x) for x in (roles.get("default") or []))
-        return set(admins) | set(OWNERS) | default_role
-    except Exception:
-        return set(admins) | set(OWNERS)
-
-def _current_admins() -> Set[int]:
-    _migrate_legacy_if_needed()
-    file_ids = _load_file_ids()
-    return _union_with_roles(file_ids)
-
-# ───────────── واجهة عامة ─────────────
-def is_admin(uid: int) -> bool:
-    try:
-        return int(uid) in _current_admins()
+        return int(user_id) in _ADMIN_SET
     except Exception:
         return False
 
 def list_admins() -> list[int]:
-    return sorted(_current_admins())
+    """قائمة الأدمن فقط (بدون المالكين)."""
+    return ADMIN_IDS[:]
 
-def add_admin(uid: int) -> tuple[bool, str]:
-    """يضيف مديرًا إلى ملف التخزين (حتى لو لم يكن Owner)."""
-    uid = int(uid)
-    with _LOCK:
-        admins = _load_file_ids() | set(OWNERS)  # مجموعة العمل شامل المالِكين مؤقتًا
-        if uid in admins:
-            return False, "already"
-        # أضِف للملف فقط إن لم يكن Owner من البيئة
-        file_ids = _load_file_ids()
-        file_ids.add(uid)
-        _save_file_ids(file_ids)
-        return True, "added"
-
-def remove_admin(uid: int) -> tuple[bool, str]:
-    """يزيل مديرًا من ملف التخزين (لن يزيل Owner القادم من البيئة)."""
-    uid = int(uid)
-    with _LOCK:
-        if uid in OWNERS:
-            return False, "owner_protected"
-        file_ids = _load_file_ids()
-        if uid not in file_ids:
-            # قد يكون قادمًا من roles أو owners، لكن ليس في الملف
-            return False, "not_found"
-        file_ids.discard(uid)
-        _save_file_ids(file_ids)
-        return True, "removed"
-
-# ───────────── توافق قديم + واجهة موحّدة ─────────────
-def get_admin_ids() -> set[int]:
-    """إرجاع مجموعة المدراء الحالية (Owners + ملف + roles.default)."""
+def add_admin(user_id: int) -> bool:
+    """أضف أدمن واحفظه في الملف (لا يضيف مالك)."""
     try:
-        return set(_current_admins())
+        uid = int(user_id)
     except Exception:
-        return set()
+        return False
+    if uid in ADMIN_IDS:
+        return True
+    ADMIN_IDS.append(uid)
+    _ADMIN_SET.add(uid)
+    _persist()
+    return True
 
-# ثابت للتوافق مع الاستيرادات القديمة:
-try:
-    ADMIN_IDS: set[int] = set(_current_admins())
-except Exception:
-    ADMIN_IDS = set()
+def remove_admin(user_id: int) -> bool:
+    """احذف أدمن واحفظ التغيير."""
+    try:
+        uid = int(user_id)
+    except Exception:
+        return False
+    if uid in ADMIN_IDS:
+        ADMIN_IDS.remove(uid)
+        # لا نحذف من OWNERS هنا
+        if uid in _ADMIN_SET and uid not in set(OWNERS):
+            _ADMIN_SET.remove(uid)
+        _persist()
+        return True
+    return False
+
+# ---------- حفظ إلى الملف ----------
+def _persist() -> None:
+    data = {
+        "admins": sorted(set(ADMIN_IDS)),
+        "owners": sorted(set(OWNERS)),
+    }
+    _save_json(ADMINS_FILE, data)
+
+# ---------- توافق أسماء قديمة ----------
+# بعض الملفات قد تعتمد على أسماء برمجية قديمة:
+# - OWNER_IDS: قمنا بتوفيرها كتوافق (تعيد نفس OWNERS)
+OWNER_IDS: list[int] = OWNERS[:]
+
+__all__ = [
+    "ADMIN_IDS", "OWNERS", "OWNER_IDS",
+    "get_admin_ids", "get_owner_ids",
+    "is_admin", "add_admin", "remove_admin", "list_admins",
+    "ADMINS_FILE",
+]
