@@ -24,7 +24,7 @@ _STRINGS = {
         "en": "✅ We received your confirmation for `{order_id}`.\nWe’ll verify the transfer shortly; keys will arrive here."
     },
     "howto_keys": {
-        "ar": "ℹ️ **طريقة تفعيل المفتاح**\n1) افتح تطبيق محرك الثعبان.\n2) من أعلى التطبيق افتح \"حول التطبيق\".\n3) اضغط **entry Key**.\n4) الصق المفتاح واضغط **Activate**.\n💡 يبدأ العدّ عند التفعيل. المفتاح يُستخدم مرة واحدة.",
+        "ar": "ℹ️ **طريقة تفعيل المفتاح**\n1) افتح تطبيق محرك الثعبان.\n2) من أعلى التطبيق افتح \\"حول التطبيق\\".\n3) اضغط **entry Key**.\n4) الصق المفتاح واضغط **Activate**.\n💡 يبدأ العدّ عند التفعيل. المفتاح يُستخدم مرة واحدة.",
         "en": "ℹ️ **How to activate**\n1) Open Snake Engine app.\n2) Open “About app”.\n3) Tap **entry Key**.\n4) Paste the key then **Activate**.\n💡 Time starts at activation. One-time key."
     },
     "profile_empty": {"ar": "لا توجد مفاتيح مشتراة بعد.", "en": "No purchased keys yet."},

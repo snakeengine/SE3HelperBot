@@ -1,6 +1,6 @@
 import os, io, re, sys
 
-TRI = ("\"\"\"", "'''")
+TRI = ("\\"\\"\\"", "'''")
 
 def split_header(text: str):
     """يرجع (prefix, rest) حيث prefix يشمل shebang/encoding + docstring لو وُجد."""

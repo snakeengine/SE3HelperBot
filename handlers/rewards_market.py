@@ -74,7 +74,7 @@ def _L(uid: int) -> str:
 
 def _fmt_hours_ar(hours: int) -> str:
     if hours < 24:
-        return f"{hours} Ø³Ø§Ø¹Ø©"
+        return f"{hours} ساعة"
     days = hours // 24
     if days == 1:
         return "ÙŠÙˆÙ…"

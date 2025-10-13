@@ -124,7 +124,7 @@ def _fmt_eta(seconds: int, lang: str) -> str:
     m = (seconds % 3600) // 60
     if (lang or "en").startswith("ar"):
         parts = []
-        if h: parts.append(f"{h} Ø³Ø§Ø¹Ø©")
+        if h: parts.append(f"{h} ساعة")
         if m: parts.append(f"{m} Ø¯Ù‚ÙŠÙ‚Ø©")
         if not parts: parts = ["Ø£Ù‚Ù„ Ù…Ù† Ø¯Ù‚ÙŠÙ‚Ø©"]
         return " Ùˆ ".join(parts)

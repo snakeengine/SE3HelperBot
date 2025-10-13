@@ -211,7 +211,7 @@ async def require_membership(msg_or_cb: Message | CallbackQuery) -> bool:
         except TelegramBadRequest as e:
             if "message is not modified" in str(e):
                 await msg_or_cb.answer(
-                    t(lang, "rewards.gate.still_missing", "Ù„Ù… Ù†Ø±ØµØ¯ Ø§Ø´ØªØ±Ø§ÙƒÙƒ Ø¨Ø¹Ø¯. ØªØ£ÙƒØ¯ Ø«Ù… Ø§Ø¶ØºØ· \"ØªØ­Ù‚Ù‚\" Ù…Ø±Ø© Ø£Ø®Ø±Ù‰."),
+                    t(lang, "rewards.gate.still_missing", "Ù„Ù… Ù†Ø±ØµØ¯ Ø§Ø´ØªØ±Ø§ÙƒÙƒ Ø¨Ø¹Ø¯. ØªØ£ÙƒØ¯ Ø«Ù… Ø§Ø¶ØºØ· \\"ØªØ­Ù‚Ù‚\\" Ù…Ø±Ø© Ø£Ø®Ø±Ù‰."),
                     show_alert=True
                 )
             else:

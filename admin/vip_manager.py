@@ -190,7 +190,7 @@ def _user_row_line(uid: str, meta: dict) -> str:
     exp   = (meta or {}).get("expiry_ts")
     exp_s = _fmt_date(exp)
     adder_s = f"by:{adder}" if adder else "by:-"
-    return f"â€¢ <code>{app}</code> â€” UID <a href=\"tg://user?id={uid}\">{uid}</a> ({adder_s}, exp:{exp_s})"
+    return f"â€¢ <code>{app}</code> â€” UID <a href=\\"tg://user?id={uid}\\">{uid}</a> ({adder_s}, exp:{exp_s})"
 
 async def _render_list(cb_msg, lang: str):
     d = list_vips() or {"users": {}}
@@ -446,7 +446,7 @@ async def vipadm_details(cb: CallbackQuery):
 
     text = (
         f"ðŸ‘‘ <b>{t(l, 'admin.vip.sub_details')}</b>\n"
-        f"ðŸ‘¤ UID: <a href=\"tg://user?id={uid}\">{uid}</a>\n"
+        f"ðŸ‘¤ UID: <a href=\\"tg://user?id={uid}\\">{uid}</a>\n"
         f"ðŸ†” SNAKE ID: <code>{app}</code>\n"
         f"ðŸ—“ï¸ {t(l,'vip.expires_on')}: <code>{exp}</code>\n"
         f"ðŸ•’ {t(l,'admin.vip.added_at')}: <code>{ts}</code>\n"

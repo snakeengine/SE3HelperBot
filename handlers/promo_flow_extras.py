@@ -97,7 +97,7 @@ def _fmt_eta(seconds: int, lang: str) -> str:
     m = (seconds % 3600) // 60
     if (lang or "en").startswith("ar"):
         parts = []
-        if h: parts.append(f"{h} Ø³Ø§Ø¹Ø©")
+        if h: parts.append(f"{h} ساعة")
         if m: parts.append(f"{m} Ø¯Ù‚ÙŠÙ‚Ø©")
         if not parts: parts = ["Ø£Ù‚Ù„ Ù…Ù† Ø¯Ù‚ÙŠÙ‚Ø©"]
         return " Ùˆ ".join(parts)
@@ -666,7 +666,7 @@ async def pick_game(cb: CallbackQuery, state: FSMContext):
 @router.message(StateFilter(RegState.enter_id))
 async def get_snake_id(msg: Message, state: FSMContext):
     raw = (msg.text or "").strip()
-    trans = str.maketrans("Ù Ù¡Ù¢Ù£Ù¤Ù¥Ù¦Ù§Ù¨Ù©","0123456789")
+    trans = str.maketrans("٠١٢٣٤٥٦٧٨٩","0123456789")
     raw = raw.translate(trans)
     sid = re.sub(r"\D+","", raw)
     if not (3 <= len(sid) <= 18):

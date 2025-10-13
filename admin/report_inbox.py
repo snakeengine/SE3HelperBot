@@ -100,7 +100,7 @@ def _human_hours_label(hours: int, lang: str) -> str:
     try: hours = int(hours)
     except Exception: return "?"
     if hours < 24:
-        return f"{hours}h" if not str(lang).startswith("ar") else f"{hours} Ø³Ø§Ø¹Ø©"
+        return f"{hours}h" if not str(lang).startswith("ar") else f"{hours} ساعة"
     days = hours // 24
     if str(lang).startswith("ar"):
         return f"{days} ÙŠÙˆÙ…" if days == 1 else f"{days} Ø£ÙŠØ§Ù…"
@@ -162,13 +162,13 @@ def _kb_chat(lang: str, th: dict) -> InlineKeyboardMarkup:
         kb.row(InlineKeyboardButton(text="ðŸ”’ " + (t(lang, "rin.close") or "Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø©"),
                                     callback_data=f"rin:close:{uid}"))
     else:
-        kb.row(InlineKeyboardButton(text="â™»ï¸ " + (t(lang, "rin.reopen") or "Ø¥Ø¹Ø§Ø¯Ø© ÙØªØ­"),
+        kb.row(InlineKeyboardButton(text="â™»ï¸ " + (t(lang, "rin.reopen") or "إعادة فتح"),
                                     callback_data=f"rin:reopen:{uid}"))
 
     # Ø£Ø²Ø±Ø§Ø± Ø§Ù„Ø­Ø¸Ø± Ø§Ù„Ù†ØµÙ‘ÙŠØ© Ø§Ù„ÙˆØ§Ø¶Ø­Ø©
     def ban_txt(h):
         if h < 24:
-            return "ðŸš« " + (t(lang, "rpadm.ban_hour") or "Ø­Ø¸Ø±: {n} Ø³").format(n=h)
+            return "ðŸš« " + (t(lang, "rpadm.ban_hour") or "حظر: {n} س").format(n=h)
         d = h // 24
         if str(lang).startswith("ar"):
             return f"ðŸš« Ø­Ø¸Ø±: {d} " + ("ÙŠÙˆÙ…" if d == 1 else "Ø£ÙŠØ§Ù…")

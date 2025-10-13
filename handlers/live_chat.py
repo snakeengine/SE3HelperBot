@@ -218,7 +218,7 @@ def _fmt_dur(sec: int, lang: str) -> str:
     m, s = divmod(r, 60)
     parts = []
     if d: parts.append(f"{d}" + (" ÙŠÙˆÙ…" if lang.startswith("ar") else "d"))
-    if h: parts.append(f"{h}" + (" Ø³Ø§Ø¹Ø©" if lang.startswith("ar") else "h"))
+    if h: parts.append(f"{h}" + (" ساعة" if lang.startswith("ar") else "h"))
     if m and not d: parts.append(f"{m}" + (" Ø¯Ù‚ÙŠÙ‚Ø©" if lang.startswith("ar") else "m"))
     if s and not d and not h: parts.append(f"{s}" + (" Ø«Ø§Ù†ÙŠØ©" if lang.startswith("ar") else "s"))
     return " ".join(parts) or ("Ø«ÙˆØ§Ù†Ù" if lang.startswith("ar") else "secs")

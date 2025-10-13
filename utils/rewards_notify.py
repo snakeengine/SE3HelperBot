@@ -82,7 +82,7 @@ def _fb(lang: str, ar_text: str, en_text: str) -> str:
 def _fmt_hours(hours: int, lang: str) -> str:
     """ØªÙ†Ø³ÙŠÙ‚ Ù…Ø¯Ø© VIP Ø¨Ø§Ù„Ù„ØºØªÙŠÙ†."""
     if hours < 24:
-        return _fb(lang, f"{hours} Ø³Ø§Ø¹Ø©", f"{hours} hour" + ("s" if hours != 1 else ""))
+        return _fb(lang, f"{hours} ساعة", f"{hours} hour" + ("s" if hours != 1 else ""))
     days = hours // 24
     if str(lang).startswith("ar"):
         if days == 1:

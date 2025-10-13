@@ -49,7 +49,7 @@ def _tf(lang: str, key: str, fallback: str) -> str:
 def _format_duration(sec: int, lang: str) -> str:
     sec = max(0, int(sec)); m = sec // 60; h = m // 60; d = h // 24
     if d >= 1: return f"{d} " + (_tf(lang,"prom.time.days","ÙŠÙˆÙ…" if lang=="ar" else "d"))
-    if h >= 1: return f"{h} " + (_tf(lang,"prom.time.hours","Ø³Ø§Ø¹Ø©" if lang=="ar" else "h"))
+    if h >= 1: return f"{h} " + (_tf(lang,"prom.time.hours","ساعة" if lang=="ar" else "h"))
     if m >= 1: return f"{m} " + (_tf(lang,"prom.time.minutes","Ø¯Ù‚ÙŠÙ‚Ø©" if lang=="ar" else "m"))
     return f"{sec} " + (_tf(lang,"prom.time.seconds","Ø«Ø§Ù†ÙŠØ©" if lang=="ar" else "s"))
 
@@ -72,7 +72,7 @@ def _since_phrase(start_ts: int, lang: str) -> str:
         return f"{lead} {mins} {unit}" if lang=="ar" else f"{mins} {unit} ago"
     hrs = mins // 60
     if hrs < 24:
-        unit = _tf(lang, "prom.time.hours", "Ø³Ø§Ø¹Ø©" if lang=="ar" else "h")
+        unit = _tf(lang, "prom.time.hours", "ساعة" if lang=="ar" else "h")
         return f"{lead} {hrs} {unit}" if lang=="ar" else f"{hrs} {unit} ago"
     days = hrs // 24
     unit = _tf(lang, "prom.time.days", "ÙŠÙˆÙ…" if lang=="ar" else "d")
@@ -146,7 +146,7 @@ def _fmt_links(links: list[str]) -> str:
     for x in links:
         s = (x or "").strip()
         if not s: continue
-        if s.startswith(("http://","https://","tg://")): out.append(f"â€¢ <a href=\"{s}\">{s}</a>")
+        if s.startswith(("http://","https://","tg://")): out.append(f"â€¢ <a href=\\"{s}\\">{s}</a>")
         else: out.append(f"â€¢ {s}")
     return "\n".join(out) if out else "â€”"
 
@@ -157,13 +157,13 @@ def _fmt_links_short(links: list[str], limit: int = 2) -> str:
         if not s: continue
         if s.startswith(("http://","https://","tg://")):
             text = s if len(s) <= 60 else (s[:57] + "â€¦")
-            items.append(f"<a href=\"{s}\">{text}</a>")
+            items.append(f"<a href=\\"{s}\\">{text}</a>")
         else:
             items.append(s)
         if len(items) >= limit: break
     return " Â· ".join(items) if items else "â€”"
 
-def _chip(text: str) -> str: return f"<span class=\"tg-spoiler\">{text}</span>"
+def _chip(text: str) -> str: return f"<span class=\\"tg-spoiler\\">{text}</span>"
 
 def _tg_line(lang: str, tg: dict) -> str:
     decl = tg.get("declared") or "-"; real = tg.get("real") or "-"; match = bool(tg.get("match"))
@@ -730,7 +730,7 @@ async def activate_finish(m: Message, state: FSMContext):
             text=_tf(lang, "promp.renew.custom", "Ù…Ø¯Ø© Ù…Ø®ØµØµØ©" if lang=="ar" else "Custom duration"),
             callback_data=f"promp:adm:activate_custom:{uid}"
         )],
-        [InlineKeyboardButton(text="âŒ " + (_tf(lang,'promp.adm.deny','Ø±ÙØ¶' if lang=='ar' else 'Deny')),
+        [InlineKeyboardButton(text="âŒ " + (_tf(lang,'promp.adm.deny','رفض' if lang=='ar' else 'Deny')),
                               callback_data=f"promp:adm:deny:{uid}")],
     ])
 

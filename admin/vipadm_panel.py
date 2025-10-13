@@ -102,7 +102,7 @@ def _kb_ticket(lang: str, req: Dict) -> InlineKeyboardMarkup:
         kb.row(
             InlineKeyboardButton(text="âœ… " + _tt(lang, "approve", "Ù…ÙˆØ§ÙÙ‚Ø©"),
                                  callback_data=f"req:approve:{rtype}:{ticket}:{uid}"),
-            InlineKeyboardButton(text="âŒ " + _tt(lang, "reject", "Ø±ÙØ¶"),
+            InlineKeyboardButton(text="âŒ " + _tt(lang, "reject", "رفض"),
                                  callback_data=f"req:reject:{rtype}:{ticket}:{uid}"),
         )
     # Ø¥Ø«Ø¨Ø§Øª Ø§Ù„Ø¯ÙØ¹/Ø§Ù„Ø¹Ù…Ù„ÙŠØ©
@@ -157,8 +157,8 @@ async def vipadm_menu(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
         return await cb.answer(_tt(_L(cb.from_user.id), "admins_only", "Ù„Ù„Ù…Ø´Ø±ÙÙŠÙ† ÙÙ‚Ø·"), show_alert=True)
     lang = _L(cb.from_user.id)
-    title = "ðŸ‘‘ " + _tt(lang, "vipadm.title", "Ø¥Ø¯Ø§Ø±Ø© VIP")
-    desc  = _tt(lang, "vipadm.choose", "Ø§Ø®ØªØ± Ø¥Ø¬Ø±Ø§Ø¡:")
+    title = "ðŸ‘‘ " + _tt(lang, "vipadm.title", "إدارة VIP")
+    desc  = _tt(lang, "vipadm.choose", "اختر إجراء:")
     await cb.message.edit_text(f"<b>{title}</b>\n{desc}",
                                reply_markup=_kb_home(lang),
                                parse_mode=ParseMode.HTML)

@@ -82,7 +82,7 @@ def _human_dur(sec: int, lang: str) -> str:
     h = m // 60
     d = h // 24
     if d >= 1: return f"{d} " + _tf(lang, "prom.time.days", "ÙŠÙˆÙ…", "day")
-    if h >= 1: return f"{h} " + _tf(lang, "prom.time.hours", "Ø³Ø§Ø¹Ø©", "hour")
+    if h >= 1: return f"{h} " + _tf(lang, "prom.time.hours", "ساعة", "hour")
     if m >= 1: return f"{m} " + _tf(lang, "prom.time.minutes", "Ø¯Ù‚ÙŠÙ‚Ø©", "minute")
     return f"{max(0,sec)} " + _tf(lang, "prom.time.seconds", "Ø«Ø§Ù†ÙŠØ©", "second")
 
@@ -170,7 +170,7 @@ def _panel_text(lang: str) -> str:
 def _panel_kb(lang: str) -> InlineKeyboardMarkup:
     kb = [
         [InlineKeyboardButton(text="ðŸ“¥ " + _tf(lang,"promadm.btn.pending","Ø§Ù„Ø·Ù„Ø¨Ø§Øª Ø§Ù„Ù…Ø¹Ù„Ù‘Ù‚Ø©","Pending requests"), callback_data="promadm:pending:1")],
-        [InlineKeyboardButton(text="ðŸ” " + _tf(lang,"promadm.btn.search","Ø¨Ø­Ø« ID","Search by ID"), callback_data="promadm:search")],
+        [InlineKeyboardButton(text="ðŸ” " + _tf(lang,"promadm.btn.search","بحث ID","Search by ID"), callback_data="promadm:search")],
         [InlineKeyboardButton(text="ðŸ“¦ " + _tf(lang,"promadm.btn.list","Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬ÙŠÙ†","Promoters list"), callback_data="promadm:list:approved:1")],
         [
             InlineKeyboardButton(text="âŒ " + _tf(lang,"promadm.btn.cancel","Ø¥Ù„ØºØ§Ø¡ Ù…Ø±ÙˆÙ‘Ø¬","Cancel promoter"), callback_data="promadm:cancel"),

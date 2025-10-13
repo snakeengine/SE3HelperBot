@@ -318,7 +318,7 @@ def _kb_main(lang: str) -> InlineKeyboardMarkup:
     maint_text        = "ðŸ› ï¸ " + tt(lang, "admin_hub_btn_maintenance", "ÙˆØ¶Ø¹ Ø§Ù„ØµÙŠØ§Ù†Ø©")
     live_text         = "ðŸ’¬ " + tt(lang, "admin.live.btn.panel", "Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„Ø­ÙŠÙ‘Ø©")
     bot_cmds_txt      = "ðŸ§¹ " + tt(lang, "admin_hub_btn_botcmds", "Ø£ÙˆØ§Ù…Ø± Ø§Ù„Ø¨ÙˆØª")
-    vip_admin_txt     = "ðŸ‘‘ " + tt(lang, "admin_hub_btn_vip_admin", "Ø¥Ø¯Ø§Ø±Ø© VIP")
+    vip_admin_txt     = "ðŸ‘‘ " + tt(lang, "admin_hub_btn_vip_admin", "إدارة VIP")
     rewards_admin_txt = "ðŸ† " + tt(lang, "admin_hub_btn_rewards_admin", "Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø¬ÙˆØ§Ø¦Ø²")
     shop_admin_txt    = "ðŸ›ï¸ " + tt(lang, "admin_hub_btn_shop", "Ù…ØªØ¬Ø± Ø§Ù„Ù…ÙØ§ØªÙŠØ­")
     admin_access_txt  = "ðŸ‘¥ " + tt(lang, "admin_hub_btn_admin_access", "Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø£Ø¯Ù…Ù†")
@@ -377,7 +377,7 @@ def _kb_reports(lang: str) -> InlineKeyboardMarkup:
         InlineKeyboardButton(text=f"ðŸš« {tt(lang,'admin_hub_btn_reports_banned','Ø§Ù„Ù…Ø­Ø¸ÙˆØ±ÙŠÙ†')} ({blocked_n})", callback_data="ra:banned"),
         InlineKeyboardButton(text=f"ðŸ“Š {tt(lang,'admin_hub_btn_reports_stats','Ø¥Ø­ØµØ§Ø¡Ø§Øª')}",              callback_data="ah:rstats"),
     )
-    kb.row(InlineKeyboardButton(text="ðŸ› ï¸ " + tt(lang,"admin_hub_btn_reports_shortcuts","Ø§Ø®ØªØµØ§Ø±Ø§Øª"), callback_data="ah:rshort"))
+    kb.row(InlineKeyboardButton(text="ðŸ› ï¸ " + tt(lang,"admin_hub_btn_reports_shortcuts","اختصارات"), callback_data="ah:rshort"))
     kb.row(InlineKeyboardButton(text="â¬…ï¸ " + tt(lang,"admin.back","Ø±Ø¬ÙˆØ¹"), callback_data="ah:menu"))
     return kb.as_markup()
 
@@ -463,7 +463,7 @@ def _kb_alerts_list(lang: str, items: list[dict], page: int = 0, per_page: int =
         # Ø¹Ù…ÙˆØ¯Ø§Ù†: Ù†Øµ Ù‚ØµÙŠØ± + Ø²Ø± Ø­Ø°Ù
         kb.row(
             InlineKeyboardButton(text=f"ðŸ”” {_k} Â· {_id[:6]} â€¢ {preview}", callback_data="ah:noop"),
-            InlineKeyboardButton(text="ðŸ—‘ï¸ " + tt(lang,"alerts.btn.delete_one","Ø­Ø°Ù"), callback_data=f"al:blk:{_id}:{page}")
+            InlineKeyboardButton(text="ðŸ—‘ï¸ " + tt(lang,"alerts.btn.delete_one","حذف"), callback_data=f"al:blk:{_id}:{page}")
         )
 
     # ØªÙ†Ù‚Ù‘Ù„
@@ -492,7 +492,7 @@ def _kb_alerts_trash(lang: str, bl_ids: list[str], page: int = 0, per_page: int 
     for aid in slice_:
         kb.row(
             InlineKeyboardButton(text=f"ðŸ—‘ï¸ {aid}", callback_data="ah:noop"),
-            InlineKeyboardButton(text="â™»ï¸ " + tt(lang,"alerts.btn.restore","Ø§Ø³ØªØ±Ø¬Ø§Ø¹"), callback_data=f"al:unblk:{aid}:{page}")
+            InlineKeyboardButton(text="â™»ï¸ " + tt(lang,"alerts.btn.restore","استرجاع"), callback_data=f"al:unblk:{aid}:{page}")
         )
     nav = []
     if start > 0:
@@ -915,7 +915,7 @@ async def admin_cmd(msg: Message):
         return
     lang = get_user_lang(msg.from_user.id) or "en"
     title = tt(lang, "admin_hub_title", "Ù„ÙˆØ­Ø© Ø§Ù„Ø£Ø¯Ù…Ù† âš¡")
-    desc  = tt(lang, "admin_hub_choose", "Ø§Ø®ØªØ± Ø¥Ø¬Ø±Ø§Ø¡:")
+    desc  = tt(lang, "admin_hub_choose", "اختر إجراء:")
     await msg.answer(f"<b>{title}</b>\n{desc}",
                      reply_markup=_kb_main(lang),
                      disable_web_page_preview=True,
@@ -928,7 +928,7 @@ async def ah_menu(cb: CallbackQuery):
         return await cb.answer(tt(l, "admins_only", "Ù„Ù„Ù…Ø´Ø±ÙÙŠÙ† ÙÙ‚Ø·"), show_alert=True)
     lang = get_user_lang(cb.from_user.id) or "en"
     title = tt(lang, "admin_hub_title", "Ù„ÙˆØ­Ø© Ø§Ù„Ø£Ø¯Ù…Ù† âš¡")
-    desc  = tt(lang, "admin_hub_choose", "Ø§Ø®ØªØ± Ø¥Ø¬Ø±Ø§Ø¡:")
+    desc  = tt(lang, "admin_hub_choose", "اختر إجراء:")
     try:
         await cb.message.edit_text(f"<b>{title}</b>\n{desc}",
                                    reply_markup=_kb_main(lang),
@@ -1121,7 +1121,7 @@ async def admin_cmd(msg: Message):
         return
     lang = get_user_lang(msg.from_user.id) or "en"
     title = tt(lang, "admin_hub_title", "Ù„ÙˆØ­Ø© Ø§Ù„Ø£Ø¯Ù…Ù† âš¡")
-    desc  = tt(lang, "admin_hub_choose", "Ø§Ø®ØªØ± Ø¥Ø¬Ø±Ø§Ø¡:")
+    desc  = tt(lang, "admin_hub_choose", "اختر إجراء:")
     await msg.answer(f"<b>{title}</b>\n{desc}",
                      reply_markup=_kb_main(lang),
                      disable_web_page_preview=True,
@@ -1134,7 +1134,7 @@ async def ah_menu(cb: CallbackQuery):
         return await cb.answer(tt(l, "admins_only", "Ù„Ù„Ù…Ø´Ø±ÙÙŠÙ† ÙÙ‚Ø·"), show_alert=True)
     lang = get_user_lang(cb.from_user.id) or "en"
     title = tt(lang, "admin_hub_title", "Ù„ÙˆØ­Ø© Ø§Ù„Ø£Ø¯Ù…Ù† âš¡")
-    desc  = tt(lang, "admin_hub_choose", "Ø§Ø®ØªØ± Ø¥Ø¬Ø±Ø§Ø¡:")
+    desc  = tt(lang, "admin_hub_choose", "اختر إجراء:")
     try:
         await cb.message.edit_text(f"<b>{title}</b>\n{desc}",
                                    reply_markup=_kb_main(lang),
@@ -1263,7 +1263,7 @@ def _kb_live_main(lang: str, admin_id: int) -> InlineKeyboardMarkup:
     )
     # Ø£Ø²Ø±Ø§Ø± Ø³Ø±ÙŠØ¹Ø© Ø¨Ø§Ù„Ø­Ø¸Ø±/Ø±ÙØ¹ Ø§Ù„Ø­Ø¸Ø± Ø¹Ø¨Ø± UID
     kb.row(
-        InlineKeyboardButton(text="ðŸš« " + tt(lang, "admin.live.btn.block_uid", "Ø­Ø¸Ø± (UID)"), callback_data="liveadm:ban_open"),
+        InlineKeyboardButton(text="ðŸš« " + tt(lang, "admin.live.btn.block_uid", "حظر (UID)"), callback_data="liveadm:ban_open"),
         InlineKeyboardButton(text="ðŸ”“ " + tt(lang, "admin.live.btn.unban_uid", "Ø±ÙØ¹ Ø§Ù„Ø­Ø¸Ø± (UID)"), callback_data="liveadm:unban_open"),
     )
     kb.row(InlineKeyboardButton(text="â¬…ï¸ " + tt(lang, "admin.back", "Ø±Ø¬ÙˆØ¹"), callback_data="ah:menu"))
@@ -1329,7 +1329,7 @@ def _kb_live_list(lang: str, waiting: list[int], active: list[tuple[int,int]]) -
         )
         # Ø³Ø·Ø± 2: Ø§Ù„Ø­Ø¸Ø± ÙÙ‚Ø·
         kb.row(
-            InlineKeyboardButton(text=tt(lang, "admin.live.btn.block", "Ø­Ø¸Ø±"), callback_data=f"liveadm:block:{uid}")
+            InlineKeyboardButton(text=tt(lang, "admin.live.btn.block", "حظر"), callback_data=f"liveadm:block:{uid}")
         )
 
     # Ø§Ù„Ø¬Ù„Ø³Ø§Øª Ø§Ù„Ù†Ø´Ø·Ø©
@@ -1341,7 +1341,7 @@ def _kb_live_list(lang: str, waiting: list[int], active: list[tuple[int,int]]) -
         )
         # Ø³Ø·Ø± 2: Ø­Ø¸Ø±/Ø¥Ù„ØºØ§Ø¡ Ø­Ø¸Ø±
         kb.row(
-            InlineKeyboardButton(text=tt(lang, "admin.live.btn.block", "Ø­Ø¸Ø±"),          callback_data=f"liveadm:block:{uid}"),
+            InlineKeyboardButton(text=tt(lang, "admin.live.btn.block", "حظر"),          callback_data=f"liveadm:block:{uid}"),
             InlineKeyboardButton(text=tt(lang, "admin.live.btn.unblock", "Ø¥Ù„ØºØ§Ø¡ Ø­Ø¸Ø±"), callback_data=f"liveadm:unblock:{uid}")
         )
 
@@ -1506,7 +1506,7 @@ async def ah_bot_cmds(cb: CallbackQuery):
         return await cb.answer(t(l, "admins_only"), show_alert=True)
     lang = get_user_lang(cb.from_user.id) or "en"
     title = "ðŸ§¹ " + tt(lang, "admin.botcmds.title", "Ø§Ù„ØªØ­ÙƒÙ… Ø¨Ø£ÙˆØ§Ù…Ø± Ø§Ù„Ø¨ÙˆØª")
-    desc  = tt(lang, "admin.botcmds.desc", "Ø§Ø®ØªØ± Ø¥Ø¬Ø±Ø§Ø¡:")
+    desc  = tt(lang, "admin.botcmds.desc", "اختر إجراء:")
     await cb.message.edit_text(f"<b>{title}</b>\n{desc}",
                                reply_markup=_kb_bot_cmds(lang),
                                disable_web_page_preview=True,
@@ -1682,10 +1682,10 @@ async def open_app_panel(cb: CallbackQuery):
             ver_txt = ""
 
     kb = InlineKeyboardBuilder()
-    kb.button(text="ðŸ“¤ " + tt(lang, "admin.app.btn_upload", "Ø±ÙØ¹"), callback_data="adm:app_upload")
+    kb.button(text="ðŸ“¤ " + tt(lang, "admin.app.btn_upload", "رفع"), callback_data="adm:app_upload")
     kb.button(text="ðŸ“¥ " + tt(lang, "admin.app.btn_send", "Ø¥Ø±Ø³Ø§Ù„") + ver_txt, callback_data="adm:app_send")
     kb.button(text="â„¹ï¸ " + tt(lang, "admin.app.btn_info", "Ù…Ø¹Ù„ÙˆÙ…Ø§Øª"),   callback_data="adm:app_info")
-    kb.button(text="ðŸ—‘ï¸ " + tt(lang, "admin.app.btn_remove", "Ø­Ø°Ù"), callback_data="adm:app_remove")
+    kb.button(text="ðŸ—‘ï¸ " + tt(lang, "admin.app.btn_remove", "حذف"), callback_data="adm:app_remove")
     kb.adjust(2)
 
     title = tt(lang, "admin.app.title", "Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„ØªØ·Ø¨ÙŠÙ‚") + (f" â€” {ver_val}" if ver_val else "")
@@ -1834,7 +1834,7 @@ async def cmd_vipadm(msg: Message):
         return
     lang = get_user_lang(msg.from_user.id) or "en"
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="ðŸ‘‘ " + tt(lang, "admin_hub_btn_vip_admin", "Ø¥Ø¯Ø§Ø±Ø© VIP"),
+        [InlineKeyboardButton(text="ðŸ‘‘ " + tt(lang, "admin_hub_btn_vip_admin", "إدارة VIP"),
                               callback_data="vipadm:menu")],
         [InlineKeyboardButton(text=tt(lang, "admin.back", "Ø±Ø¬ÙˆØ¹"), callback_data="ah:menu")]
     ])

@@ -150,7 +150,7 @@ def _panel_kb(lang: str) -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="ðŸš« " + _tf(lang,"promadm.btn.banned","Ø§Ù„Ù…Ø­Ø¸ÙˆØ±ÙˆÙ† (Ù†Ø´Ø·)","Banned (active)"), callback_data="promadm:list:banned:1"),
             InlineKeyboardButton(text="ðŸ“£ " + _tf(lang,"promadm.btn.box","Ø¨ÙˆÙƒØ³ Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬ÙŠÙ†","Promoters box"), callback_data="promadm:box:1"),
         ],
-        [InlineKeyboardButton(text="ðŸ”Ž " + _tf(lang,"promadm.btn.search","Ø¨Ø­Ø« ID","Search by ID"), callback_data="promadm:search")],
+        [InlineKeyboardButton(text="ðŸ”Ž " + _tf(lang,"promadm.btn.search","بحث ID","Search by ID"), callback_data="promadm:search")],
         [InlineKeyboardButton(text="âš™ï¸ " + _tf(lang,"promadm.btn.settings","Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª","Settings"), callback_data="promadm:settings")],
         [InlineKeyboardButton(text="ðŸ”„ " + _tf(lang,"promadm.btn.refresh","ØªØ­Ø¯ÙŠØ«","Refresh"), callback_data="promadm:open")],
         [InlineKeyboardButton(text="â¬…ï¸ " + _tf(lang,"promadm.btn.back","Ø±Ø¬ÙˆØ¹","Back"), callback_data="ah:menu")],

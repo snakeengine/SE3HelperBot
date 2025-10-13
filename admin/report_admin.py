@@ -200,7 +200,7 @@ def _panel_kb(lang: str, *, viewer_id: int | None = None) -> InlineKeyboardMarku
             InlineKeyboardButton(text="â± " + _tf(lang,"ra.btn_cooldown","ØªØºÙŠÙŠØ± Ø§Ù„ØªØ¨Ø±ÙŠØ¯"), callback_data="ra:cooldown"),
         ],
         [
-            InlineKeyboardButton(text="ðŸš« " + _tf(lang,"ra.btn_ban","Ø­Ø¸Ø± (uid Ø³Ø§Ø¹Ø§Øª|perm)"), callback_data="ra:ban"),
+            InlineKeyboardButton(text="ðŸš« " + _tf(lang,"ra.btn_ban","حظر (uid ساعات|perm)"), callback_data="ra:ban"),
             InlineKeyboardButton(text="â™»ï¸ " + _tf(lang,"ra.btn_unban","Ø±ÙØ¹ Ø§Ù„Ø­Ø¸Ø±"), callback_data="ra:unban"),
         ],
         [InlineKeyboardButton(text="ðŸ§½ " + _tf(lang,"ra.btn_clearcd","Ù…Ø³Ø­ ØªØ¨Ø±ÙŠØ¯ Ù…Ø³ØªØ®Ø¯Ù…"), callback_data="ra:clearcd")],

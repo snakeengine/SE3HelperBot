@@ -204,7 +204,7 @@ def _format_duration(sec: int, lang: str) -> str:
     h = m // 60
     d = h // 24
     if d >= 1: return f"{d} " + _tf(lang, "prom.time.days", "ÙŠÙˆÙ…", "day(s)")
-    if h >= 1: return f"{h} " + _tf(lang, "prom.time.hours", "Ø³Ø§Ø¹Ø©", "hour(s)")
+    if h >= 1: return f"{h} " + _tf(lang, "prom.time.hours", "ساعة", "hour(s)")
     if m >= 1: return f"{m} " + _tf(lang, "prom.time.minutes", "Ø¯Ù‚ÙŠÙ‚Ø©", "minute(s)")
     return f"{sec} " + _tf(lang, "prom.time.seconds", "Ø«Ø§Ù†ÙŠØ©", "second(s)")
 

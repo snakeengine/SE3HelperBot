@@ -1175,7 +1175,7 @@ async def text_mux(msg: Message):
         return
 
     raw = (msg.text or "").strip()
-    if raw.lower().startswith(("/done", "done", "Ø­ÙØ¸", "/save")):
+    if raw.lower().startswith(("/done", "done", "حفظ", "/save")):
         return await _inv_save_from_message(msg)
     if raw.lower().startswith(("/cancel", "cancel", "Ø§Ù„ØºØ§Ø¡", "Ø¥Ù„ØºØ§Ø¡")):
         _INV_SESS.pop(uid, None)
@@ -1414,7 +1414,7 @@ async def stars_cmd(msg: Message):
     for p in PRODUCTS:
         Sp = _prices_stars_effective(p)
         lines += [
-            f"â­ Ø£Ø³Ø¹Ø§Ø± ({p}):",
+            f"⭐ أسعار ({p}):",
             f"â€¢ 3d: â­{Sp[3]}",
             f"â€¢ 10d: â­{Sp[10]}",
             f"â€¢ 30d: â­{Sp[30]}",
