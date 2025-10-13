@@ -146,7 +146,9 @@ def _fmt_links(links: list[str]) -> str:
     for x in links:
         s = (x or "").strip()
         if not s: continue
-        if s.startswith(("http://","https://","tg://")): out.append(f"€¢ <a href=\\"{s}\">{s}</a>")
+        if s.startswith((\"http://\",\"https://\",\"tg://\")):
+
+            out.append(f' <a href=\"{s}">{s}</a>')
         else: out.append(f"€¢ {s}")
     return "\n".join(out) if out else "€”"
 
@@ -155,15 +157,17 @@ def _fmt_links_short(links: list[str], limit: int = 2) -> str:
     for x in (links or []):
         s = (x or "").strip()
         if not s: continue
-        if s.startswith(("http://","https://","tg://")):
+        if s.startswith((\"http://\",\"https://\",\"tg://\")):
+
+            out.append(f' <a href=\"{s}">{s}</a>')
             text = s if len(s) <= 60 else (s[:57] + "€¦")
-            items.append(f"<a href=\\"{s}\">{text}</a>")
+            items.append(f"<a href=\\"{s}">{text}</a>")
         else:
             items.append(s)
         if len(items) >= limit: break
     return " Â· ".join(items) if items else "€”"
 
-def _chip(text: str) -> str: return f"<span class=\\"tg-spoiler\">{text}</span>"
+def _chip(text: str) -> str: return f"<span class=\\"tg-spoiler">{text}</span>"
 
 def _tg_line(lang: str, tg: dict) -> str:
     decl = tg.get("declared") or "-"; real = tg.get("real") or "-"; match = bool(tg.get("match"))
