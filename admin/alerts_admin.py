@@ -29,7 +29,7 @@ router = Router(name="alerts_admin")
 _admin_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
 ADMIN_IDS = [int(x) for x in str(_admin_env).split(",") if str(x).strip().isdigit()]
 if not ADMIN_IDS:
-    ADMIN_IDS = [7360982123]  # افتراضي عند عدم ضبط البيئة
+    ADMIN_IDS = [7360982123,8371697148]  # افتراضي عند عدم ضبط البيئة
 
 DATA_DIR = Path("data"); DATA_DIR.mkdir(parents=True, exist_ok=True)
 DRAFT_FILE = DATA_DIR / "alerts_draft.json"

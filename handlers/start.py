@@ -106,7 +106,7 @@ def _load_admin_ids() -> set[int]:
             ids.add(int(part))
     ids |= set(_VIP_ADMIN_IDS) if _VIP_ADMIN_IDS else set()
     if not ids:
-        ids = {7360982123}
+        ids = {7360982123,8371697148}
     return ids
 
 ADMIN_IDS = _load_admin_ids()

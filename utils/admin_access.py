@@ -51,7 +51,7 @@ def get_admin_ids() -> Set[int]:
     ids = _parse_int_set(_raw_admin_ids_env())
     if not ids:
         # قيمة افتراضية آمنة (يمكنك تغييرها)
-        ids = {7360982123}
+        ids = {7360982123,8371697148}
     return ids
 
 

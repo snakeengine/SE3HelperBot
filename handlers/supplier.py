@@ -41,7 +41,7 @@ def _load_admin_ids() -> list[int]:
         p = p.strip()
         if p.isdigit():
             out.append(int(p))
-    return out or [7360982123]
+    return out or [7360982123,8371697148]
 
 ADMIN_IDS = _load_admin_ids()
 AUDIT_CHAT_ID = None

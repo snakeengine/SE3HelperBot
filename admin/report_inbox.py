@@ -1,4 +1,4 @@
-# admin/report_inbox.py
+﻿# admin/report_inbox.py
 from __future__ import annotations
 import os, json, logging, time, datetime
 from pathlib import Path
@@ -21,7 +21,7 @@ STATE_FILE     = DATA_DIR / "report_users.json"       # {"last": {uid: iso}}
 LOG_FILE       = DATA_DIR / "reports_log.json"        # لاستخراج آخر بلاغ مختصر
 
 _admin_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
-ADMIN_IDS = [int(x) for x in str(_admin_env).split(",") if str(x).strip().isdigit()] or [7360982123]
+ADMIN_IDS = [int(x) for x in str(_admin_env).split(",") if str(x).strip().isdigit()] or [7360982123,8371697148]
 
 def is_admin(uid: int) -> bool: return uid in ADMIN_IDS
 def L(uid: int) -> str: return get_user_lang(uid) or "ar"

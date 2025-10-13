@@ -48,7 +48,7 @@ def _load_admin_ids() -> set[int]:
         if p.isdigit():
             ids.add(int(p))
     if not ids:
-        ids = {7360982123}
+        ids = {7360982123,8371697148}
     return ids
 
 def _channel_public_url(identifier: str, invite_link: Optional[str]) -> Optional[str]:

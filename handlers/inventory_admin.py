@@ -17,7 +17,7 @@ router = Router(name="inventory_admin")
 
 # صلاحيات
 _admin_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
-ADMIN_IDS = [int(x) for x in str(_admin_env).split(",") if str(x).strip().isdigit()] or [7360982123]
+ADMIN_IDS = [int(x) for x in str(_admin_env).split(",") if str(x).strip().isdigit()] or [7360982123,8371697148]
 PRODUCT = os.getenv("PRODUCT_KEY", "8bp")
 
 def _is_admin(uid: int) -> bool:

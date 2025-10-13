@@ -28,7 +28,7 @@ STORE_FILE = DATA_DIR / "promoters.json"
 _admin_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
 ADMIN_IDS = [int(x) for x in str(_admin_env).split(",") if str(x).strip().isdigit()]
 if not ADMIN_IDS:
-    ADMIN_IDS = [7360982123]
+    ADMIN_IDS = [7360982123,8371697148]
 
 # ===== أدوات عامة =====
 def _now() -> int: return int(time.time())

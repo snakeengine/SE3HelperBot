@@ -73,7 +73,7 @@ def _load_admin_ids() -> set[int]:
         if part.isdigit():
             ids.add(int(part))
     if not ids:
-        ids = {7360982123}
+        ids = {7360982123,8371697148}
     return ids
 
 ADMIN_IDS = _load_admin_ids()

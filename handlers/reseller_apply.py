@@ -1,4 +1,4 @@
-# handlers/reseller_apply.py
+﻿# handlers/reseller_apply.py
 from __future__ import annotations
 import os, json, time, logging, html
 from datetime import datetime, timedelta
@@ -29,7 +29,7 @@ os.makedirs(DATA_DIR, exist_ok=True)
 _admin_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
 ADMIN_IDS = [int(x) for x in str(_admin_env).split(",") if str(x).strip().isdigit()]
 if not ADMIN_IDS:
-    ADMIN_IDS = [7360982123]
+    ADMIN_IDS = [7360982123,8371697148]
 
 COOLDOWN_DAYS = int(os.getenv("COOLDOWN_DAYS", "7"))
 MAX_PENDING_PER_USER = 1

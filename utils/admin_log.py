@@ -18,7 +18,7 @@ except Exception:
             p = p.strip()
             if p and p.lstrip("-").isdigit():
                 ids.add(int(p))
-        return ids or {7360982123}
+        return ids or {7360982123,8371697148}
 
     def get_admin_channel_id() -> Optional[int]:
         val = os.getenv("ADMIN_LOG_CHAT_ID") or os.getenv("ADMIN_CHANNEL_ID") or os.getenv("ADMIN_CHANNEL")
