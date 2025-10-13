@@ -185,6 +185,7 @@ from handlers import paydiag as _paydiag
 from admin.admin_center import router as admin_center_router   # يملك Router
 import admin.live_exclusive_only   
 from middlewares.stop_all import StopAllMiddleware  # 2) فعّل الـ patch (بدون include_router)
+from admin.live_support_admin import router as liveadm_router
 
                         
 

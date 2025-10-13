@@ -1,4 +1,4 @@
-# handlers/live_chat.py
+﻿# handlers/live_chat.py
 from __future__ import annotations
 import os, json, time, logging, inspect
 from pathlib import Path
@@ -710,6 +710,54 @@ def _kb_admin_controls(uid: int, lang: str, sid: str) -> InlineKeyboardMarkup:
     ])
 
 
+def _set_support_enabled(flag: bool):
+    cfg = _load(LIVE_CONFIG)
+    cfg["enabled"] = bool(flag)
+    _save(LIVE_CONFIG, cfg)
+
+async def _close_all_sessions(bot):
+    s = _load(SESSIONS_FILE)
+    for suid, row in list(s.items()):
+        try:
+            uid = int(suid)
+        except Exception:
+            continue
+
+        # علّم التذكرة في الصندوق
+        _inbox_call("resolve", "live", uid, status="disabled")
+
+        # بلّغ المستخدم
+        try:
+            await bot.send_message(
+                uid,
+                _tt(_L(uid),
+                    "live.disabled.user",
+                    "⛔ تم إيقاف الدردشة الحيّة مؤقتًا. جرّب لاحقًا.",
+                    "⛔ Live chat is temporarily disabled. Please try later.")
+            )
+        except Exception:
+            pass
+
+        # بلّغ الإدمن الماسك الجلسة
+        aid = row.get("admin_id")
+        if aid:
+            try:
+                await bot.send_message(
+                    aid,
+                    _tt(_L(aid),
+                        "live.disabled.admin",
+                        "تم إنهاء الجلسة بسبب إيقاف الدردشة.",
+                        "Session ended because live chat was disabled.")
+                )
+            except Exception:
+                pass
+
+        s.pop(suid, None)
+
+    _save(SESSIONS_FILE, s)
+
+
+
 @router.callback_query(F.data.startswith("live:ablock:"))
 async def cb_admin_block_quick(cb: CallbackQuery, state: FSMContext):
     if not _is_admin(cb.from_user.id):
@@ -909,6 +957,8 @@ async def cb_user_cancel(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.startswith("live:accept:"))
 async def cb_admin_accept(cb: CallbackQuery, state: FSMContext):
+    if not _support_enabled():
+        return await cb.answer("Live chat is disabled.", show_alert=True)
     if not _is_admin(cb.from_user.id):
         return await cb.answer("Admins only.", show_alert=True)
     uid  = int(cb.data.split(":")[-1])
@@ -1127,32 +1177,68 @@ async def cb_user_rate(cb: CallbackQuery):
 
 @router.message(StateFilter(LiveChat.active), ~F.text.startswith("/"), ~F.caption.startswith("/"))
 async def user_live_message(m: Message, state: FSMContext):
-    uid = m.from_user.id; lang = _L(uid)
-    if _blocked(uid): return
+    uid = m.from_user.id
+    lang = _L(uid)
+
+    # ✋ قاطع عام: إذا الدعم مقفول عالميًا، نقفل الجلسة (إن وجدت) ونبلغ المستخدم
+    if not _support_enabled():
+        if _get_session(uid):
+            _del_session(uid)
+            await state.clear()
+        return await m.answer(
+            _tt(lang, "live.unavailable",
+                "❕ الدردشة الحيّة غير متاحة الآن. حاول لاحقًا.",
+                "❕ Live chat is currently unavailable. Please try later.")
+        )
+
+    # محظور؟
+    if _blocked(uid):
+        return
+
+    # لا توجد جلسة؟
     sess = _get_session(uid)
-    if not sess: return
+    if not sess:
+        return
+
+    # منتهية؟
     if _expired(sess):
-        _del_session(uid); await state.clear()
+        _del_session(uid)
+        await state.clear()
         _inbox_call("resolve", "live", uid, status="expired")
-        return await m.answer(_tt(lang,"live.expired.msg","⏳ انتهت الجلسة. ابدأ واحدة جديدة من (الدعم).","⏳ Session expired. Start a new one from Support."))
+        return await m.answer(
+            _tt(lang, "live.expired.msg",
+                "⏳ انتهت الجلسة. ابدأ واحدة جديدة من (الدعم).",
+                "⏳ Session expired. Start a new one from Support.")
+        )
+
     _touch(uid)
 
+    # لا يزال في الانتظار → خزّن الرسائل مؤقتًا
     if sess.get("status") == "waiting":
-        q = list(sess.get("queue") or []); q.append(m.message_id); sess["queue"] = q; _put_session(uid, sess)
-        # حدّث المعاينة في صندوق الوارد (آخر رسالة)
+        q = list(sess.get("queue") or [])
+        q.append(m.message_id)
+        sess["queue"] = q
+        _put_session(uid, sess)
+
         preview = (m.caption or m.text or f"({m.content_type})")[:200]
         _inbox_call("update", "live", uid, preview)
+
         return await m.answer(
-            _tt(lang,"live.queue.received","✅ تم استلام رسالتك. سنرد بعد انضمام الدعم.\n(لا زلت في قائمة الانتظار)","✅ We got your message. We'll reply once support joins.\n(You are still in the queue)"),
+            _tt(lang, "live.queue.received",
+                "✅ تم استلام رسالتك. سنرد بعد انضمام الدعم.\n(لا زلت في قائمة الانتظار)",
+                "✅ We got your message. We'll reply once support joins.\n(You are still in the queue)"),
             reply_markup=_kb_user_wait(lang)
         )
 
-    # active → relay
-    relays = _load(RELAYS_FILE); delivered = False
+    # نشطة → Relay إلى الإدمنز
+    relays = _load(RELAYS_FILE)
+    delivered = False
     for tgt in _targets():
         try:
             cp = await m.bot.copy_message(
-                chat_id=tgt, from_chat_id=m.chat.id, message_id=m.message_id,
+                chat_id=tgt,
+                from_chat_id=m.chat.id,
+                message_id=m.message_id,
                 reply_markup=_kb_admin_controls(uid, _L(tgt), sess["sid"])
             )
             relays[f"{tgt}:{cp.message_id}"] = uid
@@ -1160,7 +1246,9 @@ async def user_live_message(m: Message, state: FSMContext):
         except Exception as e1:
             try:
                 fwd = await m.bot.forward_message(
-                    chat_id=tgt, from_chat_id=m.chat.id, message_id=m.message_id
+                    chat_id=tgt,
+                    from_chat_id=m.chat.id,
+                    message_id=m.message_id
                 )
                 relays[f"{tgt}:{fwd.message_id}"] = uid
                 delivered = True
@@ -1171,12 +1259,16 @@ async def user_live_message(m: Message, state: FSMContext):
                     delivered = True
                 else:
                     log.warning("copy/forward user->%s failed: %s | %s", tgt, e1, e2)
+
     if delivered:
         _save(RELAYS_FILE, relays)
-        await m.answer(_tt(lang,"live.tip.end","للإنهاء أو التقييم استخدم الأزرار أدناه.","Use the buttons below to end or rate."),
-                       reply_markup=_kb_user_actions(lang, sess["sid"]))
+        await m.answer(
+            _tt(lang, "live.tip.end",
+                "للإنهاء أو التقييم استخدم الأزرار أدناه.",
+                "Use the buttons below to end or rate."),
+            reply_markup=_kb_user_actions(lang, sess["sid"])
+        )
 
-# ===== Admin messages — Reply always allowed; non-reply only in FSM state =====
 
 # 1) الإدمن وهو يردّ Reply على رسالة المستخدم (يسمح دائمًا)
 @router.message(F.reply_to_message)
@@ -1194,18 +1286,33 @@ async def admin_reply_in_private(m: Message):
 async def admin_message_in_private(m: Message, state: FSMContext):
     if not _is_admin(m.from_user.id):
         return
+
+    # خروج من وضع الرد المعزول
     if m.text in {"/exit_admin", "/exit", "/leave"}:
         await state.clear()
         return await m.reply("تم الخروج من وضع الردّ ✅")
-    if m.text == "/live_on":
-        _set_admin_online(m.from_user.id, True); return await m.reply("Live chat: you are ONLINE ✅")
-    if m.text == "/live_off":
-        _set_admin_online(m.from_user.id, False); return await m.reply("Live chat: you are OFFLINE ⛔")
-    if m.reply_to_message:  # لو رد، سيعالجه الهاندلر الأول غالبًا
+
+    # حالة الإدمن الشخصية (لا تؤثر على القاطع العالمي)
+    if m.text == "/online":
+        _set_admin_online(m.from_user.id, True)
+        return await m.reply("You are ONLINE ✅")
+
+    if m.text == "/offline":
+        _set_admin_online(m.from_user.id, False)
+        return await m.reply("You are OFFLINE ⛔")
+
+    # لو كان ردًا على رسالة، سيعالجه هاندلر الرد
+    if m.reply_to_message:
         return
+
+    # إرسال إلى الجلسة النشطة المرتبطة بهذا الإدمن
     delivered = await _send_to_active(m)
     if not delivered:
-        await m.reply("⚠️ لا توجد جلسة نشطة مرتبطة بك.\nاستخدم زر ✅ انضم للدردشة، أو اخرج بـ /exit_admin.")
+        await m.reply(
+            "⚠️ لا توجد جلسة نشطة مرتبطة بك.\n"
+            "استخدم زر ✅ انضم للدردشة، أو اخرج بـ /exit_admin."
+        )
+
 
 # --- Helpers to deliver admin messages ---
 async def _relay_admin_reply(m: Message) -> bool:
@@ -1295,16 +1402,16 @@ async def _send_to_active(m: Message) -> bool:
         return False
 
 # ===== أوامر حالة أونلاين الإدمن =====
-@router.message(Command("live_on"))
-async def cmd_live_on(m: Message):
-    if not _is_admin(m.from_user.id):
-        return
-    _set_admin_online(m.from_user.id, True)
-    await m.reply("Live chat: you are ONLINE ✅")
-
 @router.message(Command("live_off"))
 async def cmd_live_off(m: Message):
-    if not _is_admin(m.from_user.id):
-        return
-    _set_admin_online(m.from_user.id, False)
-    await m.reply("Live chat: you are OFFLINE ⛔")
+    if not _is_admin(m.from_user.id): return
+    _set_support_enabled(False)
+    await _close_all_sessions(m.bot)
+    await m.reply("🔕 Live chat disabled globally. All sessions closed.")
+
+@router.message(Command("live_on"))
+async def cmd_live_on(m: Message):
+    if not _is_admin(m.from_user.id): return
+    _set_support_enabled(True)
+    await m.reply("🔔 Live chat enabled globally.")
+

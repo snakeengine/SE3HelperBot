@@ -95,6 +95,56 @@ def _support_enabled() -> bool:
     cfg = _load(CONFIG_FILE)
     return bool(cfg.get("enabled", True))
 
+# --- helper: close all sessions when disabling live chat ---
+async def _close_all_sessions(bot):
+    s = _load(SESSIONS_FILE)
+    for suid, row in list(s.items()):
+        try:
+            uid = int(suid)
+        except Exception:
+            continue
+        # أخبر المستخدم
+        try:
+            tlang = _L(uid)
+            txt_user = _tt(tlang,
+                "⛔ تم إيقاف الدردشة الحية مؤقتًا. جرّب لاحقًا.",
+                "⛔ Live chat is temporarily disabled. Please try later."
+            )
+            await bot.send_message(uid, txt_user)
+        except Exception:
+            pass
+        # أخبر الأدمن الماسك الجلسة (إن وجد)
+        aid = row.get("admin_id")
+        if aid:
+            try:
+                alang = _L(aid)
+                await bot.send_message(
+                    aid,
+                    _tt(alang, "تم إنهاء الجلسة بسبب إيقاف الدردشة.", "Session ended because live chat was disabled.")
+                )
+            except Exception:
+                pass
+        # احذف الجلسة
+        s.pop(suid, None)
+    _save(SESSIONS_FILE, s)
+
+@router.message(Command("live_off"))
+async def cmd_live_off(m: Message):
+    if not await _is_live_admin(m.from_user.id):
+        return
+    _set_support_enabled(False)
+    await _close_all_sessions(m.bot)
+    lang = _L(m.from_user.id)
+    await m.reply(_tt(lang, "تم إيقاف الدردشة الحية وإغلاق كل الجلسات الحالية.", "Live chat disabled and all sessions closed."))
+
+@router.message(Command("live_on"))
+async def cmd_live_on(m: Message):
+    if not await _is_live_admin(m.from_user.id):
+        return
+    _set_support_enabled(True)
+    lang = _L(m.from_user.id)
+    await m.reply(_tt(lang, "تم تفعيل الدردشة الحية.", "Live chat enabled."))
+
 def _set_support_enabled(flag: bool):
     cfg = _load(CONFIG_FILE); cfg["enabled"] = bool(flag); _save(CONFIG_FILE, cfg)
 
