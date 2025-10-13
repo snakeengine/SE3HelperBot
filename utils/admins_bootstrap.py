@@ -13,9 +13,11 @@ def _parse_ids(s: str) -> list[int]:
     return out
 
 def ensure_admin_store(path: str = "/data/admins.json") -> None:
-    """يكتب owners/admins إلى /data/admins.json من متغيرات البيئة لو مفقود أو مختلف."""
     owners = _parse_ids(os.getenv("OWNERS", ""))
-    admins = _parse_ids(os.getenv("ADMIN_IDS", "")) or owners[:]  # fallback
+    admins_env = _parse_ids(os.getenv("ADMIN_IDS", ""))
+
+    # اجمع الاثنين: أي Owner يكون Admin تلقائيًا
+    admins = sorted(set(admins_env) | set(owners))
 
     try:
         p = pathlib.Path(path)
