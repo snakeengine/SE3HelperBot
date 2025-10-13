@@ -1,4 +1,4 @@
-from utils.admins import get_admin_ids, is_admin, get_owner_ids
+﻿from utils.admins import get_admin_ids, is_admin, get_owner_ids
 # bot.py
 # =========================================
 # S.E Support Bot (Aiogram v3) — Clean & Ready (Merged)
@@ -301,6 +301,9 @@ def _parse_admin_ids(s: str | None) -> list[int]:
         except ValueError:
             continue
     return sorted(ids)
+
+from utils.admins_bootstrap import ensure_admin_store
+ensure_admin_store()
 
 _admin_ids_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
 ADMIN_IDS: list[int] = _parse_admin_ids(_admin_ids_env)
