@@ -23,7 +23,7 @@ except Exception:  # Fallback بسيط
 router = Router(name="live_support_admin")
 log = logging.getLogger(__name__)
 
-DATA = Path("data")
+DATA = Path(os.getenv("DATA_DIR", "data"))
 SESSIONS_FILE = DATA/"live_sessions.json"
 BLOCKLIST_FILE= DATA/"live_blocklist.json"
 HISTORY_FILE  = DATA/"live_history.json"
@@ -33,6 +33,29 @@ ADMIN_SEEN    = DATA/"admin_last_seen.json"   # { admin_id: {"online": bool, "ts
 ADMIN_ONLINE_TTL = int(os.getenv("ADMIN_ONLINE_TTL", "600"))  # 10 دقائق
 
 # ----------------- Helpers -----------------
+FLAGS_FILE = DATA / "shop_flags.json"
+
+def _flags_load() -> dict:
+    try:
+        if FLAGS_FILE.exists():
+            return json.loads(FLAGS_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return {}
+
+def _flags_save(d: dict):
+    try:
+        FLAGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        FLAGS_FILE.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception as e:
+        log.warning("save flags failed: %s", e)
+
+def _stop_all_enabled() -> bool:
+    return bool(_flags_load().get("stop_all", False))
+
+def _set_stop_all(flag: bool):
+    m = _flags_load(); m["stop_all"] = bool(flag); _flags_save(m)
+
 def _now() -> float: return time.time()
 
 def _load(p: Path):
@@ -118,7 +141,11 @@ def _admin_online_count(ttl: int = ADMIN_ONLINE_TTL) -> int:
 # ====== الكيبورد ======
 def _kb_main(lang: str) -> InlineKeyboardMarkup:
     toggle = _tt(lang, "liveadm.btn.disable", "🔕 إيقاف الدردشة", "🔕 Disable") if _support_enabled() \
-             else _tt(lang, "liveadm.btn.enable", "🔔 تفعيل الدردشة", "🔔 Enable")
+             else _tt(lang, "liveadm.btn.enable",  "🔔 تفعيل الدردشة", "🔔 Enable")
+
+    stopall_txt = "⛔ إيقاف الكل" if not _stop_all_enabled() else "✅ فتح الكل"
+    stopall_cb  = "liveadm:stopall:on" if not _stop_all_enabled() else "liveadm:stopall:off"
+
     online_btn = InlineKeyboardButton(
         text=_tt(lang, "liveadm.btn.i_am_online", "أنا متاح الآن ✅", "I'm online ✅"),
         callback_data="liveadm:online:on"
@@ -127,7 +154,6 @@ def _kb_main(lang: str) -> InlineKeyboardMarkup:
         text=_tt(lang, "liveadm.btn.i_am_offline", "غير متاح ⛔", "I'm offline ⛔"),
         callback_data="liveadm:online:off"
     )
-    # زر رفع الحظر بالـ UID (جديد)
     unban_btn = InlineKeyboardButton(
         text=_tt(lang, "liveadm.btn.unban_prompt", "🔓 رفع الحظر (UID)", "🔓 Unban by UID"),
         callback_data="liveadm:unban:open"
@@ -135,12 +161,14 @@ def _kb_main(lang: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=toggle, callback_data="liveadm:toggle"),
          InlineKeyboardButton(text=_tt(lang,"liveadm.btn.refresh","تحديث ♻️","Refresh ♻️"), callback_data="liveadm:refresh")],
+        [InlineKeyboardButton(text=stopall_txt, callback_data=stopall_cb)],
         [online_btn, offline_btn],
         [InlineKeyboardButton(text=_tt(lang,"liveadm.btn.sessions","الجلسات النشطة","Active sessions"), callback_data="liveadm:sessions"),
          InlineKeyboardButton(text=_tt(lang,"liveadm.btn.blocklist","قائمة الحظر","Blocklist"), callback_data="liveadm:blocklist")],
         [unban_btn],
         [InlineKeyboardButton(text=_tt(lang,"liveadm.btn.help","تعليمات","Help"), callback_data="liveadm:help")]
     ])
+
 
 def _kb_session_item(uid: int, sid: str, lang: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
@@ -169,10 +197,14 @@ def _dashboard_stats(lang: str) -> str:
     waiting= sum(1 for v in s.values() if v.get("status") == "waiting")
     online = _admin_online_count()
     en = _support_enabled()
-    return _tt(lang, "liveadm.stats",
+    stopall = _stop_all_enabled()
+    base = _tt(lang, "liveadm.stats",
         "• الحالة: <b>{onoff}</b>\n• إدمن متصل (آخر 10د): <b>{online}</b>\n• نشطة: <b>{active}</b> | انتظار: <b>{waiting}</b>",
         "• Status: <b>{onoff}</b>\n• Admins online (10m): <b>{online}</b>\n• Active: <b>{active}</b> | Waiting: <b>{waiting}</b>"
     ).format(onoff=("مفعلة ✅" if en else "متوقفة ⛔"), online=online, active=active, waiting=waiting)
+    extra = "\n• القاطع العام: <b>{}</b>".format("⛔ مُفعل" if stopall else "✅ مفتوح")
+    return base + extra
+
 
 @router.message(Command("liveadmin"))
 async def cmd_liveadmin(m: Message):
@@ -203,21 +235,23 @@ async def cmd_offline(m: Message):
 class LiveAdmState(StatesGroup):
     unban_wait = State()
 
-@router.callback_query(F.data.in_({"liveadm:refresh", "liveadm:toggle", "liveadm:sessions", "liveadm:blocklist", "liveadm:help", "liveadm:online:on", "liveadm:online:off"}))
+@router.callback_query(F.data.in_({
+    "liveadm:refresh","liveadm:toggle","liveadm:sessions","liveadm:blocklist","liveadm:help",
+    "liveadm:online:on","liveadm:online:off","liveadm:stopall:on","liveadm:stopall:off"
+}))
 async def cb_panel_actions(cb: CallbackQuery):
     if not await _is_live_admin(cb.from_user.id):
         return
     lang = _L(cb.from_user.id)
 
-    # تبديل الحالة (أنا متاح/غير متاح)
-    if cb.data == "liveadm:online:on":
-        _set_admin_online(cb.from_user.id, True)
-    elif cb.data == "liveadm:online:off":
-        _set_admin_online(cb.from_user.id, False)
+    if cb.data == "liveadm:online:on":  _set_admin_online(cb.from_user.id, True)
+    if cb.data == "liveadm:online:off": _set_admin_online(cb.from_user.id, False)
 
-    if cb.data == "liveadm:toggle":
-        _set_support_enabled(not _support_enabled())
-    if cb.data in ("liveadm:refresh","liveadm:toggle","liveadm:online:on","liveadm:online:off"):
+    if cb.data == "liveadm:toggle":      _set_support_enabled(not _support_enabled())
+    if cb.data == "liveadm:stopall:on":  _set_stop_all(True)
+    if cb.data == "liveadm:stopall:off": _set_stop_all(False)
+
+    if cb.data in {"liveadm:refresh","liveadm:toggle","liveadm:online:on","liveadm:online:off","liveadm:stopall:on","liveadm:stopall:off"}:
         await cb.message.edit_text(_dashboard_stats(lang), reply_markup=_kb_main(lang), parse_mode=ParseMode.HTML)
         return await cb.answer("OK")
 

@@ -183,8 +183,10 @@ from handlers import paydiag as _paydiag
 
 # الصحيح:
 from admin.admin_center import router as admin_center_router   # يملك Router
-import admin.live_exclusive_only                            # 2) فعّل الـ patch (بدون include_router)
+import admin.live_exclusive_only   
+from middlewares.stop_all import StopAllMiddleware  # 2) فعّل الـ patch (بدون include_router)
 
+                        
 
 # ===== Rewards (optional) =====
 import handlers.rewards_gate as _rewards_gate
@@ -582,6 +584,8 @@ def register_routers(dp: Dispatcher):
 
     dp.include_router(admin_center_router)
     dp.include_router(promo_panel_ui_router)
+    dp.update.outer_middleware(StopAllMiddleware())
+
 
 
     # Rewards (fallback: لو لأي سبب ما رُكّبت مبكراً)
