@@ -23,7 +23,7 @@ router = Router(name="promo_free_sevip")
 ADMIN_IDS = get_admin_ids()
 def _is_admin(i: int) -> bool: return i in set(ADMIN_IDS or [])
 
-# ÙƒÙ… Ø¯Ù‚ÙŠÙ‚Ø© Ù†Ø³Ù…Ø­ Ø¨Ø¹Ø¯Ù‡Ø§ Ø¨Ø¥Ø¹Ø§Ø¯Ø© ØªÙ†Ø¨ÙŠÙ‡ Ø§Ù„Ø£Ø¯Ù…Ù† ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‹Ø§ Ø¥Ø°Ø§ Ø¸Ù„Ù‘Øª Ø§Ù„Ø­Ø§Ù„Ø© awaiting_admin
+# ÙƒÙ… Ø¯Ù‚ÙŠÙ‚Ø© Ù†Ø³Ù…Ø Ø¨Ø¹Ø¯Ù‡Ø§ Ø¨Ø¥Ø¹Ø§Ø¯Ø© ØªÙ†Ø¨ÙŠÙ‡ Ø§Ù„Ø£Ø¯Ù…Ù† ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‹Ø§ Ø¥Ø°Ø§ Ø¸Ù„Ù‘Øª Ø§Ù„ØØ§Ù„Ø© awaiting_admin
 RENOTIFY_MIN = int(os.getenv("PROMO_RENOTIFY_MIN", "10"))
 
 def _admin_ids_loaded() -> bool:
@@ -99,10 +99,10 @@ def _menu_kb(lang: str):
 
 def _send_terms(lang: str):
     ar = (lang or "en").startswith("ar")
-    title = "ðŸŽŸï¸ Ø§Ù„Ø­ØµÙˆÙ„ Ø¹Ù„Ù‰ Ø§Ø´ØªØ±Ø§Ùƒ Ù…Ø¬Ø§Ù†Ù‹Ø§" if ar else "ðŸŽŸï¸ Get SEVIP for Free"
+    title = "ðŸŽŸï¸ Ø§Ù„ØØµÙˆÙ„ Ø¹Ù„Ù‰ Ø§Ø´ØªØ±Ø§Ùƒ Ù…Ø¬Ø§Ù†Ù‹Ø§" if ar else "ðŸŽŸï¸ Get SEVIP for Free"
     terms_title = "ðŸ“œ Ø´Ø±ÙˆØ· Ø§Ù„Ù…Ø´Ø§Ø±ÙƒØ©" if ar else "ðŸ“œ Participation Terms"
     views_rule = (f"Minimum views: {PROMO_MIN_VIEWS:,} real views."
-                  if not ar else f"Ø­Ø¯ Ø£Ø¯Ù†Ù‰ Ù„Ù„Ù…Ø´Ø§Ù‡Ø¯Ø§Øª: {PROMO_MIN_VIEWS:,} Ù…Ø´Ø§Ù‡Ø¯Ø© Ø­Ù‚ÙŠÙ‚ÙŠØ©.")
+                  if not ar else f"ØØ¯ Ø£Ø¯Ù†Ù‰ Ù„Ù„Ù…Ø´Ø§Ù‡Ø¯Ø§Øª: {PROMO_MIN_VIEWS:,} Ù…Ø´Ø§Ù‡Ø¯Ø© ØÙ‚ÙŠÙ‚ÙŠØ©.")
     after_approve = ("After approval, choose a platform, post publicly, then send the URL and screenshot."
                      if not ar else "Ø¨Ø¹Ø¯ Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø© Ø§Ø®ØªØ± Ù…Ù†ØµØ© ÙˆØ§Ù†Ø´Ø± Ø¹Ù„Ù†Ù‹Ø§ Ø«Ù… Ø£Ø±Ø³Ù„ Ø§Ù„Ø±Ø§Ø¨Ø· ÙˆØ§Ù„Ù„Ù‚Ø·Ø©.")
     rules = load_rules(lang)
@@ -136,7 +136,7 @@ def _fmt_eta(seconds: int, lang: str) -> str:
         return " ".join(parts)
 
 def _cooldown_left(rec: dict) -> int:
-    """Ø«ÙˆØ§Ù†Ù Ù…ØªØ¨Ù‚ÙŠØ© Ù‚Ø¨Ù„ Ø§Ù„Ø³Ù…Ø§Ø­ Ø¨Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… Ø¨Ø¹Ø¯ Ø§Ù„Ø±ÙØ¶."""
+    """Ø«ÙˆØ§Ù†Ù Ù…ØªØ¨Ù‚ÙŠØ© Ù‚Ø¨Ù„ Ø§Ù„Ø³Ù…Ø§Ø Ø¨Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… Ø¨Ø¹Ø¯ Ø§Ù„Ø±ÙØ¶."""
     if (rec.get("status") or "") != "rejected":
         return 0
     t0 = int(rec.get("rejected_at") or rec.get("updated_at") or 0)
@@ -181,11 +181,11 @@ async def promo_open(cb: CallbackQuery):
         update_request(uid, status="none", lang=lang, created_at=_now())
         rec = find_request(uid) or {}
 
-        # Ù…Ù†Ø¹ Ø§Ù„Ù…Ø­Ø¸ÙˆØ±/Ø§Ù„Ù…Ø¬Ù…Ù‘Ø¯
+        # Ù…Ù†Ø¹ Ø§Ù„Ù…ØØ¸ÙˆØ±/Ø§Ù„Ù…Ø¬Ù…Ù‘Ø¯
     if str(rec.get("status")) == "banned":
-         return await cb.answer(_L(lang, "âŒ Ø­Ø³Ø§Ø¨Ùƒ Ù…Ø­Ø¸ÙˆØ± Ù…Ù† Ø§Ù„Ù…Ø´Ø§Ø±ÙƒØ©.", "âŒ You are banned from participating."), show_alert=True)
+         return await cb.answer(_L(lang, "âŒ ØØ³Ø§Ø¨Ùƒ Ù…ØØ¸ÙˆØ± Ù…Ù† Ø§Ù„Ù…Ø´Ø§Ø±ÙƒØ©.", "âŒ You are banned from participating."), show_alert=True)
     if rec.get("frozen"):
-         return await cb.answer(_L(lang, "ðŸ§Š Ø­Ø³Ø§Ø¨Ùƒ Ù…Ø¬Ù…Ù‘Ø¯ Ù…Ø¤Ù‚ØªÙ‹Ø§.", "ðŸ§Š Your account is temporarily frozen."), show_alert=True)
+         return await cb.answer(_L(lang, "ðŸ§Š ØØ³Ø§Ø¨Ùƒ Ù…Ø¬Ù…Ù‘Ø¯ Ù…Ø¤Ù‚ØªÙ‹Ø§.", "ðŸ§Š Your account is temporarily frozen."), show_alert=True)
 
 
     # Ø§Ù„Ø´Ø±ÙˆØ· Ø£ÙˆÙ„Ù‹Ø§
@@ -224,10 +224,10 @@ async def promo_open(cb: CallbackQuery):
 
     if st == "approved":
         body = (
-            _L(lang, "âœ… ØªÙ…Øª Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø© Ù…Ù† Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©. Ø§Ø®ØªØ± Ø§Ù„Ù…Ù†ØµØ© Ù„Ù†Ø´Ø± Ø§Ù„Ù…Ø­ØªÙˆÙ‰.",
+            _L(lang, "âœ… ØªÙ…Øª Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø© Ù…Ù† Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©. Ø§Ø®ØªØ± Ø§Ù„Ù…Ù†ØµØ© Ù„Ù†Ø´Ø± Ø§Ù„Ù…ØØªÙˆÙ‰.",
                      "âœ… Approved by admins. Choose a platform to post.")
             + "\n"
-            + _L(lang, f"Ø­Ø¯ Ø£Ø¯Ù†Ù‰ Ù„Ù„Ù…Ø´Ø§Ù‡Ø¯Ø§Øª: {PROMO_MIN_VIEWS:,} Ù…Ø´Ø§Ù‡Ø¯Ø© Ø­Ù‚ÙŠÙ‚ÙŠØ©.",
+            + _L(lang, f"ØØ¯ Ø£Ø¯Ù†Ù‰ Ù„Ù„Ù…Ø´Ø§Ù‡Ø¯Ø§Øª: {PROMO_MIN_VIEWS:,} Ù…Ø´Ø§Ù‡Ø¯Ø© ØÙ‚ÙŠÙ‚ÙŠØ©.",
                        f"Minimum views: {PROMO_MIN_VIEWS:,} real views.")
             + "\n\n"
             + load_rules(lang)
@@ -386,7 +386,7 @@ async def got_url(msg: Message, state: FSMContext):
 
     url = (msg.text or "").strip()
     if not _valid(rec.get("platform",""), url):
-        return await msg.reply(_L(uid, "Ø§Ù„Ø±Ø§Ø¨Ø· ØºÙŠØ± ØµØ§Ù„Ø­ Ù„Ù‡Ø°Ù‡ Ø§Ù„Ù…Ù†ØµØ©.", "Invalid link for this platform."))
+        return await msg.reply(_L(uid, "Ø§Ù„Ø±Ø§Ø¨Ø· ØºÙŠØ± ØµØ§Ù„Ø Ù„Ù‡Ø°Ù‡ Ø§Ù„Ù…Ù†ØµØ©.", "Invalid link for this platform."))
 
     update_request(uid, post_url=url, step="shot")
     await state.set_state(PromoState.waiting_shot)

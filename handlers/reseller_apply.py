@@ -139,7 +139,7 @@ def _fee_note(lang: str) -> str:
     return _tr(
         lang, "supplier_fee_note",
         "Note: There is a <b>$300</b> fee to activate your supplier account in-app (credited to your wallet for key/ID activations).",
-        "Ù…Ù„Ø§Ø­Ø¸Ø©: ØªÙˆØ¬Ø¯ Ø±Ø³ÙˆÙ… Ù‚Ø¯Ø±Ù‡Ø§ <b>300$</b> Ù„ØªÙØ¹ÙŠÙ„ Ø­Ø³Ø§Ø¨ Ø§Ù„Ù…ÙˆØ±Ø¯ Ø¯Ø§Ø®Ù„ Ø§Ù„ØªØ·Ø¨ÙŠÙ‚ (ØªÙØ¶Ø§Ù Ù„Ù…Ø­ÙØ¸ØªÙƒ Ù„ØªÙØ¹ÙŠÙ„ Ø§Ù„Ù…ÙØ§ØªÙŠØ­/Ø§Ù„Ù…Ø¹Ø±Ù‘ÙØ§Øª)."
+        "Ù…Ù„Ø§ØØ¸Ø©: ØªÙˆØ¬Ø¯ Ø±Ø³ÙˆÙ… Ù‚Ø¯Ø±Ù‡Ø§ <b>300$</b> Ù„ØªÙØ¹ÙŠÙ„ ØØ³Ø§Ø¨ Ø§Ù„Ù…ÙˆØ±Ø¯ Ø¯Ø§Ø®Ù„ Ø§Ù„ØªØ·Ø¨ÙŠÙ‚ (ØªÙØ¶Ø§Ù Ù„Ù…ØÙØ¸ØªÙƒ Ù„ØªÙØ¹ÙŠÙ„ Ø§Ù„Ù…ÙØ§ØªÙŠØ/Ø§Ù„Ù…Ø¹Ø±Ù‘ÙØ§Øª)."
     )
 
 def _is_admin(user_id: int) -> bool:
@@ -155,7 +155,7 @@ def _norm_lang_pref(text: str, fallback: str = "en") -> str:
     if s in en_set: return "en"
     return fallback
 
-# ===== Ø­Ø§Ù„Ø§Øª FSM =====
+# ===== ØØ§Ù„Ø§Øª FSM =====
 class ApplyStates(StatesGroup):
     name = State()
     country = State()
@@ -192,7 +192,7 @@ def _kb_admin(rec_id: int, lang: str) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text=t(lang, "admin_btn_ask"), callback_data=f"resapp:ask:{rec_id}")],
     ])
 
-# ===== ÙØªØ­ Ø§Ù„Ù†Ù…ÙˆØ°Ø¬ =====
+# ===== ÙØªØ Ø§Ù„Ù†Ù…ÙˆØ°Ø¬ =====
 @router.callback_query(F.data == "apply_reseller")
 async def open_apply(cb: CallbackQuery, state: FSMContext):
     lang = get_user_lang(cb.from_user.id) or "en"
@@ -289,14 +289,14 @@ async def g_country(msg: Message, state: FSMContext):
         return await msg.answer(_tr(lang, "retry_text", "Please send text.", "Ù…Ù† ÙØ¶Ù„Ùƒ Ø£Ø±Ø³Ù„ Ù†ØµÙ‹Ø§."), parse_mode=ParseMode.HTML)
     await state.update_data(country=v)
     await state.set_state(ApplyStates.channel)
-    await msg.answer(_tr(lang, "ask_channel", "Your channel / page link?", "Ø±Ø§Ø¨Ø· Ù‚Ù†Ø§ØªÙƒ/ØµÙØ­ØªÙƒØŸ"), parse_mode=ParseMode.HTML)
+    await msg.answer(_tr(lang, "ask_channel", "Your channel / page link?", "Ø±Ø§Ø¨Ø· Ù‚Ù†Ø§ØªÙƒ/ØµÙØØªÙƒØŸ"), parse_mode=ParseMode.HTML)
 
 @router.message(ApplyStates.channel)
 async def g_channel(msg: Message, state: FSMContext):
     lang = get_user_lang(msg.from_user.id) or "en"
     ch = (msg.text or "").strip()
     if not ch or not ("t.me/" in ch or ch.startswith("@")):
-        return await msg.answer(_tr(lang, "retry_channel", "Please send a valid Telegram link or @username.", "Ø£Ø±Ø³Ù„ Ø±Ø§Ø¨Ø· ØªÙŠÙ„ÙŠØ¬Ø±Ø§Ù… ØµØ­ÙŠØ­Ù‹Ø§ Ø£Ùˆ Ø§Ø³Ù… Ù…Ø³ØªØ®Ø¯Ù… ÙŠØ¨Ø¯Ø£ Ø¨Ù€ @."), parse_mode=ParseMode.HTML)
+        return await msg.answer(_tr(lang, "retry_channel", "Please send a valid Telegram link or @username.", "Ø£Ø±Ø³Ù„ Ø±Ø§Ø¨Ø· ØªÙŠÙ„ÙŠØ¬Ø±Ø§Ù… ØµØÙŠØÙ‹Ø§ Ø£Ùˆ Ø§Ø³Ù… Ù…Ø³ØªØ®Ø¯Ù… ÙŠØ¨Ø¯Ø£ Ø¨Ù€ @."), parse_mode=ParseMode.HTML)
     await state.update_data(channel=ch)
     await state.set_state(ApplyStates.exp)
     await msg.answer(_tr(lang, "ask_experience", "Tell us about your experience.", "Ø§Ø®Ø¨Ø±Ù†Ø§ Ø¹Ù† Ø®Ø¨Ø±ØªÙƒ."), parse_mode=ParseMode.HTML)
@@ -309,7 +309,7 @@ async def g_exp(msg: Message, state: FSMContext):
         return await msg.answer(_tr(lang, "retry_text", "Please send text.", "Ù…Ù† ÙØ¶Ù„Ùƒ Ø£Ø±Ø³Ù„ Ù†ØµÙ‹Ø§."), parse_mode=ParseMode.HTML)
     await state.update_data(exp=v)
     await state.set_state(ApplyStates.vol)
-    await msg.answer(_tr(lang, "ask_volume", "Monthly sales/volume (optional).", "Ø­Ø¬Ù… Ø§Ù„Ù…Ø¨ÙŠØ¹Ø§Øª Ø§Ù„Ø´Ù‡Ø±ÙŠ (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)."), parse_mode=ParseMode.HTML)
+    await msg.answer(_tr(lang, "ask_volume", "Monthly sales/volume (optional).", "ØØ¬Ù… Ø§Ù„Ù…Ø¨ÙŠØ¹Ø§Øª Ø§Ù„Ø´Ù‡Ø±ÙŠ (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)."), parse_mode=ParseMode.HTML)
 
 @router.message(ApplyStates.vol)
 async def g_vol(msg: Message, state: FSMContext):
@@ -396,7 +396,7 @@ async def admin_actions(cb: CallbackQuery, state: FSMContext):
         _, action, rec_id_s = cb.data.split(":")
         rec_id = int(rec_id_s)
     except Exception:
-        return await cb.answer(_tr(lang_admin, "bad_data", "Bad data", "Ø¨ÙŠØ§Ù†Ø§Øª ØºÙŠØ± ØµØ§Ù„Ø­Ø©"))
+        return await cb.answer(_tr(lang_admin, "bad_data", "Bad data", "Ø¨ÙŠØ§Ù†Ø§Øª ØºÙŠØ± ØµØ§Ù„ØØ©"))
 
     i, rec, _ = _find_by_rec_id(rec_id)
     if rec is None:
@@ -412,12 +412,12 @@ async def admin_actions(cb: CallbackQuery, state: FSMContext):
                 await cb.message.bot.send_message(rec["user_id"], _tr(user_lang, "approve_message", "âœ… Approved. Please complete payment to activate.", "âœ… ØªÙ… Ø§Ù„Ù‚Ø¨ÙˆÙ„. ÙŠØ±Ø¬Ù‰ Ø¥ÙƒÙ…Ø§Ù„ Ø§Ù„Ø¯ÙØ¹ Ù„Ù„ØªÙØ¹ÙŠÙ„."), parse_mode=ParseMode.HTML)
             except Exception:
                 pass
-            # 2) ÙØªØ­ Ø´Ø§Ø´Ø© Ø§Ù„Ø¯ÙØ¹
+            # 2) ÙØªØ Ø´Ø§Ø´Ø© Ø§Ù„Ø¯ÙØ¹
             try:
                 await prompt_user_payment(cb.message.bot, rec["user_id"], user_lang)
             except Exception:
                 pass
-            # 3) ØªÙ†Ø¸ÙŠÙ Ù„ÙˆØ­Ø© Ø§Ù„Ø£Ø¯Ù…Ù† ÙˆØªØ£ÙƒÙŠØ¯ Ø¨Ù„ØºØ© Ø§Ù„Ø£Ø¯Ù…Ù†
+            # 3) ØªÙ†Ø¸ÙŠÙ Ù„ÙˆØØ© Ø§Ù„Ø£Ø¯Ù…Ù† ÙˆØªØ£ÙƒÙŠØ¯ Ø¨Ù„ØºØ© Ø§Ù„Ø£Ø¯Ù…Ù†
             await cb.message.edit_reply_markup(reply_markup=None)
             await cb.message.answer(_tr(admin_lang, "approve_message_admin", "Approved and user notified.", "ØªÙ… Ø§Ù„Ù‚Ø¨ÙˆÙ„ ÙˆØ¥Ø¨Ù„Ø§Øº Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…."), parse_mode=ParseMode.HTML)
         return await cb.answer()
@@ -431,7 +431,7 @@ async def admin_actions(cb: CallbackQuery, state: FSMContext):
                     logging.warning(f"set_supplier(False) failed for {rec['user_id']}: {e}")
 
             try:
-                await cb.message.bot.send_message(rec["user_id"], _tr(user_lang, "reject_message", "âŒ Rejected. You can re-apply later.", "âŒ ØªÙ… Ø§Ù„Ø±ÙØ¶. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… Ù„Ø§Ø­Ù‚Ù‹Ø§."), parse_mode=ParseMode.HTML)
+                await cb.message.bot.send_message(rec["user_id"], _tr(user_lang, "reject_message", "âŒ Rejected. You can re-apply later.", "âŒ ØªÙ… Ø§Ù„Ø±ÙØ¶. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… Ù„Ø§ØÙ‚Ù‹Ø§."), parse_mode=ParseMode.HTML)
             except Exception:
                 pass
             await cb.message.edit_reply_markup(reply_markup=None)
@@ -469,7 +469,7 @@ async def admin_send_question(msg: Message, state: FSMContext):
     done = t(lang_admin, "admin_done")
     await msg.answer(done if (isinstance(done, str) and done.strip() and done != "admin_done") else _tr(lang_admin, "admin_done_fallback", "Done.", "ØªÙ…."), parse_mode=ParseMode.HTML)
 
-# ====== Ù„ÙˆØ­Ø© Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø·Ù„Ø¨Ø§Øª Ù„Ù„Ø£Ø¯Ù…Ù† ======
+# ====== Ù„ÙˆØØ© Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø·Ù„Ø¨Ø§Øª Ù„Ù„Ø£Ø¯Ù…Ù† ======
 PER_PAGE = 5
 
 def _items_by_status(status: str) -> list[dict]:
@@ -479,7 +479,7 @@ def _items_by_status(status: str) -> list[dict]:
     elif status == "approved":
         items = [r for r in data if r.get("status") == "approved"]
     elif status == "blocked":
-        # Ø£Ø­Ø¯Ø« Ø³Ø¬Ù„ Ù„ÙƒÙ„ Ù…Ø³ØªØ®Ø¯Ù…Ø› Ø¥Ù† ÙƒØ§Ù† "rejected" Ø¶Ù…Ù† Ø§Ù„Ù…Ù‡Ù„Ø© â†’ Ù…Ø­Ø¸ÙˆØ±
+        # Ø£ØØ¯Ø« Ø³Ø¬Ù„ Ù„ÙƒÙ„ Ù…Ø³ØªØ®Ø¯Ù…Ø› Ø¥Ù† ÙƒØ§Ù† "rejected" Ø¶Ù…Ù† Ø§Ù„Ù…Ù‡Ù„Ø© â†’ Ù…ØØ¸ÙˆØ±
         last, last_ts = {}, {}
         for r in data:
             uid = r.get("user_id")
@@ -591,7 +591,7 @@ async def admin_view_cb(cb: CallbackQuery):
     user_lang = rec.get("pref") or get_user_lang(rec["user_id"]) or "en"
     lbl_rec   = _tr(lang, "admin_lbl_recid",  "RecID", "Ø§Ù„Ù…Ø¹Ø±Ù‘Ù")
     lbl_user  = _tr(lang, "admin_lbl_user",   "User",  "Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…")
-    lbl_stat  = _tr(lang, "admin_lbl_status", "Status","Ø§Ù„Ø­Ø§Ù„Ø©")
+    lbl_stat  = _tr(lang, "admin_lbl_status", "Status","Ø§Ù„ØØ§Ù„Ø©")
     text = (
         f"ðŸ§¾ <b>{lbl_rec}:</b> <code>{rec['id']}</code>\n"
         f"ðŸ‘¤ <b>{lbl_user}:</b> <code>{rec['user_id']}</code> @{rec.get('username','')}\n"
@@ -637,7 +637,7 @@ async def admin_unban_cb(cb: CallbackQuery):
     target_uid = rec.get("user_id")
     user_lang = rec.get("pref") or get_user_lang(target_uid) or "ar"
 
-    # Ø£Ø­Ø¯Ø« Ø±ÙØ¶ Ù„Ù‡Ø°Ø§ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…
+    # Ø£ØØ¯Ø« Ø±ÙØ¶ Ù„Ù‡Ø°Ø§ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…
     latest_reject_idx, latest_reject_ts = None, None
     for idx, r in enumerate(data):
         if r.get("user_id") != target_uid or r.get("status") != "rejected":
@@ -657,7 +657,7 @@ async def admin_unban_cb(cb: CallbackQuery):
             await cb.message.edit_reply_markup(reply_markup=None)
         except Exception:
             pass
-        await cb.message.answer(_tr(lang_admin, "admin_unbanned_admin", "Unban completed âœ…", "ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø§Ù„Ø­Ø¸Ø± âœ…"))
+        await cb.message.answer(_tr(lang_admin, "admin_unbanned_admin", "Unban completed âœ…", "ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø§Ù„ØØ¸Ø± âœ…"))
         return await cb.answer()
 
     data[latest_reject_idx]["status"] = "rejected_unblocked"
@@ -667,14 +667,14 @@ async def admin_unban_cb(cb: CallbackQuery):
     # ðŸ“¨ Ø±Ø³Ø§Ù„Ø© Ù„Ù„Ù…Ø³ØªØ®Ø¯Ù…
     msg_user = _tr(user_lang, "admin_unbanned_user",
                    "âœ… Your block has been lifted. You can apply again now.",
-                   "âœ… ØªÙ… Ø±ÙØ¹ Ø§Ù„Ø­Ø¸Ø±. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… Ù…Ø±Ø© Ø£Ø®Ø±Ù‰ Ø§Ù„Ø¢Ù†.")
+                   "âœ… ØªÙ… Ø±ÙØ¹ Ø§Ù„ØØ¸Ø±. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… Ù…Ø±Ø© Ø£Ø®Ø±Ù‰ Ø§Ù„Ø¢Ù†.")
     try:
         await cb.message.bot.send_message(target_uid, msg_user)
     except Exception:
         pass
 
-    # ØªØ­Ø¯ÙŠØ« Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ø£Ø¯Ù…Ù† + Ø³Ø·Ø± Ø§Ù„Ø­Ø§Ù„Ø© Ù…ØªØ±Ø¬Ù…
-    status_unb = _tr(lang_admin, "admin_status_unbanned", "Unbanned", "ØªÙ… ÙÙƒ Ø§Ù„Ø­Ø¸Ø±")
+    # ØªØØ¯ÙŠØ« Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ø£Ø¯Ù…Ù† + Ø³Ø·Ø± Ø§Ù„ØØ§Ù„Ø© Ù…ØªØ±Ø¬Ù…
+    status_unb = _tr(lang_admin, "admin_status_unbanned", "Unbanned", "ØªÙ… ÙÙƒ Ø§Ù„ØØ¸Ø±")
     try:
         await cb.message.edit_text(cb.message.text + f"\n\nâœ… {status_unb}",
                                    disable_web_page_preview=True)
@@ -684,7 +684,7 @@ async def admin_unban_cb(cb: CallbackQuery):
         except Exception:
             pass
 
-    await cb.message.answer(_tr(lang_admin, "admin_unbanned_admin", "Unban completed âœ…", "ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø§Ù„Ø­Ø¸Ø± âœ…"))
+    await cb.message.answer(_tr(lang_admin, "admin_unbanned_admin", "Unban completed âœ…", "ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø§Ù„ØØ¸Ø± âœ…"))
     await cb.answer()
 
 # Ø²Ø± Ø«Ø§Ø¨Øª Ù„Ù„ØªØ±Ù‚ÙŠÙ… (Ù„Ø§ ÙŠÙØ¹Ù„ Ø´ÙŠØ¦Ù‹Ø§)

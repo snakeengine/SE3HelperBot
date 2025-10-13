@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 # =============== ANTI-CONFLICT PATCH ===============
 router.message.filter(F.chat.type == "private")
 router.callback_query.filter(F.message.chat.type == "private")
-# Ù„Ø§ ØªÙØ¹Ù‘Ù„ Ù‡Ø°Ø§ Ø§Ù„ÙÙ„ØªØ± Ø§Ù„Ø¹Ø§Ù… Ù‡Ù†Ø§ Ø­ØªÙ‰ Ù„Ø§ ÙŠØ¤Ø«Ø± Ø¹Ù„Ù‰ Ø±Ø§ÙˆØªØ±Ø§Øª Ø£Ø®Ø±Ù‰:
+# Ù„Ø§ ØªÙØ¹Ù‘Ù„ Ù‡Ø°Ø§ Ø§Ù„ÙÙ„ØªØ± Ø§Ù„Ø¹Ø§Ù… Ù‡Ù†Ø§ ØØªÙ‰ Ù„Ø§ ÙŠØ¤Ø«Ø± Ø¹Ù„Ù‰ Ø±Ø§ÙˆØªØ±Ø§Øª Ø£Ø®Ø±Ù‰:
 # router.message.filter(~F.text.startswith("/"), ~F.caption.startswith("/"))
 router.callback_query.filter(F.data.startswith("live:") | (F.data == "bot:live"))
 # ===================================================
@@ -51,7 +51,7 @@ def _targets() -> list[int]:
 try:
     from utils.roles import has_role_at_least as _has_role
     def _is_admin(uid: int) -> bool:
-        # Ù†Ø³Ù…Ø­ Ù„Ù…Ù† Ø¯ÙˆØ±Ù‡ support Ø£Ùˆ Ø£Ø¹Ù„Ù‰ (support/moderator/admin/superadmin/owner)
+        # Ù†Ø³Ù…Ø Ù„Ù…Ù† Ø¯ÙˆØ±Ù‡ support Ø£Ùˆ Ø£Ø¹Ù„Ù‰ (support/moderator/admin/superadmin/owner)
         return bool(_has_role(uid, "support"))
 except Exception:
     def _is_admin(uid: int) -> bool:
@@ -188,7 +188,7 @@ def _format_period(seconds: int) -> str:
     return " ".join(parts) or f"{s}s"
 
 def _block_user(uid: int, seconds: int, reason: str | None = None):
-    """ÙŠØ­Ø¸Ø± Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ù„Ù…Ø¯Ø© Ù…Ø¹ÙŠÙ‘Ù†Ø© Ø¨Ø§Ù„Ø«ÙˆØ§Ù†ÙŠ."""
+    """ÙŠØØ¸Ø± Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ù„Ù…Ø¯Ø© Ù…Ø¹ÙŠÙ‘Ù†Ø© Ø¨Ø§Ù„Ø«ÙˆØ§Ù†ÙŠ."""
     bl = _load(BLOCKLIST_FILE)
     bl[str(uid)] = {"until": _now() + max(1, int(seconds)), "reason": reason or ""}
     _save(BLOCKLIST_FILE, bl)
@@ -196,7 +196,7 @@ def _block_user(uid: int, seconds: int, reason: str | None = None):
 def _block_status(uid: int) -> tuple[bool, int, str | None]:
     """
     ÙŠØ±Ø¬Ø¹ (is_blocked, remaining_seconds, reason).
-    ÙŠÙ†Ø¸Ù‘Ù Ø§Ù„Ø­Ø¸Ø± Ø§Ù„Ù…Ù†ØªÙ‡ÙŠ ØªÙ„Ù‚Ø§Ø¦ÙŠØ§Ù‹.
+    ÙŠÙ†Ø¸Ù‘Ù Ø§Ù„ØØ¸Ø± Ø§Ù„Ù…Ù†ØªÙ‡ÙŠ ØªÙ„Ù‚Ø§Ø¦ÙŠØ§Ù‹.
     """
     row = _load(BLOCKLIST_FILE).get(str(uid))
     if not row:
@@ -301,7 +301,7 @@ def _any_admin_online() -> bool:
     return any_online
 
 def _live_available() -> bool:
-    """Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ù…ØªØ§Ø­Ø© ÙÙ‚Ø· Ø¥Ø°Ø§ ÙƒØ§Ù†Øª Ù…ÙØ¹Ù‘Ù„Ø© ÙˆÙŠÙˆØ¬Ø¯ Ø¥Ø¯Ù…Ù† Ø£ÙˆÙ†Ù„Ø§ÙŠÙ†."""
+    """Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ù…ØªØ§ØØ© ÙÙ‚Ø· Ø¥Ø°Ø§ ÙƒØ§Ù†Øª Ù…ÙØ¹Ù‘Ù„Ø© ÙˆÙŠÙˆØ¬Ø¯ Ø¥Ø¯Ù…Ù† Ø£ÙˆÙ†Ù„Ø§ÙŠÙ†."""
     try:
         return _support_enabled() and _any_admin_online()
     except Exception:
@@ -366,11 +366,11 @@ def _kb_user_actions(lang: str, sid: str) -> InlineKeyboardMarkup:
     psid = _sid_pack(sid)
     return InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(text=_tt(lang,"live.btn.end","âŒ Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø©","âŒ End chat"), callback_data="live:end_self"),
-        InlineKeyboardButton(text=_tt(lang,"live.btn.rate","â­ ØªÙ‚ÙŠÙŠÙ…","â­ Rate"), callback_data=f"live:rateopen:{psid}")
+        InlineKeyboardButton(text=_tt(lang,"live.btn.rate","â ØªÙ‚ÙŠÙŠÙ…","â Rate"), callback_data=f"live:rateopen:{psid}")
     ]])
 
 def _kb_user_rate_choices(psid: str, lang: str) -> InlineKeyboardMarkup:
-    stars = [InlineKeyboardButton(text=f"{i}â­", callback_data=f"live:urate:{psid}:{i}") for i in range(1,6)]
+    stars = [InlineKeyboardButton(text=f"{i}â", callback_data=f"live:urate:{psid}:{i}") for i in range(1,6)]
     back  = InlineKeyboardButton(text=("â¬…ï¸ Ø±Ø¬ÙˆØ¹" if lang.startswith("ar") else "â¬…ï¸ Back"), callback_data=f"live:rateclose:{psid}")
     return InlineKeyboardMarkup(inline_keyboard=[stars,[back]])
 
@@ -388,8 +388,8 @@ CATEGORIES = {
     "app": ("Ù…Ø´Ø§ÙƒÙ„ Ø§Ù„ØªØ·Ø¨ÙŠÙ‚", "App issues"),
     "pay": ("Ù…Ø´Ø§ÙƒÙ„ Ø§Ù„Ø¯ÙØ¹", "Payment issues"),
     "ask": ("Ø§Ø³ØªÙØ³Ø§Ø±Ø§Øª Ø¹Ø§Ù…Ø©", "General questions"),
-    "prom": ("Ø£Ø±ÙŠØ¯ Ø£Ù† Ø£ØµØ¨Ø­ Ù…ÙØ±ÙˆÙ‘Ø¬Ù‹Ø§", "Become a promoter"),
-    "sup": ("Ø£Ø±ÙŠØ¯ Ø£Ù† Ø£ØµØ¨Ø­ Ù…ÙˆØ±Ù‘Ø¯Ù‹Ø§", "Become a supplier"),
+    "prom": ("Ø£Ø±ÙŠØ¯ Ø£Ù† Ø£ØµØ¨Ø Ù…ÙØ±ÙˆÙ‘Ø¬Ù‹Ø§", "Become a promoter"),
+    "sup": ("Ø£Ø±ÙŠØ¯ Ø£Ù† Ø£ØµØ¨Ø Ù…ÙˆØ±Ù‘Ø¯Ù‹Ø§", "Become a supplier"),
     "other": ("Ø£Ø®Ø±Ù‰", "Other"),
 }
 def _cat_label(lang: str, code: str) -> str:
@@ -406,24 +406,24 @@ def _kb_pre_live(lang: str) -> InlineKeyboardMarkup:
         for code, icon in pair:
             row.append(InlineKeyboardButton(text=f"{icon} {_cat_label(lang, code)}", callback_data=f"live:cat:{code}"))
         ik.append(row)
-    # â¬…ï¸ Ù…Ù‡Ù…: Namespace Ù…Ø­Ù„ÙŠ Ù„Ù„Ø¯Ø±Ø¯Ø´Ø© ÙÙ‚Ø· Ù„ØªØ¬Ù†Ø¨ Ø§Ù„ØªØ¹Ø§Ø±Ø¶ Ù…Ø¹ Ø£ÙŠ back Ø¹Ø§Ù…
+    # â¬…ï¸ Ù…Ù‡Ù…: Namespace Ù…ØÙ„ÙŠ Ù„Ù„Ø¯Ø±Ø¯Ø´Ø© ÙÙ‚Ø· Ù„ØªØ¬Ù†Ø¨ Ø§Ù„ØªØ¹Ø§Ø±Ø¶ Ù…Ø¹ Ø£ÙŠ back Ø¹Ø§Ù…
     ik.append([InlineKeyboardButton(text=("â¬…ï¸ Ø±Ø¬ÙˆØ¹" if lang.startswith("ar") else "â¬…ï¸ Back"),
                                     callback_data="live:back")])
     return InlineKeyboardMarkup(inline_keyboard=ik)
 
 def _pre_header(lang: str) -> str:
     if lang == "ar":
-        return ("ðŸ’¬ <b>Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„Ø­ÙŠÙ‘Ø©</b>\nØ§Ø®ØªØ± Ù†ÙˆØ¹ Ø·Ù„Ø¨Ùƒ Ø£ÙˆÙ„Ù‹Ø§ Ù„Ù„Ø­ØµÙˆÙ„ Ø¹Ù„Ù‰ Ù…Ø³Ø§Ø¹Ø¯Ø© Ø£Ø³Ø±Ø¹:")
+        return ("ðŸ’¬ <b>Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„ØÙŠÙ‘Ø©</b>\nØ§Ø®ØªØ± Ù†ÙˆØ¹ Ø·Ù„Ø¨Ùƒ Ø£ÙˆÙ„Ù‹Ø§ Ù„Ù„ØØµÙˆÙ„ Ø¹Ù„Ù‰ Ù…Ø³Ø§Ø¹Ø¯Ø© Ø£Ø³Ø±Ø¹:")
     return ("ðŸ’¬ <b>Live chat</b>\nPlease pick a category first for faster help:")
 
 def _cat_hint(lang: str, code: str) -> str:
     if lang == "ar":
         mapping = {
             "app": "â€¢ Ø«Ø¨Ù‘Øª Ø¢Ø®Ø± Ù†Ø³Ø®Ø© Ù…Ù† Ø§Ù„ØªØ·Ø¨ÙŠÙ‚ (Ø²Ø± <b>ØªØ«Ø¨ÙŠØª ØªØ·Ø¨ÙŠÙ‚ Ø«Ø¹Ø¨Ø§Ù†</b> ÙÙŠ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø©)\nâ€¢ Ø£Ø±ÙÙ‚ ØµÙˆØ±Ø©/ÙÙŠØ¯ÙŠÙˆ Ù„Ù„Ù…Ø´ÙƒÙ„Ø© + Ù†ÙˆØ¹ Ø¬Ù‡Ø§Ø²Ùƒ ÙˆØ£Ù†Ø¯Ø±ÙˆÙŠØ¯.",
-            "pay": "â€¢ Ø£Ø±ÙÙ‚ Ù„Ù‚Ø·Ø© Ø´Ø§Ø´Ø© Ù„Ø¹Ù…Ù„ÙŠØ© Ø§Ù„Ø¯ÙØ¹ ÙˆØ±Ù‚Ù… Ø§Ù„Ø·Ù„Ø¨ (Ø¥Ù† ÙˆØ¬Ø¯) + Ø§Ø³Ù… Ø§Ù„Ø¨Ø§Ø¦Ø¹.\nâ€¢ ÙŠÙ…ÙƒÙ† ÙØªØ­ ØªØ°ÙƒØ±Ø© Ø£ÙŠØ¶Ù‹Ø§ Ø¨Ù€ /report.",
+            "pay": "â€¢ Ø£Ø±ÙÙ‚ Ù„Ù‚Ø·Ø© Ø´Ø§Ø´Ø© Ù„Ø¹Ù…Ù„ÙŠØ© Ø§Ù„Ø¯ÙØ¹ ÙˆØ±Ù‚Ù… Ø§Ù„Ø·Ù„Ø¨ (Ø¥Ù† ÙˆØ¬Ø¯) + Ø§Ø³Ù… Ø§Ù„Ø¨Ø§Ø¦Ø¹.\nâ€¢ ÙŠÙ…ÙƒÙ† ÙØªØ ØªØ°ÙƒØ±Ø© Ø£ÙŠØ¶Ù‹Ø§ Ø¨Ù€ /report.",
             "ask": "â€¢ Ø§ÙƒØªØ¨ Ø³Ø¤Ø§Ù„Ùƒ Ø¨Ø¥ÙŠØ¬Ø§Ø². Ø¥Ù† ÙƒØ§Ù† Ø¹Ù† Ø§Ù„Ø£Ù…Ø§Ù†ØŒ Ø±Ø§Ø¬Ø¹ Â«Ø¯Ù„ÙŠÙ„ Ø§Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ø¢Ù…Ù†Â».",
-            "prom": "â€¢ Ø§Ø·Ù„Ø¹ Ø£ÙˆÙ„Ù‹Ø§ Ø¹Ù„Ù‰ Ø´Ø±ÙˆØ· ÙˆÙ†ØµØ§Ø¦Ø­ Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬ÙŠÙ† Ù…Ù† Â«ÙƒÙŠÙ ØªØµØ¨Ø­ Ù…ÙØ±ÙˆÙ‘Ø¬Ù‹Ø§ØŸÂ».",
-            "sup": "â€¢ Ù„Ù„ØªÙ‚Ø¯ÙŠÙ… ÙƒÙ…ÙˆØ±Ù‘Ø¯ Ø§Ø³ØªØ®Ø¯Ù… Â«ÙƒÙŠÙ ØªØµØ¨Ø­ Ù…ÙˆØ±Ù‘Ø¯Ù‹Ø§ØŸÂ» Ù…Ù† Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© ÙˆØ§Ù‚Ø±Ø£ Ø§Ù„Ø´Ø±ÙˆØ·.",
+            "prom": "â€¢ Ø§Ø·Ù„Ø¹ Ø£ÙˆÙ„Ù‹Ø§ Ø¹Ù„Ù‰ Ø´Ø±ÙˆØ· ÙˆÙ†ØµØ§Ø¦Ø Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬ÙŠÙ† Ù…Ù† Â«ÙƒÙŠÙ ØªØµØ¨Ø Ù…ÙØ±ÙˆÙ‘Ø¬Ù‹Ø§ØŸÂ».",
+            "sup": "â€¢ Ù„Ù„ØªÙ‚Ø¯ÙŠÙ… ÙƒÙ…ÙˆØ±Ù‘Ø¯ Ø§Ø³ØªØ®Ø¯Ù… Â«ÙƒÙŠÙ ØªØµØ¨Ø Ù…ÙˆØ±Ù‘Ø¯Ù‹Ø§ØŸÂ» Ù…Ù† Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© ÙˆØ§Ù‚Ø±Ø£ Ø§Ù„Ø´Ø±ÙˆØ·.",
             "other": "â€¢ ØµÙ Ù…Ø´ÙƒÙ„ØªÙƒ Ø¨Ø¥ÙŠØ¬Ø§Ø² ÙˆØ§Ø°ÙƒØ± Ø£ÙŠ ØªÙØ§ØµÙŠÙ„ Ù…ÙÙŠØ¯Ø© (ØµÙˆØ±/Ø±ÙˆØ§Ø¨Ø·/Ø®Ø·ÙˆØ§Øª).",
         }
     else:
@@ -440,11 +440,11 @@ def _cat_hint(lang: str, code: str) -> str:
 def _terms_text(lang: str) -> str:
     if lang == "ar":
         return ("ðŸ“œ <b>Ø´Ø±ÙˆØ· Ø§Ù„Ø¯Ø±Ø¯Ø´Ø©</b>\n"
-                "1) ÙƒÙ† Ù…Ø­ØªØ±Ù…Ù‹Ø§ ÙˆØªØ­Ø¯Ù‘Ø« Ø¹Ù† Ù…ÙˆØ¶ÙˆØ¹ ÙˆØ§Ø­Ø¯ ÙÙ‚Ø·.\n"
-                "2) Ù„Ø§ ØªØ´Ø§Ø±Ùƒ Ø¨ÙŠØ§Ù†Ø§Øª Ø­Ø³Ù‘Ø§Ø³Ø© Ø£Ùˆ Ø£ÙƒÙˆØ§Ø¯ Ø´Ø±Ø§Ø¡ Ø¹Ù„Ù†Ù‹Ø§.\n"
-                "3) Ø£Ø±ÙÙ‚ Ù„Ù‚Ø·Ø§Øª/ØªÙØ§ØµÙŠÙ„ ÙˆØ§Ø¶Ø­Ø© Ù„ØªØ³Ø±ÙŠØ¹ Ø§Ù„Ø­Ù„.\n"
-                "4) Ù‚Ø¯ ØªÙØ³ØªØ®Ø¯Ù… Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø© Ù„ØªØ­Ø³ÙŠÙ† Ø¬ÙˆØ¯Ø© Ø§Ù„Ø®Ø¯Ù…Ø©.\n\n"
-                "Ø¨Ø§Ù„Ø¶ØºØ· Ø¹Ù„Ù‰ Â«Ø£ÙˆØ§ÙÙ‚ ÙˆØ§Ø¨Ø¯Ø£Â»ØŒ Ø³ÙŠØªÙ… ÙØªØ­ Ø¯Ø±Ø¯Ø´Ø© Ù…Ø¹ Ø§Ù„Ø¯Ø¹Ù….")
+                "1) ÙƒÙ† Ù…ØØªØ±Ù…Ù‹Ø§ ÙˆØªØØ¯Ù‘Ø« Ø¹Ù† Ù…ÙˆØ¶ÙˆØ¹ ÙˆØ§ØØ¯ ÙÙ‚Ø·.\n"
+                "2) Ù„Ø§ ØªØ´Ø§Ø±Ùƒ Ø¨ÙŠØ§Ù†Ø§Øª ØØ³Ù‘Ø§Ø³Ø© Ø£Ùˆ Ø£ÙƒÙˆØ§Ø¯ Ø´Ø±Ø§Ø¡ Ø¹Ù„Ù†Ù‹Ø§.\n"
+                "3) Ø£Ø±ÙÙ‚ Ù„Ù‚Ø·Ø§Øª/ØªÙØ§ØµÙŠÙ„ ÙˆØ§Ø¶ØØ© Ù„ØªØ³Ø±ÙŠØ¹ Ø§Ù„ØÙ„.\n"
+                "4) Ù‚Ø¯ ØªÙØ³ØªØ®Ø¯Ù… Ø§Ù„Ù…ØØ§Ø¯Ø«Ø© Ù„ØªØØ³ÙŠÙ† Ø¬ÙˆØ¯Ø© Ø§Ù„Ø®Ø¯Ù…Ø©.\n\n"
+                "Ø¨Ø§Ù„Ø¶ØºØ· Ø¹Ù„Ù‰ Â«Ø£ÙˆØ§ÙÙ‚ ÙˆØ§Ø¨Ø¯Ø£Â»ØŒ Ø³ÙŠØªÙ… ÙØªØ Ø¯Ø±Ø¯Ø´Ø© Ù…Ø¹ Ø§Ù„Ø¯Ø¹Ù….")
     return ("ðŸ“œ <b>Chat terms</b>\n"
             "1) Be respectful and stick to one topic.\n"
             "2) Donâ€™t share sensitive data publicly.\n"
@@ -462,7 +462,7 @@ def _kb_terms(lang: str, code: str) -> InlineKeyboardMarkup:
 
 @router.callback_query(F.data == "live:back")
 async def cb_live_back(cb: CallbackQuery):
-    # Ù†Ø­Ø°Ù Ø±Ø³Ø§Ù„Ø© Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© ÙÙ‚Ø· Ø¨Ø¯ÙˆÙ† Ù„Ù…Ø³ Ø£ÙŠ Ø±Ø§ÙˆØªØ± Ø¢Ø®Ø±
+    # Ù†ØØ°Ù Ø±Ø³Ø§Ù„Ø© Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© ÙÙ‚Ø· Ø¨Ø¯ÙˆÙ† Ù„Ù…Ø³ Ø£ÙŠ Ø±Ø§ÙˆØªØ± Ø¢Ø®Ø±
     try:
         await cb.message.delete()
     except Exception:
@@ -471,7 +471,7 @@ async def cb_live_back(cb: CallbackQuery):
 
 def _kb_blocked(lang: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text=("âŸ³ ØªØ­Ø¯ÙŠØ« Ø§Ù„ÙˆÙ‚Øª" if lang.startswith("ar") else "âŸ³ Refresh"),
+        InlineKeyboardButton(text=("âŸ³ ØªØØ¯ÙŠØ« Ø§Ù„ÙˆÙ‚Øª" if lang.startswith("ar") else "âŸ³ Refresh"),
                              callback_data="live:brefresh")
     ]])
 
@@ -482,14 +482,14 @@ async def cb_block_refresh(cb: CallbackQuery):
     blocked, remain, _ = _block_status(uid)
     if blocked:
         txt = _tt(lang, "live.blocked.detail",
-                  "â›” ØªÙ… Ø­Ø¸Ø±Ùƒ Ù…Ù† Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„Ø­ÙŠÙ‘Ø©.\nØ§Ù„ÙˆÙ‚Øª Ø§Ù„Ù…ØªØ¨Ù‚Ù‘ÙŠ: {rem}",
+                  "â›” ØªÙ… ØØ¸Ø±Ùƒ Ù…Ù† Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„ØÙŠÙ‘Ø©.\nØ§Ù„ÙˆÙ‚Øª Ø§Ù„Ù…ØªØ¨Ù‚Ù‘ÙŠ: {rem}",
                   "â›” You are blocked from live chat.\nTime remaining: {rem}").format(rem=_fmt_dur(remain, lang))
         try:
             await cb.message.edit_text(txt, reply_markup=_kb_blocked(lang))
         except Exception:
             pass
         return await cb.answer()
-    # Ù„Ù… ÙŠØ¹Ø¯ Ù…Ø­Ø¸ÙˆØ±Ø§Ù‹ â†’ Ù†Ø±Ø¬Ø¹ Ù„Ø´Ø§Ø´Ø© Ù…Ø§ Ù‚Ø¨Ù„ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø©
+    # Ù„Ù… ÙŠØ¹Ø¯ Ù…ØØ¸ÙˆØ±Ø§Ù‹ â†’ Ù†Ø±Ø¬Ø¹ Ù„Ø´Ø§Ø´Ø© Ù…Ø§ Ù‚Ø¨Ù„ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø©
     try:
         await cb.message.edit_text(_pre_header(lang), reply_markup=_kb_pre_live(lang), parse_mode="HTML")
     except Exception:
@@ -497,17 +497,17 @@ async def cb_block_refresh(cb: CallbackQuery):
             await cb.message.answer(_pre_header(lang), reply_markup=_kb_pre_live(lang), parse_mode="HTML")
         except Exception:
             pass
-    await cb.answer(_tt(lang, "live.unblocked", "ØªÙ… Ø±ÙØ¹ Ø§Ù„Ø­Ø¸Ø±. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„Ø¨Ø¯Ø¡ Ø§Ù„Ø¢Ù†.", "Ban lifted. You can start now."))
+    await cb.answer(_tt(lang, "live.unblocked", "ØªÙ… Ø±ÙØ¹ Ø§Ù„ØØ¸Ø±. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„Ø¨Ø¯Ø¡ Ø§Ù„Ø¢Ù†.", "Ban lifted. You can start now."))
 
 @router.callback_query(F.data.in_({"bot:live", "live:pre"}))
 async def cb_open_pre(cb: CallbackQuery):
     lang = _L(cb.from_user.id)
 
-    # ðŸ”’ Ø­Ø¸Ø±: Ø§Ø¹Ø±Ø¶ Ø±Ø³Ø§Ù„Ø© ØªÙØµÙŠÙ„ÙŠØ© Ù…Ø¹ Ø§Ù„ÙˆÙ‚Øª Ø§Ù„Ù…ØªØ¨Ù‚Ù‘ÙŠ
+    # ðŸ”’ ØØ¸Ø±: Ø§Ø¹Ø±Ø¶ Ø±Ø³Ø§Ù„Ø© ØªÙØµÙŠÙ„ÙŠØ© Ù…Ø¹ Ø§Ù„ÙˆÙ‚Øª Ø§Ù„Ù…ØªØ¨Ù‚Ù‘ÙŠ
     blocked, remain, _ = _block_status(cb.from_user.id)
     if blocked:
         txt = _tt(lang, "live.blocked.detail",
-                  "â›” ØªÙ… Ø­Ø¸Ø±Ùƒ Ù…Ù† Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„Ø­ÙŠÙ‘Ø©.\nØ§Ù„ÙˆÙ‚Øª Ø§Ù„Ù…ØªØ¨Ù‚Ù‘ÙŠ: {rem}",
+                  "â›” ØªÙ… ØØ¸Ø±Ùƒ Ù…Ù† Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„ØÙŠÙ‘Ø©.\nØ§Ù„ÙˆÙ‚Øª Ø§Ù„Ù…ØªØ¨Ù‚Ù‘ÙŠ: {rem}",
                   "â›” You are blocked from live chat.\nTime remaining: {rem}").format(rem=_fmt_dur(remain, lang))
         try:
             await cb.message.edit_text(txt, reply_markup=_kb_blocked(lang))
@@ -518,26 +518,26 @@ async def cb_open_pre(cb: CallbackQuery):
                 pass
         return await cb.answer()
 
-    # â›” ØºÙŠØ± Ù…ØªØ§Ø­Ø© Ø§Ù„Ø¢Ù†
+    # â›” ØºÙŠØ± Ù…ØªØ§ØØ© Ø§Ù„Ø¢Ù†
     if not _live_available():
         try:
             await cb.message.edit_text(
                 _tt(lang, "live.unavailable",
-                    "â• Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„Ø­ÙŠÙ‘Ø© ØºÙŠØ± Ù…ØªØ§Ø­Ø© Ø§Ù„Ø¢Ù†. Ø­Ø§ÙˆÙ„ Ù„Ø§Ø­Ù‚Ù‹Ø§.",
+                    "â• Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„ØÙŠÙ‘Ø© ØºÙŠØ± Ù…ØªØ§ØØ© Ø§Ù„Ø¢Ù†. ØØ§ÙˆÙ„ Ù„Ø§ØÙ‚Ù‹Ø§.",
                     "â• Live chat is currently unavailable. Please try later.")
             )
         except Exception:
             try:
                 await cb.message.answer(
                     _tt(lang, "live.unavailable",
-                        "â• Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„Ø­ÙŠÙ‘Ø© ØºÙŠØ± Ù…ØªØ§Ø­Ø© Ø§Ù„Ø¢Ù†. Ø­Ø§ÙˆÙ„ Ù„Ø§Ø­Ù‚Ù‹Ø§.",
+                        "â• Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„ØÙŠÙ‘Ø© ØºÙŠØ± Ù…ØªØ§ØØ© Ø§Ù„Ø¢Ù†. ØØ§ÙˆÙ„ Ù„Ø§ØÙ‚Ù‹Ø§.",
                         "â• Live chat is currently unavailable. Please try later.")
                 )
             except Exception:
                 pass
         return await cb.answer()
 
-    # âœ… Ù…ØªØ§Ø­Ø© â†’ Ø§Ø¹Ø±Ø¶ Ø´Ø§Ø´Ø© Ø§Ù„ØªØµÙ†ÙŠÙØ§Øª
+    # âœ… Ù…ØªØ§ØØ© â†’ Ø§Ø¹Ø±Ø¶ Ø´Ø§Ø´Ø© Ø§Ù„ØªØµÙ†ÙŠÙØ§Øª
     try:
         await cb.message.edit_text(_pre_header(lang), reply_markup=_kb_pre_live(lang), parse_mode="HTML")
     except Exception:
@@ -552,11 +552,11 @@ async def cb_open_pre(cb: CallbackQuery):
 async def cb_pick_category(cb: CallbackQuery):
     lang = _L(cb.from_user.id)
 
-    # ðŸ”’ Ø­Ø¸Ø±
+    # ðŸ”’ ØØ¸Ø±
     blocked, remain, _ = _block_status(cb.from_user.id)
     if blocked:
         txt = _tt(lang, "live.blocked.detail",
-                  "â›” ØªÙ… Ø­Ø¸Ø±Ùƒ Ù…Ù† Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„Ø­ÙŠÙ‘Ø©.\nØ§Ù„ÙˆÙ‚Øª Ø§Ù„Ù…ØªØ¨Ù‚Ù‘ÙŠ: {rem}",
+                  "â›” ØªÙ… ØØ¸Ø±Ùƒ Ù…Ù† Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„ØÙŠÙ‘Ø©.\nØ§Ù„ÙˆÙ‚Øª Ø§Ù„Ù…ØªØ¨Ù‚Ù‘ÙŠ: {rem}",
                   "â›” You are blocked from live chat.\nTime remaining: {rem}").format(rem=_fmt_dur(remain, lang))
         try:
             await cb.message.edit_text(txt, reply_markup=_kb_blocked(lang))
@@ -567,26 +567,26 @@ async def cb_pick_category(cb: CallbackQuery):
                 pass
         return await cb.answer()
 
-    # â›” ØºÙŠØ± Ù…ØªØ§Ø­Ø©
+    # â›” ØºÙŠØ± Ù…ØªØ§ØØ©
     if not _live_available():
         try:
             await cb.message.edit_text(
                 _tt(lang, "live.unavailable",
-                    "â• Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„Ø­ÙŠÙ‘Ø© ØºÙŠØ± Ù…ØªØ§Ø­Ø© Ø§Ù„Ø¢Ù†. Ø­Ø§ÙˆÙ„ Ù„Ø§Ø­Ù‚Ù‹Ø§.",
+                    "â• Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„ØÙŠÙ‘Ø© ØºÙŠØ± Ù…ØªØ§ØØ© Ø§Ù„Ø¢Ù†. ØØ§ÙˆÙ„ Ù„Ø§ØÙ‚Ù‹Ø§.",
                     "â• Live chat is currently unavailable. Please try later.")
             )
         except Exception:
             try:
                 await cb.message.answer(
                     _tt(lang, "live.unavailable",
-                        "â• Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„Ø­ÙŠÙ‘Ø© ØºÙŠØ± Ù…ØªØ§Ø­Ø© Ø§Ù„Ø¢Ù†. Ø­Ø§ÙˆÙ„ Ù„Ø§Ø­Ù‚Ù‹Ø§.",
+                        "â• Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„ØÙŠÙ‘Ø© ØºÙŠØ± Ù…ØªØ§ØØ© Ø§Ù„Ø¢Ù†. ØØ§ÙˆÙ„ Ù„Ø§ØÙ‚Ù‹Ø§.",
                         "â• Live chat is currently unavailable. Please try later.")
                 )
             except Exception:
                 pass
         return await cb.answer()
 
-    # âœ… Ø£Ø¹Ø±Ø¶ Ø§Ù„Ø´Ø±ÙˆØ· Ø­Ø³Ø¨ Ø§Ù„ØªØµÙ†ÙŠÙ
+    # âœ… Ø£Ø¹Ø±Ø¶ Ø§Ù„Ø´Ø±ÙˆØ· ØØ³Ø¨ Ø§Ù„ØªØµÙ†ÙŠÙ
     code = cb.data.split(":")[2]
     title = _cat_label(lang, code)
     text = f"ðŸ—‚ï¸ <b>{title}</b>\n{_cat_hint(lang, code)}\n\n{_terms_text(lang)}"
@@ -601,9 +601,9 @@ async def cb_pick_category(cb: CallbackQuery):
 
 
 class LiveChat(StatesGroup):
-    active = State()   # Ø­Ø§Ù„Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…
+    active = State()   # ØØ§Ù„Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…
     admin  = State()   # ÙˆØ¶Ø¹ Ø§Ù„Ø¥Ø¯Ù…Ù† Ø§Ù„Ù…Ø¹Ø²ÙˆÙ„ Ù„Ù„Ø±Ø¯
-    block_wait = State()  # Ø§Ù„Ø¥Ø¯Ù…Ù† ÙŠÙ†ØªØ¸Ø± Ø¥Ø¯Ø®Ø§Ù„ Ù…Ø¯Ø© Ø§Ù„Ø­Ø¸Ø± Ø§Ù„Ù…Ø®ØµØµØ©
+    block_wait = State()  # Ø§Ù„Ø¥Ø¯Ù…Ù† ÙŠÙ†ØªØ¸Ø± Ø¥Ø¯Ø®Ø§Ù„ Ù…Ø¯Ø© Ø§Ù„ØØ¸Ø± Ø§Ù„Ù…Ø®ØµØµØ©
 
 
 @router.callback_query(F.data.startswith("live:start:"))
@@ -612,11 +612,11 @@ async def cb_start_live_after_terms(cb: CallbackQuery, state: FSMContext):
     lang = _L(uid)
     category = cb.data.split(":")[2]
 
-    # ðŸ”’ Ù…Ø­Ø¸ÙˆØ± â†’ Ø±Ø³Ø§Ù„Ø© Ù…Ø¹ ÙˆÙ‚Øª Ù…ØªØ¨Ù‚Ù‘ÙŠ + Ø²Ø± ØªØ­Ø¯ÙŠØ«
+    # ðŸ”’ Ù…ØØ¸ÙˆØ± â†’ Ø±Ø³Ø§Ù„Ø© Ù…Ø¹ ÙˆÙ‚Øª Ù…ØªØ¨Ù‚Ù‘ÙŠ + Ø²Ø± ØªØØ¯ÙŠØ«
     blocked, remain, _ = _block_status(uid)
     if blocked:
         txt = _tt(lang, "live.blocked.detail",
-                  "â›” ØªÙ… Ø­Ø¸Ø±Ùƒ Ù…Ù† Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„Ø­ÙŠÙ‘Ø©.\nØ§Ù„ÙˆÙ‚Øª Ø§Ù„Ù…ØªØ¨Ù‚Ù‘ÙŠ: {rem}",
+                  "â›” ØªÙ… ØØ¸Ø±Ùƒ Ù…Ù† Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„ØÙŠÙ‘Ø©.\nØ§Ù„ÙˆÙ‚Øª Ø§Ù„Ù…ØªØ¨Ù‚Ù‘ÙŠ: {rem}",
                   "â›” You are blocked from live chat.\nTime remaining: {rem}").format(rem=_fmt_dur(remain, lang))
         try:
             await cb.message.edit_text(txt, reply_markup=_kb_blocked(lang))
@@ -631,12 +631,12 @@ async def cb_start_live_after_terms(cb: CallbackQuery, state: FSMContext):
     if not _live_available():
         await cb.message.edit_text(
             _tt(lang, "live.unavailable",
-                "â• Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„Ø­ÙŠÙ‘Ø© ØºÙŠØ± Ù…ØªØ§Ø­Ø© Ø§Ù„Ø¢Ù†. Ø­Ø§ÙˆÙ„ Ù„Ø§Ø­Ù‚Ù‹Ø§.",
+                "â• Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„ØÙŠÙ‘Ø© ØºÙŠØ± Ù…ØªØ§ØØ© Ø§Ù„Ø¢Ù†. ØØ§ÙˆÙ„ Ù„Ø§ØÙ‚Ù‹Ø§.",
                 "â• Live chat is currently unavailable. Please try later.")
         )
         return await cb.answer()
 
-    # âœ… Ø§ÙØªØ­ Ø§Ù„Ø·Ù„Ø¨ ÙˆØ§Ø¯Ø®Ù„ Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø±
+    # âœ… Ø§ÙØªØ Ø§Ù„Ø·Ù„Ø¨ ÙˆØ§Ø¯Ø®Ù„ Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø±
     sid  = f"{uid}:{int(_now())}"
     sess = {"status":"waiting","start_ts":_now(),"last_ts":_now(),"queue":[],"admin_id":None,"sid":sid,"category":category}
     _put_session(uid, sess)
@@ -649,7 +649,7 @@ async def cb_start_live_after_terms(cb: CallbackQuery, state: FSMContext):
     await state.set_state(LiveChat.active)
     await cb.message.edit_text(
         _tt(lang, "live.opened",
-            "ðŸ’¬ ØªÙ… ÙØªØ­ Ø·Ù„Ø¨ Ø¯Ø±Ø¯Ø´Ø©.\nØ§Ù„Ø±Ø¬Ø§Ø¡ Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø± Ø­ØªÙ‰ ÙŠÙ†Ø¶Ù… Ø§Ù„Ø¯Ø¹Ù…â€¦",
+            "ðŸ’¬ ØªÙ… ÙØªØ Ø·Ù„Ø¨ Ø¯Ø±Ø¯Ø´Ø©.\nØ§Ù„Ø±Ø¬Ø§Ø¡ Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø± ØØªÙ‰ ÙŠÙ†Ø¶Ù… Ø§Ù„Ø¯Ø¹Ù…â€¦",
             "ðŸ’¬ Chat request opened.\nPlease wait for support to joinâ€¦"),
         reply_markup=_kb_user_wait(lang)
     )
@@ -661,7 +661,7 @@ async def cb_start_live_after_terms(cb: CallbackQuery, state: FSMContext):
     await _notify_admins_t(
         cb.bot,
         "live.admin.notify.request",
-        "ðŸ†• Ø·Ù„Ø¨ Ø¯Ø±Ø¯Ø´Ø© Ø­ÙŠÙ‘Ø©\nâ€¢ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…: {name} @{username}\nâ€¢ Ø§Ù„Ù…Ø¹Ø±Ù‘Ù: {uid}\nâ€¢ Ø§Ù„ÙØ¦Ø©: {cat}",
+        "ðŸ†• Ø·Ù„Ø¨ Ø¯Ø±Ø¯Ø´Ø© ØÙŠÙ‘Ø©\nâ€¢ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…: {name} @{username}\nâ€¢ Ø§Ù„Ù…Ø¹Ø±Ù‘Ù: {uid}\nâ€¢ Ø§Ù„ÙØ¦Ø©: {cat}",
         "ðŸ†• Live chat request\nâ€¢ User: {name} @{username}\nâ€¢ ID: {uid}\nâ€¢ Category: {cat}",
         build_kb=_mk,
         name=cb.from_user.full_name,
@@ -679,13 +679,13 @@ def _kb_admin_request(uid: int, lang: str) -> InlineKeyboardMarkup:
 
 def _kb_admin_controls(uid: int, lang: str, sid: str) -> InlineKeyboardMarkup:
     psid = _sid_pack(sid)
-    stars = [InlineKeyboardButton(text=f"{i}â­", callback_data=f"live:arate:{uid}:{psid}:{i}") for i in range(1, 6)]
+    stars = [InlineKeyboardButton(text=f"{i}â", callback_data=f"live:arate:{uid}:{psid}:{i}") for i in range(1, 6)]
     tags  = [
-        InlineKeyboardButton(text=_tt(lang,"live.tag.solved","âœ… Ù…Ø­Ù„ÙˆÙ„Ø©","âœ… Solved"), callback_data=f"live:atag:{uid}:{psid}:solved"),
+        InlineKeyboardButton(text=_tt(lang,"live.tag.solved","âœ… Ù…ØÙ„ÙˆÙ„Ø©","âœ… Solved"), callback_data=f"live:atag:{uid}:{psid}:solved"),
         InlineKeyboardButton(text=_tt(lang,"live.tag.follow","â³ Ù…ØªØ§Ø¨Ø¹Ø©","â³ Follow-up"), callback_data=f"live:atag:{uid}:{psid}:follow"),
         InlineKeyboardButton(text=_tt(lang,"live.tag.bug","ðŸž Ø¹ÙŠØ¨","ðŸž Bug"), callback_data=f"live:atag:{uid}:{psid}:bug"),
     ]
-    # Ø£Ø²Ø±Ø§Ø± Ø§Ù„Ø­Ø¸Ø± Ø§Ù„Ø³Ø±ÙŠØ¹Ø©
+    # Ø£Ø²Ø±Ø§Ø± Ø§Ù„ØØ¸Ø± Ø§Ù„Ø³Ø±ÙŠØ¹Ø©
     blocks = [
         InlineKeyboardButton(text="ðŸš« 1h",  callback_data=f"live:ablock:{uid}:{psid}:3600"),
         InlineKeyboardButton(text="ðŸš« 24h", callback_data=f"live:ablock:{uid}:{psid}:86400"),
@@ -693,13 +693,13 @@ def _kb_admin_controls(uid: int, lang: str, sid: str) -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="â›” Ø¯Ø§Ø¦Ù…", callback_data=f"live:ablock:{uid}:{psid}:0"),
     ]
     custom = InlineKeyboardButton(
-        text=("â±ï¸ Ø­Ø¸Ø± Ù…ÙØ®ØµØµ" if lang.startswith("ar") else "â±ï¸ Custom block"),
+        text=("â±ï¸ ØØ¸Ø± Ù…ÙØ®ØµØµ" if lang.startswith("ar") else "â±ï¸ Custom block"),
         callback_data=f"live:ablock_custom:{uid}:{psid}"
     )
 
-    # Ø²Ø± Ø±ÙØ¹ Ø§Ù„Ø­Ø¸Ø±
+    # Ø²Ø± Ø±ÙØ¹ Ø§Ù„ØØ¸Ø±
     unban_btn = InlineKeyboardButton(
-        text=("ðŸ”“ Ø±ÙØ¹ Ø§Ù„Ø­Ø¸Ø±" if lang.startswith("ar") else "ðŸ”“ Unban"),
+        text=("ðŸ”“ Ø±ÙØ¹ Ø§Ù„ØØ¸Ø±" if lang.startswith("ar") else "ðŸ”“ Unban"),
         callback_data=f"live:aunblock:{uid}:{psid}"
     )
 
@@ -719,14 +719,14 @@ async def cb_admin_block_quick(cb: CallbackQuery, state: FSMContext):
         return await cb.answer("Admins only.", show_alert=True)
 
     uid, sid, seconds = _parse_uid_sid_stars(cb.data)  # Ø§Ø³ØªØ¹Ù…Ù„Ù†Ø§ Ù†ÙØ³ Ø§Ù„Ø¨Ø§Ø±Ø³Ø±: Ø¢Ø®Ø± Ø¬Ø²Ø¡ ÙƒØ£Ù†Ù‡ "Ù†Ø¬ÙˆÙ…" Ù„ÙƒÙ† Ù‡Ù†Ø§ Ø«ÙˆØ§Ù†ÙŠ
-    # Ù…Ù„Ø§Ø­Ø¸Ø©: ÙÙˆÙ‚ Ø§Ø³ØªØ¹Ù…Ù„Ù†Ø§ live:ablock:{uid}:{psid}:{seconds} Ù„Ø°Ù„Ùƒ Ø§Ù„Ø¯Ø§Ù„Ø© ØªØ¹Ù…Ù„ ØªÙ…Ø§Ù…
+    # Ù…Ù„Ø§ØØ¸Ø©: ÙÙˆÙ‚ Ø§Ø³ØªØ¹Ù…Ù„Ù†Ø§ live:ablock:{uid}:{psid}:{seconds} Ù„Ø°Ù„Ùƒ Ø§Ù„Ø¯Ø§Ù„Ø© ØªØ¹Ù…Ù„ ØªÙ…Ø§Ù…
     seconds = int(seconds)
     # ØªØµØ¹ÙŠØ¯ ØªÙ„Ù‚Ø§Ø¦ÙŠ (Ø§Ø®ØªÙŠØ§Ø±ÙŠ):
     strikes_after = _get_strikes(uid) + 1
     if seconds > 0:
         seconds = _auto_penalty_seconds(seconds, strikes_after)
 
-    # Ø¯ÙˆÙ‘Ù† Ø§Ù„Ø­Ø¸Ø±
+    # Ø¯ÙˆÙ‘Ù† Ø§Ù„ØØ¸Ø±
     _put_block(uid, seconds if seconds>0 else 10*365*24*3600, reason="quick")  # 0 = Ø¯Ø§Ø¦Ù… â†’ 10 Ø³Ù†ÙˆØ§Øª Ù…Ø«Ù„Ø§Ù‹
 
     # Ø£Ù†Ù‡Ù Ø§Ù„Ø¬Ù„Ø³Ø© Ù„Ùˆ Ù…ÙˆØ¬ÙˆØ¯Ø©
@@ -745,7 +745,7 @@ async def cb_admin_block_quick(cb: CallbackQuery, state: FSMContext):
     try:
         await cb.bot.send_message(uid,
             _tt(lang_user, "live.blocked.msg",
-                f"â›” ØªÙ… Ø­Ø¸Ø±Ùƒ Ù…Ù† Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ù„Ù…Ø¯Ø©: {period}.",
+                f"â›” ØªÙ… ØØ¸Ø±Ùƒ Ù…Ù† Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ù„Ù…Ø¯Ø©: {period}.",
                 f"â›” You have been blocked from live chat for: {period}."))
     except Exception:
         pass
@@ -754,7 +754,7 @@ async def cb_admin_block_quick(cb: CallbackQuery, state: FSMContext):
     try:
         await cb.message.edit_text(
             _tt(alang, "live.admin.blocked.ok",
-                f"â›” ØªÙ… Ø­Ø¸Ø± Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… {uid} ({period}) ÙˆØ¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¬Ù„Ø³Ø©.",
+                f"â›” ØªÙ… ØØ¸Ø± Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… {uid} ({period}) ÙˆØ¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¬Ù„Ø³Ø©.",
                 f"â›” User {uid} blocked ({period}) and session ended."),
             reply_markup=None
         )
@@ -763,7 +763,7 @@ async def cb_admin_block_quick(cb: CallbackQuery, state: FSMContext):
 
     await _notify_admins_t(cb.bot,
         "live.admin.notify.block",
-        "â›” Ø­Ø¸Ø± Ø§Ù„Ø¥Ø¯Ù…Ù† {admin_id} Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… {uid} Ù„Ù…Ø¯Ø© {period}\nSID={sid}",
+        "â›” ØØ¸Ø± Ø§Ù„Ø¥Ø¯Ù…Ù† {admin_id} Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… {uid} Ù„Ù…Ø¯Ø© {period}\nSID={sid}",
         "â›” Admin {admin_id} blocked user {uid} for {period}\nSID={sid}",
         admin_id=cb.from_user.id, uid=uid, sid=sid, period=period)
 
@@ -777,12 +777,12 @@ async def cb_admin_unblock(cb: CallbackQuery):
     # Ù†ÙØ³ ØªÙ†Ø³ÙŠÙ‚ live:aunblock:{uid}:{psid} â†’ Ù†Ø³ØªØ®Ø¯Ù… Ø§Ù„Ø¨Ø§Ø±Ø³Ø± Ø§Ù„Ø¹Ø§Ù…
     uid, sid = _parse_uid_sid(cb.data)
 
-    # Ù„Ùˆ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… ØºÙŠØ± Ù…Ø­Ø¸ÙˆØ±ØŒ Ù†Ø®Ø¨Ø± Ø§Ù„Ø¥Ø¯Ù…Ù† Ø¨Ø´ÙƒÙ„ ÙˆØ¯Ù‘ÙŠ
+    # Ù„Ùˆ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… ØºÙŠØ± Ù…ØØ¸ÙˆØ±ØŒ Ù†Ø®Ø¨Ø± Ø§Ù„Ø¥Ø¯Ù…Ù† Ø¨Ø´ÙƒÙ„ ÙˆØ¯Ù‘ÙŠ
     was_blocked, _, _ = _block_status(uid)
     _clear_block(uid)
 
     alang = _L(cb.from_user.id)
-    msg_admin = ("ðŸ”“ ØªÙ… Ø±ÙØ¹ Ø§Ù„Ø­Ø¸Ø± Ø¹Ù† Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… {uid}."
+    msg_admin = ("ðŸ”“ ØªÙ… Ø±ÙØ¹ Ø§Ù„ØØ¸Ø± Ø¹Ù† Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… {uid}."
                  if alang.startswith("ar") else
                  "ðŸ”“ Unban completed for user {uid}.")
     try:
@@ -791,13 +791,13 @@ async def cb_admin_unblock(cb: CallbackQuery):
     except Exception:
         pass
 
-    # Ø£Ø®Ø¨Ø± Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø£Ù†Ù‡ ØªÙ… Ø±ÙØ¹ Ø§Ù„Ø­Ø¸Ø±
+    # Ø£Ø®Ø¨Ø± Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø£Ù†Ù‡ ØªÙ… Ø±ÙØ¹ Ø§Ù„ØØ¸Ø±
     try:
         await cb.bot.send_message(
             uid,
             _tt(_L(uid),
                 "live.unblocked",
-                "âœ… ØªÙ… Ø±ÙØ¹ Ø§Ù„Ø­Ø¸Ø±. ÙŠÙ…ÙƒÙ†Ùƒ ÙØªØ­ Ø¯Ø±Ø¯Ø´Ø© Ø¬Ø¯ÙŠØ¯Ø© Ù…Ù† Â«Ø§Ù„Ø¯Ø¹Ù…Â».",
+                "âœ… ØªÙ… Ø±ÙØ¹ Ø§Ù„ØØ¸Ø±. ÙŠÙ…ÙƒÙ†Ùƒ ÙØªØ Ø¯Ø±Ø¯Ø´Ø© Ø¬Ø¯ÙŠØ¯Ø© Ù…Ù† Â«Ø§Ù„Ø¯Ø¹Ù…Â».",
                 "âœ… Your ban was lifted. You can start a new chat from Support.")
         )
     except Exception:
@@ -807,13 +807,13 @@ async def cb_admin_unblock(cb: CallbackQuery):
     await _notify_admins_t(
         cb.bot,
         "live.admin.notify.unblock",
-        "ðŸ”“ Ø±ÙØ¹ Ø§Ù„Ø¥Ø¯Ù…Ù† {admin_id} Ø§Ù„Ø­Ø¸Ø± Ø¹Ù† Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… {uid} | SID={sid}",
+        "ðŸ”“ Ø±ÙØ¹ Ø§Ù„Ø¥Ø¯Ù…Ù† {admin_id} Ø§Ù„ØØ¸Ø± Ø¹Ù† Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… {uid} | SID={sid}",
         "ðŸ”“ Admin {admin_id} unblocked user {uid} | SID={sid}",
         admin_id=cb.from_user.id, uid=uid, sid=sid
     )
 
     # Ø±Ø¯ Ù‚ØµÙŠØ± Ù„ÙˆØ§Ø¬Ù‡Ø© Ø§Ù„Ø²Ø±
-    await cb.answer("Unblocked" if not alang.startswith("ar") else "ØªÙ… Ø±ÙØ¹ Ø§Ù„Ø­Ø¸Ø±")
+    await cb.answer("Unblocked" if not alang.startswith("ar") else "ØªÙ… Ø±ÙØ¹ Ø§Ù„ØØ¸Ø±")
 
 @router.message(Command("unban"))
 async def cmd_unban(m: Message):
@@ -825,12 +825,12 @@ async def cmd_unban(m: Message):
     uid = int(parts[1])
     was_blocked, _, _ = _block_status(uid)
     _clear_block(uid)
-    await m.reply(("ðŸ”“ ØªÙ… Ø±ÙØ¹ Ø§Ù„Ø­Ø¸Ø± Ø¹Ù† " if _L(m.from_user.id).startswith("ar") else "ðŸ”“ Unbanned ") + str(uid))
+    await m.reply(("ðŸ”“ ØªÙ… Ø±ÙØ¹ Ø§Ù„ØØ¸Ø± Ø¹Ù† " if _L(m.from_user.id).startswith("ar") else "ðŸ”“ Unbanned ") + str(uid))
     try:
         await m.bot.send_message(uid,
             _tt(_L(uid),
                 "live.unblocked",
-                "âœ… ØªÙ… Ø±ÙØ¹ Ø§Ù„Ø­Ø¸Ø±. ÙŠÙ…ÙƒÙ†Ùƒ ÙØªØ­ Ø¯Ø±Ø¯Ø´Ø© Ø¬Ø¯ÙŠØ¯Ø© Ù…Ù† Â«Ø§Ù„Ø¯Ø¹Ù…Â».",
+                "âœ… ØªÙ… Ø±ÙØ¹ Ø§Ù„ØØ¸Ø±. ÙŠÙ…ÙƒÙ†Ùƒ ÙØªØ Ø¯Ø±Ø¯Ø´Ø© Ø¬Ø¯ÙŠØ¯Ø© Ù…Ù† Â«Ø§Ù„Ø¯Ø¹Ù…Â».",
                 "âœ… Your ban was lifted. You can start a new chat from Support."))
     except Exception:
         pass
@@ -845,7 +845,7 @@ async def cb_admin_block_custom_open(cb: CallbackQuery, state: FSMContext):
     uid = int(parts[2]); sid = _sid_unpack(parts[3])
     await state.update_data(block_target_uid=uid, block_target_sid=sid)
     await state.set_state(LiveChat.block_wait)
-    await cb.message.answer("â±ï¸ Ø£Ø±Ø³Ù„ Ù…Ø¯Ø© Ø§Ù„Ø­Ø¸Ø± Ø¨Ø§Ù„Ø«ÙˆØ§Ù†ÙŠØŒ ÙˆÙŠÙ…ÙƒÙ† Ø¥Ø¶Ø§ÙØ© Ø³Ø¨Ø¨ Ø¨Ø¹Ø¯ ÙØ§ØµÙ„Ø© Ø¹Ù…ÙˆØ¯ÙŠØ©:\nÙ…Ø«Ø§Ù„: `3600|Ø³Ø¨Ø§Ù…`\nExample: `86400|spam`", parse_mode="Markdown")
+    await cb.message.answer("â±ï¸ Ø£Ø±Ø³Ù„ Ù…Ø¯Ø© Ø§Ù„ØØ¸Ø± Ø¨Ø§Ù„Ø«ÙˆØ§Ù†ÙŠØŒ ÙˆÙŠÙ…ÙƒÙ† Ø¥Ø¶Ø§ÙØ© Ø³Ø¨Ø¨ Ø¨Ø¹Ø¯ ÙØ§ØµÙ„Ø© Ø¹Ù…ÙˆØ¯ÙŠØ©:\nÙ…Ø«Ø§Ù„: `3600|Ø³Ø¨Ø§Ù…`\nExample: `86400|spam`", parse_mode="Markdown")
     await cb.answer()
 
 @router.message(StateFilter(LiveChat.block_wait))
@@ -864,7 +864,7 @@ async def admin_block_custom_apply(m: Message, state: FSMContext):
             seconds = int(text)
             reason = ""
     except Exception:
-        return await m.reply("ØªÙ†Ø³ÙŠÙ‚ ØºÙŠØ± ØµØ­ÙŠØ­. Ù…Ø«Ø§Ù„: `3600|Ø³Ø¨Ø§Ù…`", parse_mode="Markdown")
+        return await m.reply("ØªÙ†Ø³ÙŠÙ‚ ØºÙŠØ± ØµØÙŠØ. Ù…Ø«Ø§Ù„: `3600|Ø³Ø¨Ø§Ù…`", parse_mode="Markdown")
 
     data = await state.get_data()
     uid = int(data.get("block_target_uid"))
@@ -887,16 +887,16 @@ async def admin_block_custom_apply(m: Message, state: FSMContext):
     try:
         await m.bot.send_message(uid,
             _tt(_L(uid), "live.blocked.msg",
-                f"â›” ØªÙ… Ø­Ø¸Ø±Ùƒ Ù…Ù† Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ù„Ù…Ø¯Ø©: {period}.",
+                f"â›” ØªÙ… ØØ¸Ø±Ùƒ Ù…Ù† Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ù„Ù…Ø¯Ø©: {period}.",
                 f"â›” You have been blocked from live chat for: {period}."))
     except Exception:
         pass
 
     _update_history(sid, tag="blocked")
-    await m.reply(f"ØªÙ… Ø§Ù„Ø­Ø¸Ø±: UID={uid} | {period} | reason={reason or '-'}")
+    await m.reply(f"ØªÙ… Ø§Ù„ØØ¸Ø±: UID={uid} | {period} | reason={reason or '-'}")
     await _notify_admins_t(m.bot,
         "live.admin.notify.block",
-        "â›” Ø­Ø¸Ø± Ø§Ù„Ø¥Ø¯Ù…Ù† {admin_id} Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… {uid} Ù„Ù…Ø¯Ø© {period}\nSID={sid}\nØ³Ø¨Ø¨: {reason}",
+        "â›” ØØ¸Ø± Ø§Ù„Ø¥Ø¯Ù…Ù† {admin_id} Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… {uid} Ù„Ù…Ø¯Ø© {period}\nSID={sid}\nØ³Ø¨Ø¨: {reason}",
         "â›” Admin {admin_id} blocked user {uid} for {period}\nSID={sid}\nReason: {reason}",
         admin_id=m.from_user.id, uid=uid, sid=sid, period=period, reason=(reason or "-"))
 
@@ -936,7 +936,7 @@ async def cb_admin_accept(cb: CallbackQuery, state: FSMContext):
     try:
         await cb.bot.send_message(
             uid,
-            _tt(user_lang,"live.joined.user","âœ… Ø§Ù†Ø¶Ù…Ù‘ Ø£Ø­Ø¯ Ø£Ø¹Ø¶Ø§Ø¡ ÙØ±ÙŠÙ‚ Ø§Ù„Ø¯Ø¹Ù… Ø¥Ù„Ù‰ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø©. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„ØªØ­Ø¯Ù‘Ø« Ø§Ù„Ø¢Ù†.","âœ… A support team member has joined. You can talk now."),
+            _tt(user_lang,"live.joined.user","âœ… Ø§Ù†Ø¶Ù…Ù‘ Ø£ØØ¯ Ø£Ø¹Ø¶Ø§Ø¡ ÙØ±ÙŠÙ‚ Ø§Ù„Ø¯Ø¹Ù… Ø¥Ù„Ù‰ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø©. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„ØªØØ¯Ù‘Ø« Ø§Ù„Ø¢Ù†.","âœ… A support team member has joined. You can talk now."),
             reply_markup=_kb_user_actions(user_lang, sess["sid"])
         )
     except Exception:
@@ -989,7 +989,7 @@ async def cb_admin_decline(cb: CallbackQuery, state: FSMContext):
     if _get_session(uid): _del_session(uid)
     _inbox_call("resolve", "live", uid, status="declined")
     try:
-        await cb.bot.send_message(uid, _tt(lang,"live.declined","Ø¹Ø°Ø±Ù‹Ø§ØŒ Ù„Ø§ ÙŠØªÙˆÙØ± Ø¯Ø¹Ù… Ø§Ù„Ø¢Ù†. Ø­Ø§ÙˆÙ„ Ù„Ø§Ø­Ù‚Ù‹Ø§.","Sorry, support is unavailable now. Please try later."))
+        await cb.bot.send_message(uid, _tt(lang,"live.declined","Ø¹Ø°Ø±Ù‹Ø§ØŒ Ù„Ø§ ÙŠØªÙˆÙØ± Ø¯Ø¹Ù… Ø§Ù„Ø¢Ù†. ØØ§ÙˆÙ„ Ù„Ø§ØÙ‚Ù‹Ø§.","Sorry, support is unavailable now. Please try later."))
     except Exception:
         pass
     # Ø®Ø±ÙˆØ¬ Ù…Ù† ÙˆØ¶Ø¹ Ø§Ù„Ø¥Ø¯Ù…Ù† Ù„Ùˆ ÙƒØ§Ù† Ø¨Ø¯Ø§Ø®Ù„Ù‡
@@ -1013,7 +1013,7 @@ async def cb_end_self(cb: CallbackQuery, state: FSMContext):
     if sid:
         _finish_history(sid)
         await _notify_admins_t(cb.bot,"live.admin.notify.ended_by_user","ðŸ”´ Ø£Ù†Ù‡Ù‰ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© | SID={sid} | UID={uid}","ðŸ”´ Chat ended by user | SID={sid} | UID={uid}", sid=sid, uid=uid)
-        kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text=f"{i}â­", callback_data=f"live:urate:{_sid_pack(sid)}:{i}") for i in range(1,6)]])
+        kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text=f"{i}â", callback_data=f"live:urate:{_sid_pack(sid)}:{i}") for i in range(1,6)]])
         try:
             await cb.bot.send_message(uid, _tt(lang,"live.rate.ask","Ù‚ÙŠÙ‘Ù… ØªØ¬Ø±Ø¨ØªÙƒ Ù…Ø¹ Ø§Ù„Ø¯Ø¹Ù…:","Rate your support experience:"), reply_markup=kb)
         except Exception:
@@ -1037,7 +1037,7 @@ async def cb_admin_end(cb: CallbackQuery, state: FSMContext):
     except Exception:
         pass
     summary = _finish_history(sid) or {}
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text=f"{i}â­", callback_data=f"live:urate:{_sid_pack(sid)}:{i}") for i in range(1,6)]])
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text=f"{i}â", callback_data=f"live:urate:{_sid_pack(sid)}:{i}") for i in range(1,6)]])
     try:
         await cb.bot.send_message(uid, _tt(user_lang,"live.rate.ask","Ù‚ÙŠÙ‘Ù… ØªØ¬Ø±Ø¨ØªÙƒ Ù…Ø¹ Ø§Ù„Ø¯Ø¹Ù…:","Rate your support experience:"), reply_markup=kb)
     except Exception:
@@ -1057,12 +1057,12 @@ async def cb_admin_rate(cb: CallbackQuery):
     _touch_admin(cb.from_user.id)
     uid, sid, stars = _parse_uid_sid_stars(cb.data)
     _set_admin_rating(sid, int(stars))
-    await cb.answer(f"Rated {stars}â­")
+    await cb.answer(f"Rated {stars}â")
     try:
         await cb.message.edit_reply_markup(reply_markup=_kb_admin_controls(int(uid), _L(cb.from_user.id), sid))
     except Exception:
         pass
-    await _notify_admins_t(cb.bot,"live.admin.notify.admin_rating","ðŸ› ï¸ Ù‚ÙŠÙ‘Ù… Ø§Ù„Ø¥Ø¯Ù…Ù† {admin_id} Ø¬Ù„Ø³Ø© {sid}: {stars}â­ (UID {uid})","ðŸ› ï¸ Admin {admin_id} rated chat {sid}: {stars}â­ (UID {uid})", admin_id=cb.from_user.id, sid=sid, stars=stars, uid=uid)
+    await _notify_admins_t(cb.bot,"live.admin.notify.admin_rating","ðŸ› ï¸ Ù‚ÙŠÙ‘Ù… Ø§Ù„Ø¥Ø¯Ù…Ù† {admin_id} Ø¬Ù„Ø³Ø© {sid}: {stars}â (UID {uid})","ðŸ› ï¸ Admin {admin_id} rated chat {sid}: {stars}â (UID {uid})", admin_id=cb.from_user.id, sid=sid, stars=stars, uid=uid)
 
 @router.callback_query(F.data.startswith("live:atag:"))
 async def cb_admin_tag(cb: CallbackQuery):
@@ -1126,7 +1126,7 @@ async def cb_user_rate(cb: CallbackQuery):
     except Exception:
         pass
     await cb.answer("Thanks!")
-    await _notify_admins_t(cb.bot,"live.admin.notify.user_rating","â­ ØªÙ‚ÙŠÙŠÙ… Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ù„Ù„Ø¬Ù„Ø³Ø© {sid}: {stars}â­","â­ User rating for chat {sid}: {stars}â­", sid=sid, stars=stars)
+    await _notify_admins_t(cb.bot,"live.admin.notify.user_rating","â ØªÙ‚ÙŠÙŠÙ… Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ù„Ù„Ø¬Ù„Ø³Ø© {sid}: {stars}â","â User rating for chat {sid}: {stars}â", sid=sid, stars=stars)
 
 @router.message(StateFilter(LiveChat.active), ~F.text.startswith("/"), ~F.caption.startswith("/"))
 async def user_live_message(m: Message, state: FSMContext):
@@ -1137,12 +1137,12 @@ async def user_live_message(m: Message, state: FSMContext):
     if _expired(sess):
         _del_session(uid); await state.clear()
         _inbox_call("resolve", "live", uid, status="expired")
-        return await m.answer(_tt(lang,"live.expired.msg","â³ Ø§Ù†ØªÙ‡Øª Ø§Ù„Ø¬Ù„Ø³Ø©. Ø§Ø¨Ø¯Ø£ ÙˆØ§Ø­Ø¯Ø© Ø¬Ø¯ÙŠØ¯Ø© Ù…Ù† (Ø§Ù„Ø¯Ø¹Ù…).","â³ Session expired. Start a new one from Support."))
+        return await m.answer(_tt(lang,"live.expired.msg","â³ Ø§Ù†ØªÙ‡Øª Ø§Ù„Ø¬Ù„Ø³Ø©. Ø§Ø¨Ø¯Ø£ ÙˆØ§ØØ¯Ø© Ø¬Ø¯ÙŠØ¯Ø© Ù…Ù† (Ø§Ù„Ø¯Ø¹Ù…).","â³ Session expired. Start a new one from Support."))
     _touch(uid)
 
     if sess.get("status") == "waiting":
         q = list(sess.get("queue") or []); q.append(m.message_id); sess["queue"] = q; _put_session(uid, sess)
-        # Ø­Ø¯Ù‘Ø« Ø§Ù„Ù…Ø¹Ø§ÙŠÙ†Ø© ÙÙŠ ØµÙ†Ø¯ÙˆÙ‚ Ø§Ù„ÙˆØ§Ø±Ø¯ (Ø¢Ø®Ø± Ø±Ø³Ø§Ù„Ø©)
+        # ØØ¯Ù‘Ø« Ø§Ù„Ù…Ø¹Ø§ÙŠÙ†Ø© ÙÙŠ ØµÙ†Ø¯ÙˆÙ‚ Ø§Ù„ÙˆØ§Ø±Ø¯ (Ø¢Ø®Ø± Ø±Ø³Ø§Ù„Ø©)
         preview = (m.caption or m.text or f"({m.content_type})")[:200]
         _inbox_call("update", "live", uid, preview)
         return await m.answer(
@@ -1181,7 +1181,7 @@ async def user_live_message(m: Message, state: FSMContext):
 
 # ===== Admin messages â€” Reply always allowed; non-reply only in FSM state =====
 
-# 1) Ø§Ù„Ø¥Ø¯Ù…Ù† ÙˆÙ‡Ùˆ ÙŠØ±Ø¯Ù‘ Reply Ø¹Ù„Ù‰ Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… (ÙŠØ³Ù…Ø­ Ø¯Ø§Ø¦Ù…Ù‹Ø§)
+# 1) Ø§Ù„Ø¥Ø¯Ù…Ù† ÙˆÙ‡Ùˆ ÙŠØ±Ø¯Ù‘ Reply Ø¹Ù„Ù‰ Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… (ÙŠØ³Ù…Ø Ø¯Ø§Ø¦Ù…Ù‹Ø§)
 @router.message(F.reply_to_message)
 async def admin_reply_in_private(m: Message):
     if not _is_admin(m.from_user.id):
@@ -1257,7 +1257,7 @@ async def _send_to_active(m: Message) -> bool:
     if not uid:
         try:
             await m.reply("âš ï¸ Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¬Ù„Ø³Ø© Ù…ÙØ¹Ù‘Ù„Ø© Ù„Ùƒ Ø§Ù„Ø¢Ù†.\n"
-                          "âžœ Ø¥Ù…Ù‘Ø§ Ø§Ø¶ØºØ· Â«âœ… Ø§Ù†Ø¶Ù… Ù„Ù„Ø¯Ø±Ø¯Ø´Ø©Â»ØŒ Ø£Ùˆ **Ø±Ø¯** (Reply) Ø¹Ù„Ù‰ Ø¥Ø­Ø¯Ù‰ Ø±Ø³Ø§Ø¦Ù„ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù….")
+                          "âžœ Ø¥Ù…Ù‘Ø§ Ø§Ø¶ØºØ· Â«âœ… Ø§Ù†Ø¶Ù… Ù„Ù„Ø¯Ø±Ø¯Ø´Ø©Â»ØŒ Ø£Ùˆ **Ø±Ø¯** (Reply) Ø¹Ù„Ù‰ Ø¥ØØ¯Ù‰ Ø±Ø³Ø§Ø¦Ù„ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù….")
         except Exception:
             pass
         return False
@@ -1266,12 +1266,12 @@ async def _send_to_active(m: Message) -> bool:
     if not s or s.get("status") != "active":
         try:
             await m.reply("âš ï¸ Ø§Ù„Ø¬Ù„Ø³Ø© Ù„ÙŠØ³Øª Ù†Ø´Ø·Ø©.\n"
-                          "Ø¥Ù†ØªÙ‡Øª/Ø£ÙØºÙ„Ù‚Øª. Ø§Ø·Ù„Ø¨ Ù…Ù† Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… ÙØªØ­ Ø·Ù„Ø¨ Ø¬Ø¯ÙŠØ¯ Ø£Ùˆ Ø§Ù†Ø¶Ù… Ø«Ø§Ù†ÙŠØ©.")
+                          "Ø¥Ù†ØªÙ‡Øª/Ø£ÙØºÙ„Ù‚Øª. Ø§Ø·Ù„Ø¨ Ù…Ù† Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… ÙØªØ Ø·Ù„Ø¨ Ø¬Ø¯ÙŠØ¯ Ø£Ùˆ Ø§Ù†Ø¶Ù… Ø«Ø§Ù†ÙŠØ©.")
         except Exception:
             pass
         return False
 
-    # Ø­Ø§ÙˆÙ„ Ø§Ù„Ù†Ø³Ø® Ø£ÙˆÙ„Ø§Ù‹ØŒ Ø«Ù… ÙÙˆÙ„Ø¨Ø§Ùƒ Ù„Ù†Øµ ÙÙ‚Ø·
+    # ØØ§ÙˆÙ„ Ø§Ù„Ù†Ø³Ø® Ø£ÙˆÙ„Ø§Ù‹ØŒ Ø«Ù… ÙÙˆÙ„Ø¨Ø§Ùƒ Ù„Ù†Øµ ÙÙ‚Ø·
     try:
         await m.bot.copy_message(
             chat_id=int(uid),
@@ -1297,7 +1297,7 @@ async def _send_to_active(m: Message) -> bool:
             log.warning("send admin(no-reply)->user failed: %s", e2)
         return False
 
-# ===== Ø£ÙˆØ§Ù…Ø± Ø­Ø§Ù„Ø© Ø£ÙˆÙ†Ù„Ø§ÙŠÙ† Ø§Ù„Ø¥Ø¯Ù…Ù† =====
+# ===== Ø£ÙˆØ§Ù…Ø± ØØ§Ù„Ø© Ø£ÙˆÙ†Ù„Ø§ÙŠÙ† Ø§Ù„Ø¥Ø¯Ù…Ù† =====
 @router.message(Command("live_on"))
 async def cmd_live_on(m: Message):
     if not _is_admin(m.from_user.id):

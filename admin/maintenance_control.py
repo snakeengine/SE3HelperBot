@@ -26,7 +26,7 @@ ADMIN_IDS = _load_admin_ids()
 def _status_text() -> str:
     return (
         "ðŸ› ï¸ <b>Maintenance Mode</b>\n"
-        f"Ø§Ù„Ø­Ø§Ù„Ø©: {'âœ… <b>Ù‚ÙŠØ¯ Ø§Ù„ØµÙŠØ§Ù†Ø©</b>' if is_enabled() else 'ðŸŸ¢ <b>ÙŠØ¹Ù…Ù„</b>'}"
+        f"Ø§Ù„ØØ§Ù„Ø©: {'âœ… <b>Ù‚ÙŠØ¯ Ø§Ù„ØµÙŠØ§Ù†Ø©</b>' if is_enabled() else 'ðŸŸ¢ <b>ÙŠØ¹Ù…Ù„</b>'}"
     )
 
 def _kb():
@@ -37,7 +37,7 @@ def _kb():
     )
     b.row(
         InlineKeyboardButton(text="ðŸ” ØªØ¨Ø¯ÙŠÙ„", callback_data="maint:toggle"),
-        InlineKeyboardButton(text="ðŸ“Š Ø§Ù„Ø­Ø§Ù„Ø©", callback_data="maint:status"),
+        InlineKeyboardButton(text="ðŸ“Š Ø§Ù„ØØ§Ù„Ø©", callback_data="maint:status"),
     )
     return b.as_markup()
 
@@ -63,7 +63,7 @@ async def maint_off(msg: Message):
     set_enabled(False)
     await msg.answer("ðŸŸ¢ ØªÙ… Ø¥Ù„ØºØ§Ø¡ ÙˆØ¶Ø¹ Ø§Ù„ØµÙŠØ§Ù†Ø©.\n" + _status_text(), reply_markup=_kb())
 
-# Ø£Ø²Ø±Ø§Ø± Ø§Ù„ØªØ­ÙƒÙ…
+# Ø£Ø²Ø±Ø§Ø± Ø§Ù„ØªØÙƒÙ…
 @router.callback_query(F.data.startswith("maint:"))
 async def maintenance_cb(cb: CallbackQuery):
     if not cb.from_user or cb.from_user.id not in ADMIN_IDS:
@@ -83,7 +83,7 @@ async def maintenance_cb(cb: CallbackQuery):
     elif action == "status":
         await cb.answer("OK")
 
-    # ØªØ­Ø¯ÙŠØ« Ø§Ù„Ø±Ø³Ø§Ù„Ø©
+    # ØªØØ¯ÙŠØ« Ø§Ù„Ø±Ø³Ø§Ù„Ø©
     try:
         await cb.message.edit_text(_status_text(), reply_markup=_kb())
     except Exception:

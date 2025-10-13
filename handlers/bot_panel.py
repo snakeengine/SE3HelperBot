@@ -30,7 +30,7 @@ async def _safe_edit(message, *, text: Optional[str] = None, reply_markup=None,
                     parse_mode: Optional[ParseMode] = None,
                     disable_web_page_preview: Optional[bool] = None):
     """
-    ÙŠØ­Ø§ÙˆÙ„ ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ø¨Ø£Ù…Ø§Ù†:
+    ÙŠØØ§ÙˆÙ„ ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ø¨Ø£Ù…Ø§Ù†:
       1) Ø¥Ù† ØªØºÙŠÙ‘Ø± Ø§Ù„Ù†Øµ ÙØ¹Ù„Ø§Ù‹ â†’ edit_text
       2) Ø¥Ù† Ù„Ù… ÙŠØªØºÙŠÙ‘Ø± Ø§Ù„Ù†Øµ Ù„ÙƒÙ† ØªØºÙŠÙ‘Ø± Ø§Ù„Ù…Ø§Ø±Ùƒ-Ø£Ø¨ â†’ edit_reply_markup ÙÙ‚Ø·
       3) Ø¥Ù† Ù„Ù… ÙŠØªØºÙŠÙ‘Ø± Ø´ÙŠØ¡ â†’ Ù„Ø§ ÙŠØ±Ù…ÙŠ Ø§Ø³ØªØ«Ù†Ø§Ø¡
@@ -48,7 +48,7 @@ async def _safe_edit(message, *, text: Optional[str] = None, reply_markup=None,
             return await message.edit_reply_markup(reply_markup=reply_markup)
         return None
     except TelegramBadRequest as e:
-        # ÙÙŠ Ø­Ø§Ù„ Ù„Ù… ÙŠØªØºÙŠÙ‘Ø± Ø´ÙŠØ¡ ÙØ¹Ù„Ø§Ù‹
+        # ÙÙŠ ØØ§Ù„ Ù„Ù… ÙŠØªØºÙŠÙ‘Ø± Ø´ÙŠØ¡ ÙØ¹Ù„Ø§Ù‹
         if "message is not modified" in str(e):
             return None
         raise
@@ -86,7 +86,7 @@ def _load_json(path: Path) -> Optional[dict]:
     return None
 
 def _public_meta() -> dict:
-    # Ø§Ù„Ù‚ÙŠÙ… Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠØ© (ØªÙ‚Ø¯Ø± ØªØºÙŠÙ‘Ø±Ù‡Ø§ Ù…Ù† Ø§Ù„Ù…Ù„Ù Ù„Ø§Ø­Ù‚Ù‹Ø§ Ø¨Ø¯ÙˆÙ† ØªØ¹Ø¯ÙŠÙ„ ÙƒÙˆØ¯)
+    # Ø§Ù„Ù‚ÙŠÙ… Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠØ© (ØªÙ‚Ø¯Ø± ØªØºÙŠÙ‘Ø±Ù‡Ø§ Ù…Ù† Ø§Ù„Ù…Ù„Ù Ù„Ø§ØÙ‚Ù‹Ø§ Ø¨Ø¯ÙˆÙ† ØªØ¹Ø¯ÙŠÙ„ ÙƒÙˆØ¯)
     base = {
         "brand": "Snake Engine",
         "channel": "https://t.me/SnakeEngine",
@@ -103,7 +103,7 @@ def _public_meta() -> dict:
         },
         "premium_benefits_ar": [
             "Ø£ÙˆÙ„ÙˆÙŠØ© Ø§Ù„Ø±Ø¯ Ù…Ù† Ø§Ù„Ø¯Ø¹Ù…",
-            "Ø­Ø¯ÙˆØ¯ Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø£Ø¹Ù„Ù‰",
+            "ØØ¯ÙˆØ¯ Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø£Ø¹Ù„Ù‰",
             "Ù…Ø²Ø§ÙŠØ§ Ø¥Ø¶Ø§ÙÙŠØ© Ø¹Ù†Ø¯ ØªÙˆÙØ±Ù‡Ø§"
         ],
         "premium_benefits_en": [
@@ -140,8 +140,8 @@ def _faq(lang: str) -> list[tuple[str, str]]:
                 ("ÙƒÙŠÙ Ø£ØºÙŠÙ‘Ø± Ø§Ù„Ù„ØºØ©ØŸ",
                  "Ø§ÙƒØªØ¨ /language Ø«Ù… Ø§Ø®ØªØ± Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© Ø£Ùˆ Ø§Ù„Ø¥Ù†Ø¬Ù„ÙŠØ²ÙŠØ©."),
                 ("ÙƒÙŠÙ ÙŠÙ…ÙƒÙ†Ù†ÙŠ Ø§Ù„Ø§ØªØµØ§Ù„ Ø¨ÙƒÙ…ØŸ",
-                 "Ø§Ø¶ØºØ· Ø²Ø± Â«ðŸ’¬ Ø¯Ø±Ø¯Ø´Ø© Ø­ÙŠØ©Â» Ø¨Ø§Ù„Ø£Ø³ÙÙ„ Ù„Ù„ØªÙˆØ§ØµÙ„ Ù…Ø¨Ø§Ø´Ø±Ø© Ù…Ø¹ ÙØ±ÙŠÙ‚ Ø§Ù„Ø¯Ø¹Ù…. "
-                 "ÙƒÙ…Ø§ ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ø³ØªØ®Ø¯Ø§Ù… /report Ø¹Ù†Ø¯ Ø§Ù„Ø­Ø§Ø¬Ø©.")
+                 "Ø§Ø¶ØºØ· Ø²Ø± Â«ðŸ’¬ Ø¯Ø±Ø¯Ø´Ø© ØÙŠØ©Â» Ø¨Ø§Ù„Ø£Ø³ÙÙ„ Ù„Ù„ØªÙˆØ§ØµÙ„ Ù…Ø¨Ø§Ø´Ø±Ø© Ù…Ø¹ ÙØ±ÙŠÙ‚ Ø§Ù„Ø¯Ø¹Ù…. "
+                 "ÙƒÙ…Ø§ ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ø³ØªØ®Ø¯Ø§Ù… /report Ø¹Ù†Ø¯ Ø§Ù„ØØ§Ø¬Ø©.")
             ]
         else:
             items = [
@@ -161,7 +161,7 @@ def _kb_main(lang: str, is_admin: bool) -> InlineKeyboardBuilder:
     kb.button(text=_tt(lang, "bot.menu.info",     _LBL(lang, "â„¹ï¸ Ù…Ø¹Ù„ÙˆÙ…Ø§Øª", "â„¹ï¸ Info")),     callback_data="bot:info")
     kb.button(text=_tt(lang, "bot.menu.faq",      _LBL(lang, "â“ Ø§Ù„Ø£Ø³Ø¦Ù„Ø© Ø§Ù„Ø´Ø§Ø¦Ø¹Ø©", "â“ FAQ")), callback_data="bot:faq")
     kb.button(text=_tt(lang, "bot.menu.support",  _LBL(lang, "ðŸ†˜ Ø§Ù„Ø¯Ø¹Ù…", "ðŸ†˜ Support")),     callback_data="bot:support")
-    kb.button(text=_tt(lang, "bot.menu.live",     _LBL(lang, "ðŸ’¬ Ø¯Ø±Ø¯Ø´Ø© Ø­ÙŠØ©", "ðŸ’¬ Live chat")), callback_data="bot:live")
+    kb.button(text=_tt(lang, "bot.menu.live",     _LBL(lang, "ðŸ’¬ Ø¯Ø±Ø¯Ø´Ø© ØÙŠØ©", "ðŸ’¬ Live chat")), callback_data="bot:live")
     kb.button(text=_tt(lang, "bot.menu.forum",    _LBL(lang, "ðŸ’¬ Ø§Ù„Ù…Ù†ØªØ¯Ù‰", "ðŸ’¬ Forum")),      callback_data="bot:forum")
     kb.button(text=_tt(lang, "bot.menu.ping",     _LBL(lang, "ðŸ“ Ø¨ÙŠÙ†Øº", "ðŸ“ Ping")),          callback_data="bot:ping")
     kb.button(text=_tt(lang, "bot.menu.close",    _LBL(lang, "âŒ Ø¥ØºÙ„Ø§Ù‚", "âŒ Close")),        callback_data="bot:close")
@@ -273,7 +273,7 @@ async def bot_support(cb: CallbackQuery):
     lines = [
         title,
         _LBL(lang,
-             "â€¢ Ù„Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„ÙÙˆØ±ÙŠØ©: Ø§Ø¶ØºØ· Â«ðŸ’¬ Ø¯Ø±Ø¯Ø´Ø© Ø­ÙŠØ©Â» Ø¨Ø§Ù„Ø£Ø³ÙÙ„.",
+             "â€¢ Ù„Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„ÙÙˆØ±ÙŠØ©: Ø§Ø¶ØºØ· Â«ðŸ’¬ Ø¯Ø±Ø¯Ø´Ø© ØÙŠØ©Â» Ø¨Ø§Ù„Ø£Ø³ÙÙ„.",
              "â€¢ For instant help: tap â€œðŸ’¬ Live chatâ€ below."),
         _LBL(lang,
              f"â€¢ ØªÙˆØ§ØµÙ„ Ù…Ø¹Ù†Ø§: <a href='https://t.me/{contact.lstrip('@')}'>{contact}</a>",
@@ -343,7 +343,7 @@ async def bot_ping(cb: CallbackQuery):
 # ===== Ù‚Ø§Ø¦Ù…Ø© Ø¥Ø¯Ø§Ø±ÙŠØ© Ù…Ø®ÙÙŠØ© (Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·) =====
 def _kb_admin(lang: str) -> InlineKeyboardBuilder:
     kb = InlineKeyboardBuilder()
-    kb.button(text=_LBL(lang, "ðŸ“ˆ Ø¥Ø­ØµØ§Ø¦ÙŠØ§Øª", "ðŸ“ˆ Stats"), callback_data="bot:admin:stats")
+    kb.button(text=_LBL(lang, "ðŸ“ˆ Ø¥ØØµØ§Ø¦ÙŠØ§Øª", "ðŸ“ˆ Stats"), callback_data="bot:admin:stats")
     kb.button(text=_LBL(lang, "ðŸ› ï¸ ØªØ¹ÙŠÙŠÙ† Ø§Ù„Ø£ÙˆØ§Ù…Ø±", "ðŸ› ï¸ Set Commands"), callback_data="bot:cmds")
     kb.button(text=_LBL(lang, "â¬…ï¸ Ø±Ø¬ÙˆØ¹", "â¬…ï¸ Back"), callback_data="bot:open")
     kb.adjust(2, 1)
@@ -356,13 +356,13 @@ async def bot_admin(cb: CallbackQuery):
     lang = _L(cb.from_user.id)
     await _safe_edit(
         cb.message,
-        text=_LBL(lang, "ðŸ”§ <b>Ù„ÙˆØ­Ø© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©</b>", "ðŸ”§ <b>Admin Panel</b>"),
+        text=_LBL(lang, "ðŸ”§ <b>Ù„ÙˆØØ© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©</b>", "ðŸ”§ <b>Admin Panel</b>"),
         parse_mode=ParseMode.HTML,
         reply_markup=_kb_admin(lang).as_markup()
     )
     await cb.answer()
 
-# Ø¥Ø­ØµØ§Ø¡Ø§Øª Ø¯Ø§Ø®Ù„ÙŠØ© â€” Ù„Ø§ ØªØ¸Ù‡Ø± Ù„Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙŠÙ†
+# Ø¥ØØµØ§Ø¡Ø§Øª Ø¯Ø§Ø®Ù„ÙŠØ© â€” Ù„Ø§ ØªØ¸Ù‡Ø± Ù„Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙŠÙ†
 def _users_count_fallback() -> int:
     try:
         from middlewares.user_tracker import get_users_count  # type: ignore
@@ -387,7 +387,7 @@ async def bot_admin_stats(cb: CallbackQuery):
     users_total = _users_count_fallback()
     # Ù„Ø§ Ù†Ø¹Ø±Ø¶ ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ù†Ø¸Ø§Ù… Ù‡Ù†Ø§ Ù„Ù„Ù…Ø³ØªØ®Ø¯Ù… â€” Ù‡Ø°ÙŠ Ø´Ø§Ø´Ø© Ù„Ù„Ø£Ø¯Ù…Ù† Ø£ØµÙ„Ø§Ù‹
     lines = [
-        _LBL(lang, "ðŸ“ˆ <b>Ø¥Ø­ØµØ§Ø¦ÙŠØ§Øª (Ø®Ø§Øµ Ø¨Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©)</b>", "ðŸ“ˆ <b>Stats (Admin)</b>"),
+        _LBL(lang, "ðŸ“ˆ <b>Ø¥ØØµØ§Ø¦ÙŠØ§Øª (Ø®Ø§Øµ Ø¨Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©)</b>", "ðŸ“ˆ <b>Stats (Admin)</b>"),
         _LBL(lang, f"â€¢ Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙŠÙ†: <b>{users_total:,}</b>",
                     f"â€¢ Total users: <b>{users_total:,}</b>"),
     ]
@@ -420,7 +420,7 @@ async def bot_set_cmds(cb: CallbackQuery):
         BotCommand(command="language", description="ØªØºÙŠÙŠØ± Ø§Ù„Ù„ØºØ©"),
     ]
     en_admin_cmds = en_cmds + [BotCommand(command="admin", description="Admin panel")]
-    ar_admin_cmds = ar_cmds + [BotCommand(command="admin", description="Ù„ÙˆØ­Ø© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©")]
+    ar_admin_cmds = ar_cmds + [BotCommand(command="admin", description="Ù„ÙˆØØ© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©")]
 
     ok = True
     try:
@@ -440,7 +440,7 @@ async def bot_set_cmds(cb: CallbackQuery):
     except Exception as e:
         log.exception("set_my_commands failed: %r", e); ok = False
 
-    msg = _LBL(lang, "âœ… ØªÙ… ØªØ­Ø¯ÙŠØ« Ø§Ù„Ø£ÙˆØ§Ù…Ø±.", "âœ… Commands updated.") if ok else _LBL(lang, "âŒ ÙØ´Ù„ ØªØ­Ø¯ÙŠØ« Ø§Ù„Ø£ÙˆØ§Ù…Ø±.", "âŒ Failed to update commands.")
+    msg = _LBL(lang, "âœ… ØªÙ… ØªØØ¯ÙŠØ« Ø§Ù„Ø£ÙˆØ§Ù…Ø±.", "âœ… Commands updated.") if ok else _LBL(lang, "âŒ ÙØ´Ù„ ØªØØ¯ÙŠØ« Ø§Ù„Ø£ÙˆØ§Ù…Ø±.", "âŒ Failed to update commands.")
     await _safe_edit(
         cb.message,
         text=msg,

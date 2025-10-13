@@ -69,7 +69,7 @@ try:
     def is_stars_ok(prod: str) -> bool: return _p_is_stars_ok(prod)
     def is_crypto_ok(prod: str) -> bool: return _p_is_crypto_ok(prod)
 except Exception:
-    # ØªØ®Ø²ÙŠÙ† Ø¨Ø§Ù„Ø­Ù‚Ù„ "pay_modes" ÙÙŠ FLAGS_PATH ÙƒÙ†Ø³Ø®Ø© Ø§Ø­ØªÙŠØ§Ø·ÙŠØ©
+    # ØªØ®Ø²ÙŠÙ† Ø¨Ø§Ù„ØÙ‚Ù„ "pay_modes" ÙÙŠ FLAGS_PATH ÙƒÙ†Ø³Ø®Ø© Ø§ØØªÙŠØ§Ø·ÙŠØ©
     def _pm_load() -> dict:
         return (_jload(FLAGS_PATH).get("pay_modes") or {})
     def _pm_save(mp: dict):
@@ -100,7 +100,7 @@ PRODUCTS = [p for p in PRODUCTS if p] or ["8bp", "carrom", "soccer"]
 if DEFAULT_PRODUCT not in PRODUCTS:
     PRODUCTS.insert(0, DEFAULT_PRODUCT)
 
-# ØªÙˆØ­ÙŠØ¯ Ù…Ø³Ø§Ø± DB Ù…Ø¹ services.orders Ø¥Ù† ÙˆÙØ¬Ø¯
+# ØªÙˆØÙŠØ¯ Ù…Ø³Ø§Ø± DB Ù…Ø¹ services.orders Ø¥Ù† ÙˆÙØ¬Ø¯
 try:
     from services.orders import DB_PATH as _ORDERS_DB_PATH  # type: ignore
     DB_PATH = str(_ORDERS_DB_PATH)
@@ -114,7 +114,7 @@ CRYPTOPAY_ON = bool(os.getenv("CRYPTOPAY_TOKEN"))
 TON_WALLET = os.getenv("TON_WALLET", "") or "â€”"
 INVOICE_TTL_MIN = int(os.getenv("INVOICE_TTL_MIN", "15"))
 
-# Ù…Ù„ÙØ§Øª Ø­Ø§Ù„Ø©/Ø£Ø³Ø¹Ø§Ø±
+# Ù…Ù„ÙØ§Øª ØØ§Ù„Ø©/Ø£Ø³Ø¹Ø§Ø±
 FLAGS_PATH          = BASE / "shop_flags.json"
 INV_BL_PATH         = BASE / "inv_blacklist.json"
 PRICES_PATH         = BASE / "shop_prices.json"   # Ø£Ø³Ø¹Ø§Ø± USD (Ù…ØªØ¹Ø¯Ø¯Ø© Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª)
@@ -142,7 +142,7 @@ class AdminTextSession(BaseFilter):
         uid = (message.from_user and message.from_user.id) or 0
         if uid not in ADMIN_IDS:
             return False
-        # ÙŠÙØ³Ù…Ø­ Ø¨Ø§Ù„Ù†Øµ ÙÙ‚Ø· Ø¥Ø°Ø§ Ø¹Ù†Ø¯ Ø§Ù„Ø£Ø¯Ù…Ù† Ø¬Ù„Ø³Ø© Ø£Ø³Ø¹Ø§Ø±/Ù†Ø¬ÙˆÙ…/Ù…Ø®Ø²ÙˆÙ†
+        # ÙŠÙØ³Ù…Ø Ø¨Ø§Ù„Ù†Øµ ÙÙ‚Ø· Ø¥Ø°Ø§ Ø¹Ù†Ø¯ Ø§Ù„Ø£Ø¯Ù…Ù† Ø¬Ù„Ø³Ø© Ø£Ø³Ø¹Ø§Ø±/Ù†Ø¬ÙˆÙ…/Ù…Ø®Ø²ÙˆÙ†
         return (uid in _PRICE_SESS) or (uid in _STAR_SESS) or (_INV_SESS.get(uid) is not None)
 
 class AdminDocSession(BaseFilter):
@@ -231,7 +231,7 @@ async def _read_document_text(doc: Document, bot) -> Optional[str]:
         return None
 
 # =========================
-# ØªÙ…ÙƒÙŠÙ†/ØªØ¹Ø·ÙŠÙ„ Ø®Ø¯Ù…Ø© Ø§Ù„Ù…ÙØ§ØªÙŠØ­
+# ØªÙ…ÙƒÙŠÙ†/ØªØ¹Ø·ÙŠÙ„ Ø®Ø¯Ù…Ø© Ø§Ù„Ù…ÙØ§ØªÙŠØ
 # =========================
 try:
     from services.payments import (
@@ -317,7 +317,7 @@ def _prices_usd(product: str) -> Dict[int, float]:
     return base
 
 # =========================
-# Ø£Ø³Ø¹Ø§Ø± Ø§Ù„Ù†Ø¬ÙˆÙ… â­
+# Ø£Ø³Ø¹Ø§Ø± Ø§Ù„Ù†Ø¬ÙˆÙ… â
 # =========================
 def _stars_per_usd_from_env() -> float:
     raw = (os.getenv("STARS_PER_USD") or os.getenv("USD_PER_STAR") or "50").strip()
@@ -463,11 +463,11 @@ def _home_kb(uid: int):
     kb.button(text=f"ðŸ§© Ø§Ù„Ù…Ù†ØªØ¬: {_cur_prod(uid)}", callback_data="sad:prod")
     kb.button(text="ðŸ“¦ Ø§Ù„Ù…Ø®Ø²ÙˆÙ†", callback_data="sad:inv")
     kb.button(text="ðŸ§¾ Ø§Ù„Ø·Ù„Ø¨Ø§Øª", callback_data="sad:orders")
-    kb.button(text="ðŸ“Š Ø§Ù„Ø¥Ø­ØµØ§Ø¦ÙŠØ§Øª", callback_data="sad:stats")
+    kb.button(text="ðŸ“Š Ø§Ù„Ø¥ØØµØ§Ø¦ÙŠØ§Øª", callback_data="sad:stats")
     kb.button(text="ðŸ’° Ø§Ù„Ø£Ø³Ø¹Ø§Ø± (USD)", callback_data="sad:prices")
-    kb.button(text="â­ Ø£Ø³Ø¹Ø§Ø± Ø§Ù„Ù†Ø¬ÙˆÙ…", callback_data="sad:stars")
+    kb.button(text="â Ø£Ø³Ø¹Ø§Ø± Ø§Ù„Ù†Ø¬ÙˆÙ…", callback_data="sad:stars")
     kb.button(text="ðŸ’³ Ø·Ø±Ù‚ Ø§Ù„Ø¯ÙØ¹", callback_data="sad:pay")
-    kb.button(text="â›”ï¸ Ø­Ø§Ù„Ø© Ø§Ù„Ù…Ù†ØªØ¬", callback_data="sad:pstate")   # â† Ø¬Ø¯ÙŠØ¯
+    kb.button(text="â›”ï¸ ØØ§Ù„Ø© Ø§Ù„Ù…Ù†ØªØ¬", callback_data="sad:pstate")   # â† Ø¬Ø¯ÙŠØ¯
     kb.button(text="âš™ï¸ Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª", callback_data="sad:settings")
     kb.adjust(2, 2, 2, 2, 1)
     return kb.as_markup()
@@ -502,8 +502,8 @@ async def pstate_which(cb: CallbackQuery):
     prod = cb.data.split(":")[-1].lower()
     en = is_product_enabled(prod)
     txt = (
-        f"â›”ï¸ Ø­Ø§Ù„Ø© Ø§Ù„Ø¨ÙŠØ¹ ({prod}): {'Ù…ÙØ¹Ù‘Ù„' if en else 'Ù…ØªÙˆÙ‚Ù'}\n"
-        "Ø§Ø¶ØºØ· Ø§Ù„Ø²Ø± Ù„ØªØ¨Ø¯ÙŠÙ„ Ø§Ù„Ø­Ø§Ù„Ø©."
+        f"â›”ï¸ ØØ§Ù„Ø© Ø§Ù„Ø¨ÙŠØ¹ ({prod}): {'Ù…ÙØ¹Ù‘Ù„' if en else 'Ù…ØªÙˆÙ‚Ù'}\n"
+        "Ø§Ø¶ØºØ· Ø§Ù„Ø²Ø± Ù„ØªØ¨Ø¯ÙŠÙ„ Ø§Ù„ØØ§Ù„Ø©."
     )
     await _edit_or_answer(cb, txt, reply_markup=_pstate_edit_kb(prod, en))
     await cb.answer()
@@ -518,10 +518,10 @@ async def pstate_toggle(cb: CallbackQuery):
     en2 = is_product_enabled(prod)
     await _edit_or_answer(
         cb,
-        f"ØªÙ… Ø§Ù„ØªØ­Ø¯ÙŠØ«. Ø­Ø§Ù„Ø© Ø§Ù„Ø¨ÙŠØ¹ ({prod}): {'Ù…ÙØ¹Ù‘Ù„' if en2 else 'Ù…ØªÙˆÙ‚Ù'}",
+        f"ØªÙ… Ø§Ù„ØªØØ¯ÙŠØ«. ØØ§Ù„Ø© Ø§Ù„Ø¨ÙŠØ¹ ({prod}): {'Ù…ÙØ¹Ù‘Ù„' if en2 else 'Ù…ØªÙˆÙ‚Ù'}",
         reply_markup=_pstate_edit_kb(prod, en2)
     )
-    await cb.answer("ØªÙ… Ø§Ù„ØªØ­Ø¯ÙŠØ«.")
+    await cb.answer("ØªÙ… Ø§Ù„ØªØØ¯ÙŠØ«.")
 
 def _back_home_kb():
     kb = InlineKeyboardBuilder()
@@ -534,13 +534,13 @@ async def open_admin(msg: Message):
     if not _is_admin(msg.from_user.id):
         return await msg.answer("Admins only.")
     _CUR_PROD[msg.from_user.id] = _cur_prod(msg.from_user.id)
-    await msg.answer("ðŸ‘‘ Ù„ÙˆØ­Ø© ØªØ­ÙƒÙ‘Ù… Ø§Ù„Ù…ØªØ¬Ø±", reply_markup=_home_kb(msg.from_user.id))
+    await msg.answer("ðŸ‘‘ Ù„ÙˆØØ© ØªØÙƒÙ‘Ù… Ø§Ù„Ù…ØªØ¬Ø±", reply_markup=_home_kb(msg.from_user.id))
 
 @router.callback_query(F.data == "sad:home")
 async def cb_home(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
         return await cb.answer("Admins only.", show_alert=True)
-    await _edit_or_answer(cb, "ðŸ‘‘ Ù„ÙˆØ­Ø© ØªØ­ÙƒÙ‘Ù… Ø§Ù„Ù…ØªØ¬Ø±", reply_markup=_home_kb(cb.from_user.id))
+    await _edit_or_answer(cb, "ðŸ‘‘ Ù„ÙˆØØ© ØªØÙƒÙ‘Ù… Ø§Ù„Ù…ØªØ¬Ø±", reply_markup=_home_kb(cb.from_user.id))
     await cb.answer()
 
 # =========================
@@ -572,7 +572,7 @@ async def prod_set(cb: CallbackQuery):
     await cb_home(cb)
 
 # =========================
-# Ø§Ù„Ù…Ø®Ø²ÙˆÙ† (Ø¥Ø¶Ø§ÙØ©/Ø­Ø°Ù) â€” Ù…Ø±ÙˆÙ†Ø© ØªÙˆØ§Ù‚ÙŠØ¹
+# Ø§Ù„Ù…Ø®Ø²ÙˆÙ† (Ø¥Ø¶Ø§ÙØ©/ØØ°Ù) â€” Ù…Ø±ÙˆÙ†Ø© ØªÙˆØ§Ù‚ÙŠØ¹
 # =========================
 def _inv_main_kb(uid: int):
     prod = _cur_prod(uid)
@@ -582,8 +582,8 @@ def _inv_main_kb(uid: int):
     kb.button(text="âž• Ø¥Ø¶Ø§ÙØ© 3d",  callback_data="sad:inv:add:3")
     kb.button(text="âž• Ø¥Ø¶Ø§ÙØ© 10d", callback_data="sad:inv:add:10")
     kb.button(text="âž• Ø¥Ø¶Ø§ÙØ© 30d", callback_data="sad:inv:add:30")
-    kb.button(text="ðŸ—‘ Ø­Ø°Ù (Ù…ÙØ±Ø¯)", callback_data="sad:inv:del_one")
-    kb.button(text="ðŸ—‘ðŸ—‘ Ø­Ø°Ù (Ø¬Ù…Ù„Ø©)", callback_data="sad:inv:del_bulk")
+    kb.button(text="ðŸ—‘ ØØ°Ù (Ù…ÙØ±Ø¯)", callback_data="sad:inv:del_one")
+    kb.button(text="ðŸ—‘ðŸ—‘ ØØ°Ù (Ø¬Ù…Ù„Ø©)", callback_data="sad:inv:del_bulk")
     kb.button(text=("â›”ï¸ Ø¥ÙŠÙ‚Ø§Ù Ø§Ù„Ø®Ø¯Ù…Ø©" if service_on else "âœ… ØªØ´ØºÙŠÙ„ Ø§Ù„Ø®Ø¯Ù…Ø©"), callback_data="sad:inv:toggle")
     kb.button(text="ðŸ“ Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ø¥ÙŠÙ‚Ø§Ù", callback_data="sad:inv:stopmsg")
     kb.button(text="â—€ï¸ Ø±Ø¬ÙˆØ¹", callback_data="sad:home")
@@ -603,7 +603,7 @@ async def inv_page(cb: CallbackQuery):
     stop_msg = (get_keys_stop_message() or "").strip()
     stop_line = f"\nðŸ“ Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ø¥ÙŠÙ‚Ø§Ù:\n{stop_msg}" if stop_msg else ""
     text = (
-        f"ðŸ“¦ Ø§Ù„Ù…Ø®Ø²ÙˆÙ† ({prod}) â€” Ø­Ø§Ù„Ø© Ø§Ù„Ø®Ø¯Ù…Ø©: {status}\n"
+        f"ðŸ“¦ Ø§Ù„Ù…Ø®Ø²ÙˆÙ† ({prod}) â€” ØØ§Ù„Ø© Ø§Ù„Ø®Ø¯Ù…Ø©: {status}\n"
         f"{snap}\n{stop_line}\n\n"
         "Ø§Ø®ØªØ± Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡ Ù…Ù† Ø§Ù„Ø£Ø²Ø±Ø§Ø± Ø¨Ø§Ù„Ø£Ø³ÙÙ„. ÙŠÙ…ÙƒÙ†Ùƒ Ø£ÙŠØ¶Ù‹Ø§ Ø¥Ø±Ø³Ø§Ù„ Ù…Ù„ÙØ§Øª .txt Ø¯Ø§Ø®Ù„ Ø¬Ù„Ø³Ø© Ø§Ù„Ø¥Ø¶Ø§ÙØ©."
     )
@@ -618,13 +618,13 @@ async def inv_add_start(cb: CallbackQuery):
     prod = _cur_prod(cb.from_user.id)
     _INV_SESS[cb.from_user.id] = {"mode": "add", "product": prod, "days": days, "buf_text": ""}
     kb = InlineKeyboardBuilder()
-    kb.button(text="âœ… Ø­ÙØ¸", callback_data="sad:inv:save")
+    kb.button(text="âœ… ØÙØ¸", callback_data="sad:inv:save")
     kb.button(text="âœ–ï¸ Ø¥Ù„ØºØ§Ø¡", callback_data="sad:inv:cancel")
     kb.adjust(2)
     txt = (
-        f"âœï¸ Ø£Ø±Ø³Ù„ Ø§Ù„Ø£ÙƒÙˆØ§Ø¯ (Ø³Ø·Ø± Ù„ÙƒÙ„ Ù…ÙØªØ§Ø­ Ø£Ùˆ Ù…ÙØµÙˆÙ„Ø© Ø¨ÙÙˆØ§ØµÙ„/Ø›)ØŒ ÙˆÙŠÙ…ÙƒÙ†Ùƒ Ø£ÙŠØ¶Ù‹Ø§ Ø¥Ø±Ø³Ø§Ù„ Ù…Ù„Ù .txt.\n"
+        f"âœï¸ Ø£Ø±Ø³Ù„ Ø§Ù„Ø£ÙƒÙˆØ§Ø¯ (Ø³Ø·Ø± Ù„ÙƒÙ„ Ù…ÙØªØ§Ø Ø£Ùˆ Ù…ÙØµÙˆÙ„Ø© Ø¨ÙÙˆØ§ØµÙ„/Ø›)ØŒ ÙˆÙŠÙ…ÙƒÙ†Ùƒ Ø£ÙŠØ¶Ù‹Ø§ Ø¥Ø±Ø³Ø§Ù„ Ù…Ù„Ù .txt.\n"
         f"Ø§Ù„Ù…Ù†ØªØ¬: {prod} â€¢ Ø§Ù„Ù…Ø¯Ø©: {days}d\n"
-        f"Ø«Ù… Ø§Ø¶ØºØ· Â«Ø­ÙØ¸Â» Ø£Ùˆ Ø£Ø±Ø³Ù„ /done."
+        f"Ø«Ù… Ø§Ø¶ØºØ· Â«ØÙØ¸Â» Ø£Ùˆ Ø£Ø±Ø³Ù„ /done."
     )
     await _edit_or_answer(cb, txt, reply_markup=kb.as_markup())
     await cb.answer()
@@ -636,10 +636,10 @@ async def inv_del_one_start(cb: CallbackQuery):
     prod = _cur_prod(cb.from_user.id)
     _INV_SESS[cb.from_user.id] = {"mode": "del_one", "product": prod, "buf_text": ""}
     kb = InlineKeyboardBuilder()
-    kb.button(text="ðŸ—‘ Ø§Ø­Ø°Ù Ø§Ù„Ø¢Ù†", callback_data="sad:inv:save")
+    kb.button(text="ðŸ—‘ Ø§ØØ°Ù Ø§Ù„Ø¢Ù†", callback_data="sad:inv:save")
     kb.button(text="âœ–ï¸ Ø¥Ù„ØºØ§Ø¡", callback_data="sad:inv:cancel")
     kb.adjust(2)
-    txt = f"âœï¸ Ø£Ø±Ø³Ù„ Ø§Ù„Ù…ÙØªØ§Ø­ Ø§Ù„Ù…Ø·Ù„ÙˆØ¨ Ø­Ø°ÙÙ‡ (Ø£Ø³Ø·Ø±/ÙÙˆØ§ØµÙ„/Ù…Ù„Ù .txt).\nØ³ÙŠØªÙ… Ø§Ù„Ø¨Ø­Ø« ÙÙŠ Ø¬Ù…ÙŠØ¹ Ø§Ù„Ù…Ø¯Ø¯ 3d/10d/30d Ø¶Ù…Ù† Ø§Ù„Ù…Ù†ØªØ¬: {prod}."
+    txt = f"âœï¸ Ø£Ø±Ø³Ù„ Ø§Ù„Ù…ÙØªØ§Ø Ø§Ù„Ù…Ø·Ù„ÙˆØ¨ ØØ°ÙÙ‡ (Ø£Ø³Ø·Ø±/ÙÙˆØ§ØµÙ„/Ù…Ù„Ù .txt).\nØ³ÙŠØªÙ… Ø§Ù„Ø¨ØØ« ÙÙŠ Ø¬Ù…ÙŠØ¹ Ø§Ù„Ù…Ø¯Ø¯ 3d/10d/30d Ø¶Ù…Ù† Ø§Ù„Ù…Ù†ØªØ¬: {prod}."
     await _edit_or_answer(cb, txt, reply_markup=kb.as_markup())
     await cb.answer()
 
@@ -650,10 +650,10 @@ async def inv_del_bulk_start(cb: CallbackQuery):
     prod = _cur_prod(cb.from_user.id)
     _INV_SESS[cb.from_user.id] = {"mode": "del_bulk", "product": prod, "buf_text": ""}
     kb = InlineKeyboardBuilder()
-    kb.button(text="ðŸ—‘ðŸ—‘ Ø§Ø­Ø°Ù Ø§Ù„Ø¢Ù†", callback_data="sad:inv:save")
+    kb.button(text="ðŸ—‘ðŸ—‘ Ø§ØØ°Ù Ø§Ù„Ø¢Ù†", callback_data="sad:inv:save")
     kb.button(text="âœ–ï¸ Ø¥Ù„ØºØ§Ø¡", callback_data="sad:inv:cancel")
     kb.adjust(2)
-    txt = f"âœï¸ Ø£Ø±Ø³Ù„ Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ù…ÙØ§ØªÙŠØ­ Ø§Ù„Ù…Ø±Ø§Ø¯ Ø­Ø°ÙÙ‡Ø§ (Ø£Ø³Ø·Ø±/ÙÙˆØ§ØµÙ„/Ù…Ù„Ù .txt).\nØ³ÙŠØªÙ… Ø§Ù„Ø­Ø°Ù Ø¹Ø¨Ø± Ø¬Ù…ÙŠØ¹ Ø§Ù„Ù…Ø¯Ø¯ Ø¶Ù…Ù† Ø§Ù„Ù…Ù†ØªØ¬: {prod}."
+    txt = f"âœï¸ Ø£Ø±Ø³Ù„ Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ù…ÙØ§ØªÙŠØ Ø§Ù„Ù…Ø±Ø§Ø¯ ØØ°ÙÙ‡Ø§ (Ø£Ø³Ø·Ø±/ÙÙˆØ§ØµÙ„/Ù…Ù„Ù .txt).\nØ³ÙŠØªÙ… Ø§Ù„ØØ°Ù Ø¹Ø¨Ø± Ø¬Ù…ÙŠØ¹ Ø§Ù„Ù…Ø¯Ø¯ Ø¶Ù…Ù† Ø§Ù„Ù…Ù†ØªØ¬: {prod}."
     await _edit_or_answer(cb, txt, reply_markup=kb.as_markup())
     await cb.answer()
 
@@ -725,7 +725,7 @@ async def _inv_save_from_message(msg: Message):
     uid = msg.from_user.id
     sess = _INV_SESS.get(uid)
     if not sess:
-        return await msg.answer("Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¬Ù„Ø³Ø© Ø­Ø§Ù„ÙŠØ©.")
+        return await msg.answer("Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¬Ù„Ø³Ø© ØØ§Ù„ÙŠØ©.")
 
     mode    = sess.get("mode")
     product = sess.get("product", _cur_prod(uid))
@@ -734,11 +734,11 @@ async def _inv_save_from_message(msg: Message):
         days = int(sess.get("days") or 0) or 3
         text_blob = (sess.get("buf_text", "") or "").strip()
         if not text_blob:
-            return await msg.answer("Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ù…ÙØ§ØªÙŠØ­ Ù…ÙØ¬Ù…Ù‘Ø¹Ø© ÙÙŠ Ù‡Ø°Ù‡ Ø§Ù„Ø¬Ù„Ø³Ø©. Ø£Ø±Ø³Ù„ Ø§Ù„Ù…ÙØ§ØªÙŠØ­ Ø«Ù… Ø§Ø¶ØºØ· Â«Ø­ÙØ¸Â».")
+            return await msg.answer("Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ù…ÙØ§ØªÙŠØ Ù…ÙØ¬Ù…Ù‘Ø¹Ø© ÙÙŠ Ù‡Ø°Ù‡ Ø§Ù„Ø¬Ù„Ø³Ø©. Ø£Ø±Ø³Ù„ Ø§Ù„Ù…ÙØ§ØªÙŠØ Ø«Ù… Ø§Ø¶ØºØ· Â«ØÙØ¸Â».")
         inserted, duplicates = await _inv_add_any(product, days, text_blob)
         _INV_SESS.pop(uid, None)
         return await msg.answer(
-            "ðŸŽ‰ ØªÙ… Ø§Ù„Ø­ÙØ¸.\n"
+            "ðŸŽ‰ ØªÙ… Ø§Ù„ØÙØ¸.\n"
             f"â€¢ Ø§Ù„Ù…Ù†ØªØ¬: {product}\n"
             f"â€¢ Ø§Ù„Ù…Ø¯Ø©: {days}d\n"
             f"â€¢ Ø£Ø¶ÙŠÙ: {inserted}\n"
@@ -748,22 +748,22 @@ async def _inv_save_from_message(msg: Message):
     if mode in ("del_one", "del_bulk"):
         keys = _extract_loose(sess.get("buf_text", "") or "")
         if not keys:
-            return await msg.answer("Ù„Ù… ØªÙØ±Ø³Ù„ Ø£ÙŠ Ù…ÙØ§ØªÙŠØ­.")
+            return await msg.answer("Ù„Ù… ØªÙØ±Ø³Ù„ Ø£ÙŠ Ù…ÙØ§ØªÙŠØ.")
         deleted_map = await _inv_del_any(product, keys)
         _INV_SESS.pop(uid, None)
         return await msg.answer(
-            "ðŸ—‘ Ù†ØªÙŠØ¬Ø© Ø§Ù„Ø­Ø°Ù:\n"
+            "ðŸ—‘ Ù†ØªÙŠØ¬Ø© Ø§Ù„ØØ°Ù:\n"
             f"â€¢ 3d: {deleted_map.get(3,0)}\n"
             f"â€¢ 10d: {deleted_map.get(10,0)}\n"
             f"â€¢ 30d: {deleted_map.get(30,0)}\n"
-            + ("(Ø§Ø³ØªÙØ®Ø¯Ù… Blacklist Ù„Ø¹Ø¯Ù… ØªÙˆÙØ± Ø¯ÙˆØ§Ù„ Ø­Ø°Ù ÙÙŠ inventory)" if sum(deleted_map.values()) == 0 else "")
+            + ("(Ø§Ø³ØªÙØ®Ø¯Ù… Blacklist Ù„Ø¹Ø¯Ù… ØªÙˆÙØ± Ø¯ÙˆØ§Ù„ ØØ°Ù ÙÙŠ inventory)" if sum(deleted_map.values()) == 0 else "")
         )
 
     if mode == "stop_msg":
         msg_text = "\n".join(sess.get("buf") or []).strip()
         set_keys_stop_message(msg_text)
         _INV_SESS.pop(uid, None)
-        return await msg.answer("ØªÙ… Ø­ÙØ¸ Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ø¥ÙŠÙ‚Ø§Ù.")
+        return await msg.answer("ØªÙ… ØÙØ¸ Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ø¥ÙŠÙ‚Ø§Ù.")
 
     _INV_SESS.pop(uid, None)
     await msg.answer("Ø§Ù†ØªÙ‡Øª Ø§Ù„Ø¬Ù„Ø³Ø©.")
@@ -779,7 +779,7 @@ async def inv_collect_doc(msg: Message):
     if not doc:
         return
     if not ((doc.mime_type or "").startswith("text") or (doc.file_name or "").lower().endswith(".txt")):
-        return await msg.answer("Ø£Ø±Ø³Ù„ Ù…Ù„Ù .txt Ø£Ùˆ Ù„ØµÙ‚ Ø§Ù„Ù…ÙØ§ØªÙŠØ­ ÙƒÙ†Øµ.")
+        return await msg.answer("Ø£Ø±Ø³Ù„ Ù…Ù„Ù .txt Ø£Ùˆ Ù„ØµÙ‚ Ø§Ù„Ù…ÙØ§ØªÙŠØ ÙƒÙ†Øµ.")
 
     text = await _read_document_text(doc, msg.bot)
     if not text:
@@ -789,15 +789,15 @@ async def inv_collect_doc(msg: Message):
     text_blob += ("\n" if text_blob else "") + text
     sess["buf_text"] = text_blob
     approx = len(_extract_loose(text_blob))
-    await msg.answer(f"ðŸ“„ ØªÙ… Ø§Ø³ØªÙ„Ø§Ù… Ù…Ù„Ù. Ø§Ù„Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…Ø¤Ù‚Øª ~{approx} Ù…ÙØªØ§Ø­.")
+    await msg.answer(f"ðŸ“„ ØªÙ… Ø§Ø³ØªÙ„Ø§Ù… Ù…Ù„Ù. Ø§Ù„Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…Ø¤Ù‚Øª ~{approx} Ù…ÙØªØ§Ø.")
 
 
-# Ø­ÙØ¸ Ù…Ù† Ø§Ù„Ø£Ø²Ø±Ø§Ø±
+# ØÙØ¸ Ù…Ù† Ø§Ù„Ø£Ø²Ø±Ø§Ø±
 @router.callback_query(F.data == "sad:inv:save")
 async def inv_save(cb: CallbackQuery):
     sess = _INV_SESS.get(cb.from_user.id)
     if not sess:
-        return await cb.answer("Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¬Ù„Ø³Ø© Ø­Ø§Ù„ÙŠØ©.", show_alert=True)
+        return await cb.answer("Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¬Ù„Ø³Ø© ØØ§Ù„ÙŠØ©.", show_alert=True)
 
     mode = sess.get("mode")
     product = sess.get("product", _cur_prod(cb.from_user.id))
@@ -806,10 +806,10 @@ async def inv_save(cb: CallbackQuery):
         days = int(sess.get("days") or 0) or 3
         text_blob = (sess.get("buf_text", "") or "").strip()
         if not text_blob:
-            return await cb.answer("Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ù…ÙØ§ØªÙŠØ­ Ù…ÙØ¬Ù…Ù‘Ø¹Ø©. Ø£Ø±Ø³Ù„ Ø§Ù„Ù…ÙØ§ØªÙŠØ­ Ø£ÙˆÙ„Ù‹Ø§.", show_alert=True)
+            return await cb.answer("Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ù…ÙØ§ØªÙŠØ Ù…ÙØ¬Ù…Ù‘Ø¹Ø©. Ø£Ø±Ø³Ù„ Ø§Ù„Ù…ÙØ§ØªÙŠØ Ø£ÙˆÙ„Ù‹Ø§.", show_alert=True)
         inserted, duplicates = await _inv_add_any(product, days, text_blob)
         _INV_SESS.pop(cb.from_user.id, None)
-        await cb.answer("ØªÙ… Ø§Ù„Ø­ÙØ¸.", show_alert=False)
+        await cb.answer("ØªÙ… Ø§Ù„ØÙØ¸.", show_alert=False)
         await inv_page(cb)
         try:
             await cb.message.answer(
@@ -826,18 +826,18 @@ async def inv_save(cb: CallbackQuery):
     if mode in ("del_one", "del_bulk"):
         keys = _extract_loose(sess.get("buf_text", "") or "")
         if not keys:
-            return await cb.answer("Ù„Ù… ØªÙØ±Ø³Ù„ Ø£ÙŠ Ù…ÙØ§ØªÙŠØ­.", show_alert=True)
+            return await cb.answer("Ù„Ù… ØªÙØ±Ø³Ù„ Ø£ÙŠ Ù…ÙØ§ØªÙŠØ.", show_alert=True)
         deleted_map = await _inv_del_any(product, keys)
         _INV_SESS.pop(cb.from_user.id, None)
         await cb.answer("ØªÙ… Ø§Ù„ØªÙ†ÙÙŠØ°.", show_alert=False)
         await inv_page(cb)
         try:
             await cb.message.answer(
-                "ðŸ—‘ Ù†ØªÙŠØ¬Ø© Ø§Ù„Ø­Ø°Ù:\n"
+                "ðŸ—‘ Ù†ØªÙŠØ¬Ø© Ø§Ù„ØØ°Ù:\n"
                 f"â€¢ 3d: {deleted_map.get(3,0)}\n"
                 f"â€¢ 10d: {deleted_map.get(10,0)}\n"
                 f"â€¢ 30d: {deleted_map.get(30,0)}\n"
-                + ("(Ø§Ø³ØªÙØ®Ø¯Ù… Blacklist Ù„Ø¹Ø¯Ù… ØªÙˆÙØ± Ø¯ÙˆØ§Ù„ Ø­Ø°Ù ÙÙŠ inventory)" if sum(deleted_map.values()) == 0 else "")
+                + ("(Ø§Ø³ØªÙØ®Ø¯Ù… Blacklist Ù„Ø¹Ø¯Ù… ØªÙˆÙØ± Ø¯ÙˆØ§Ù„ ØØ°Ù ÙÙŠ inventory)" if sum(deleted_map.values()) == 0 else "")
             )
         except Exception:
             pass
@@ -853,14 +853,14 @@ async def inv_stopmsg_start(cb: CallbackQuery):
         return await cb.answer("Admins only.", show_alert=True)
     _INV_SESS[cb.from_user.id] = {"mode": "stop_msg", "buf": []}
     kb = InlineKeyboardBuilder()
-    kb.button(text="âœ… Ø­ÙØ¸ Ø§Ù„Ø±Ø³Ø§Ù„Ø©", callback_data="sad:inv:save")
-    kb.button(text="ðŸ§¹ Ù…Ø³Ø­ Ø§Ù„Ø±Ø³Ø§Ù„Ø©", callback_data="sad:inv:stopmsg:clear")
+    kb.button(text="âœ… ØÙØ¸ Ø§Ù„Ø±Ø³Ø§Ù„Ø©", callback_data="sad:inv:save")
+    kb.button(text="ðŸ§¹ Ù…Ø³Ø Ø§Ù„Ø±Ø³Ø§Ù„Ø©", callback_data="sad:inv:stopmsg:clear")
     kb.button(text="â—€ï¸ Ø±Ø¬ÙˆØ¹", callback_data="sad:inv")
     kb.adjust(1, 1, 1)
     current = (get_keys_stop_message() or "").strip()
     txt = ("âœï¸ Ø£Ø±Ø³Ù„ Ù†Øµ Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ø¥ÙŠÙ‚Ø§Ù (ÙŠÙ…ÙƒÙ† Ø¹Ø¯Ø© Ø£Ø³Ø·Ø±)."
            "\nØ³ÙŠØªÙ… Ø¹Ø±Ø¶Ù‡Ø§ Ù„Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙŠÙ† Ø¹Ù†Ø¯Ù…Ø§ ØªÙƒÙˆÙ† Ø§Ù„Ø®Ø¯Ù…Ø© Ù…ØªÙˆÙ‚ÙØ©."
-           f"\n\nØ§Ù„Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ø­Ø§Ù„ÙŠØ©:\n{current if current else 'â€”'}")
+           f"\n\nØ§Ù„Ø±Ø³Ø§Ù„Ø© Ø§Ù„ØØ§Ù„ÙŠØ©:\n{current if current else 'â€”'}")
     await _edit_or_answer(cb, txt, reply_markup=kb.as_markup())
     await cb.answer()
 
@@ -869,7 +869,7 @@ async def inv_stopmsg_clear(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
         return await cb.answer("Admins only.", show_alert=True)
     set_keys_stop_message("")
-    await cb.answer("ØªÙ… Ù…Ø³Ø­ Ø§Ù„Ø±Ø³Ø§Ù„Ø©.", show_alert=False)
+    await cb.answer("ØªÙ… Ù…Ø³Ø Ø§Ù„Ø±Ø³Ø§Ù„Ø©.", show_alert=False)
     await inv_page(cb)
 
 @router.callback_query(F.data == "sad:inv:toggle")
@@ -878,10 +878,10 @@ async def inv_toggle_service(cb: CallbackQuery):
         return await cb.answer("Admins only.", show_alert=True)
     new_state = not keys_service_enabled()
     set_keys_service_enabled(new_state)
-    await cb.answer("ØªÙ… Ø§Ù„ØªØ­Ø¯ÙŠØ«.", show_alert=False)
+    await cb.answer("ØªÙ… Ø§Ù„ØªØØ¯ÙŠØ«.", show_alert=False)
     try:
         status = "ðŸŸ¢ Ù…ÙØ¹Ù‘Ù„Ø©" if new_state else "ðŸ”´ Ù…ØªÙˆÙ‚ÙØ©"
-        await cb.message.answer(f"Ø­Ø§Ù„Ø© Ø®Ø¯Ù…Ø© Ø§Ù„Ù…ÙØ§ØªÙŠØ­ Ø§Ù„Ø¢Ù†: {status}")
+        await cb.message.answer(f"ØØ§Ù„Ø© Ø®Ø¯Ù…Ø© Ø§Ù„Ù…ÙØ§ØªÙŠØ Ø§Ù„Ø¢Ù†: {status}")
     except Exception:
         pass
     await inv_page(cb)
@@ -909,7 +909,7 @@ def _prices_edit_kb(prod: str, P: Dict[int, float]):
 async def prices_page(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
         return await cb.answer("Admins only.", show_alert=True)
-    txt = "Ø§Ø®ØªØ± Ù…Ø¬Ù…ÙˆØ¹Ø© Ø§Ù„Ø£Ø³Ø¹Ø§Ø± Ø§Ù„ØªÙŠ ØªØ±ÙŠØ¯ ØªØ¹Ø¯ÙŠÙ„Ù‡Ø§ (Ø¨Ø§Ù„Ø¯ÙˆÙ„Ø§Ø±):\n- default (Ø§ÙØªØ±Ø§Ø¶ÙŠ Ù„ÙƒÙ„ Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª)\n- Ø£Ùˆ Ù…Ù†ØªØ¬ Ù…Ø­Ø¯Ø¯."
+    txt = "Ø§Ø®ØªØ± Ù…Ø¬Ù…ÙˆØ¹Ø© Ø§Ù„Ø£Ø³Ø¹Ø§Ø± Ø§Ù„ØªÙŠ ØªØ±ÙŠØ¯ ØªØ¹Ø¯ÙŠÙ„Ù‡Ø§ (Ø¨Ø§Ù„Ø¯ÙˆÙ„Ø§Ø±):\n- default (Ø§ÙØªØ±Ø§Ø¶ÙŠ Ù„ÙƒÙ„ Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª)\n- Ø£Ùˆ Ù…Ù†ØªØ¬ Ù…ØØ¯Ø¯."
     await _edit_or_answer(cb, txt, reply_markup=_prices_root_kb())
     await cb.answer()
 
@@ -920,7 +920,7 @@ async def prices_which(cb: CallbackQuery):
     prod = cb.data.split(":")[-1].lower()
     P = _prices_usd(prod if prod != "default" else "default")
     txt = (
-        f"ðŸ’° Ø§Ù„Ø£Ø³Ø¹Ø§Ø± Ø§Ù„Ø­Ø§Ù„ÙŠØ© ({prod}) Ø¨Ø§Ù„Ø¯ÙˆÙ„Ø§Ø±:\n"
+        f"ðŸ’° Ø§Ù„Ø£Ø³Ø¹Ø§Ø± Ø§Ù„ØØ§Ù„ÙŠØ© ({prod}) Ø¨Ø§Ù„Ø¯ÙˆÙ„Ø§Ø±:\n"
         f"â€¢ 3d: ${_money(P[3])}\n"
         f"â€¢ 10d: ${_money(P[10])}\n"
         f"â€¢ 30d: ${_money(P[30])}\n\n"
@@ -936,7 +936,7 @@ async def prices_edit(cb: CallbackQuery):
     _, _, _, prod, days_s = cb.data.split(":")
     days = int(days_s)
     if days not in (3, 10, 30):
-        return await cb.answer("Ù‚ÙŠÙ…Ø© Ø£ÙŠØ§Ù… ØºÙŠØ± ØµØ§Ù„Ø­Ø©.", show_alert=True)
+        return await cb.answer("Ù‚ÙŠÙ…Ø© Ø£ÙŠØ§Ù… ØºÙŠØ± ØµØ§Ù„ØØ©.", show_alert=True)
     _PRICE_SESS[cb.from_user.id] = (prod, days)
     await cb.answer()
     try:
@@ -945,7 +945,7 @@ async def prices_edit(cb: CallbackQuery):
         pass
 
 # =========================
-# â­ Ø£Ø³Ø¹Ø§Ø± Ø§Ù„Ù†Ø¬ÙˆÙ…
+# â Ø£Ø³Ø¹Ø§Ø± Ø§Ù„Ù†Ø¬ÙˆÙ…
 # =========================
 def _stars_root_kb():
     kb = InlineKeyboardBuilder()
@@ -958,7 +958,7 @@ def _stars_root_kb():
 def _stars_edit_kb(prod: str, S: Dict[int, int]):
     kb = InlineKeyboardBuilder()
     for d in (3, 10, 30):
-        kb.button(text=f"ØªØ¹Ø¯ÙŠÙ„ {d}d (â­{S[d]})", callback_data=f"sad:stars:edit:{prod}:{d}")
+        kb.button(text=f"ØªØ¹Ø¯ÙŠÙ„ {d}d (â{S[d]})", callback_data=f"sad:stars:edit:{prod}:{d}")
     kb.button(text="â—€ï¸ Ø±Ø¬ÙˆØ¹", callback_data="sad:stars")
     kb.adjust(1, 1, 1, 1)
     return kb.as_markup()
@@ -970,16 +970,16 @@ async def stars_prices_page(cb: CallbackQuery):
     prod = _cur_prod(cb.from_user.id)
     S = _prices_stars_effective(prod)
     txt = (
-        f"â­ Ø£Ø³Ø¹Ø§Ø± Ø§Ù„Ù†Ø¬ÙˆÙ… Ø§Ù„Ø­Ø§Ù„ÙŠØ© ({prod}):\n"
-        f"â€¢ 3d: â­{S[3]}\n"
-        f"â€¢ 10d: â­{S[10]}\n"
-        f"â€¢ 30d: â­{S[30]}\n\n"
-        "Ø§Ø®ØªØ± Â«ØªØ¹Ø¯ÙŠÙ„Â» Ø«Ù… Ø£Ø±Ø³Ù„ Ù‚ÙŠÙ…Ø© Ø§Ù„Ù†Ø¬ÙˆÙ… ÙƒØ¹Ø¯Ø¯ ØµØ­ÙŠØ­ (Ù…Ø«Ø§Ù„: 13)."
+        f"â Ø£Ø³Ø¹Ø§Ø± Ø§Ù„Ù†Ø¬ÙˆÙ… Ø§Ù„ØØ§Ù„ÙŠØ© ({prod}):\n"
+        f"â€¢ 3d: â{S[3]}\n"
+        f"â€¢ 10d: â{S[10]}\n"
+        f"â€¢ 30d: â{S[30]}\n\n"
+        "Ø§Ø®ØªØ± Â«ØªØ¹Ø¯ÙŠÙ„Â» Ø«Ù… Ø£Ø±Ø³Ù„ Ù‚ÙŠÙ…Ø© Ø§Ù„Ù†Ø¬ÙˆÙ… ÙƒØ¹Ø¯Ø¯ ØµØÙŠØ (Ù…Ø«Ø§Ù„: 13)."
     )
     kb = InlineKeyboardBuilder()
-    kb.button(text=f"ØªØ¹Ø¯ÙŠÙ„ 3d  (â­{S[3]})",  callback_data=f"sad:stars:edit:{prod}:3")
-    kb.button(text=f"ØªØ¹Ø¯ÙŠÙ„ 10d (â­{S[10]})", callback_data=f"sad:stars:edit:{prod}:10")
-    kb.button(text=f"ØªØ¹Ø¯ÙŠÙ„ 30d (â­{S[30]})", callback_data=f"sad:stars:edit:{prod}:30")
+    kb.button(text=f"ØªØ¹Ø¯ÙŠÙ„ 3d  (â{S[3]})",  callback_data=f"sad:stars:edit:{prod}:3")
+    kb.button(text=f"ØªØ¹Ø¯ÙŠÙ„ 10d (â{S[10]})", callback_data=f"sad:stars:edit:{prod}:10")
+    kb.button(text=f"ØªØ¹Ø¯ÙŠÙ„ 30d (â{S[30]})", callback_data=f"sad:stars:edit:{prod}:30")
     kb.button(text="â—€ï¸ Ø±Ø¬ÙˆØ¹", callback_data="sad:home")
     kb.adjust(1, 1, 1, 1)
     await _edit_or_answer(cb, txt, reply_markup=kb.as_markup())
@@ -1002,7 +1002,7 @@ async def pay_modes_root(cb: CallbackQuery):
         return await cb.answer("Admins only.", show_alert=True)
     await _edit_or_answer(
         cb,
-        "Ø§Ø®ØªØ± Ø§Ù„Ù…Ù†ØªØ¬ Ù„Ø¥Ø¯Ø§Ø±Ø© Ø·Ø±Ù‚ Ø§Ù„Ø¯ÙØ¹ (ØªÙØ¹ÙŠÙ„/Ø¥ÙŠÙ‚Ø§Ù).\nâ€” Ù…Ù„Ø§Ø­Ø¸Ø©: Ø§Ù„ØªÙØ¹ÙŠÙ„ ÙŠØªØ£Ø«Ø± Ø£ÙŠØ¶Ù‹Ø§ Ø¨Ø§Ù„ØªÙˆÙÙ‘Ø± Ø§Ù„Ø¹Ø§Ù„Ù…ÙŠ (ØªÙ…ÙƒÙŠÙ† Ø§Ù„Ù†Ø¬ÙˆÙ… Ø£Ùˆ ÙˆØ¬ÙˆØ¯ Crypto Pay/TON).",
+        "Ø§Ø®ØªØ± Ø§Ù„Ù…Ù†ØªØ¬ Ù„Ø¥Ø¯Ø§Ø±Ø© Ø·Ø±Ù‚ Ø§Ù„Ø¯ÙØ¹ (ØªÙØ¹ÙŠÙ„/Ø¥ÙŠÙ‚Ø§Ù).\nâ€” Ù…Ù„Ø§ØØ¸Ø©: Ø§Ù„ØªÙØ¹ÙŠÙ„ ÙŠØªØ£Ø«Ø± Ø£ÙŠØ¶Ù‹Ø§ Ø¨Ø§Ù„ØªÙˆÙÙ‘Ø± Ø§Ù„Ø¹Ø§Ù„Ù…ÙŠ (ØªÙ…ÙƒÙŠÙ† Ø§Ù„Ù†Ø¬ÙˆÙ… Ø£Ùˆ ÙˆØ¬ÙˆØ¯ Crypto Pay/TON).",
         reply_markup=_pay_root_kb()
     )
     await cb.answer()
@@ -1029,10 +1029,10 @@ async def pay_modes_prod_toggle(cb: CallbackQuery):
     _, _, _, prod, action = cb.data.split(":")
     set_product_enabled(prod, action == "on")
     pm = get_pay_modes(prod)
-    await cb.answer("ØªÙ… Ø§Ù„ØªØ­Ø¯ÙŠØ«.", show_alert=False)
+    await cb.answer("ØªÙ… Ø§Ù„ØªØØ¯ÙŠØ«.", show_alert=False)
     await _edit_or_answer(
         cb,
-        f"ØªÙ… ØªØ­Ø¯ÙŠØ« Ø­Ø§Ù„Ø© Ø¨ÙŠØ¹ ({prod}) Ø¥Ù„Ù‰ {'Ù…ÙØ¹Ù‘Ù„' if is_product_enabled(prod) else 'Ù…ØªÙˆÙ‚Ù'}.",
+        f"ØªÙ… ØªØØ¯ÙŠØ« ØØ§Ù„Ø© Ø¨ÙŠØ¹ ({prod}) Ø¥Ù„Ù‰ {'Ù…ÙØ¹Ù‘Ù„' if is_product_enabled(prod) else 'Ù…ØªÙˆÙ‚Ù'}.",
         reply_markup=_pay_edit_kb(prod, pm)
     )
 
@@ -1048,7 +1048,7 @@ async def pay_modes_which(cb: CallbackQuery):
         f"ðŸ’³ Ø·Ø±Ù‚ Ø§Ù„Ø¯ÙØ¹ ({prod}):\n"
         f"â€¢ Ù†Ø¬ÙˆÙ… ØªÙŠÙ„ÙŠØ¬Ø±Ø§Ù…: {'Ù…ÙØ¹Ù‘Ù„' if pm.get('stars', True) else 'Ù…ØªÙˆÙ‚Ù'} (ØªÙˆÙÙ‘Ø± Ø¹Ø§Ù„Ù…ÙŠ: {global_stars})\n"
         f"â€¢ ÙƒØ±ÙŠØ¨ØªÙˆ (USDT/TON): {'Ù…ÙØ¹Ù‘Ù„' if pm.get('crypto', True) else 'Ù…ØªÙˆÙ‚Ù'} (ØªÙˆÙÙ‘Ø± Ø¹Ø§Ù„Ù…ÙŠ: {global_crypto})\n\n"
-        "Ø§Ø¶ØºØ· Ù„ØªØ¨Ø¯ÙŠÙ„ Ø§Ù„Ø­Ø§Ù„Ø©."
+        "Ø§Ø¶ØºØ· Ù„ØªØ¨Ø¯ÙŠÙ„ Ø§Ù„ØØ§Ù„Ø©."
     )
     await _edit_or_answer(cb, txt, reply_markup=_pay_edit_kb(prod, pm))
     await cb.answer()
@@ -1061,11 +1061,11 @@ async def pay_modes_toggle(cb: CallbackQuery):
     pm = get_pay_modes(prod)
     cur = bool(pm.get(mode, True))
     set_pay_mode_enabled(prod, mode, (not cur))
-    await cb.answer("ØªÙ… Ø§Ù„ØªØ­Ø¯ÙŠØ«.", show_alert=False)
+    await cb.answer("ØªÙ… Ø§Ù„ØªØØ¯ÙŠØ«.", show_alert=False)
     pm2 = get_pay_modes(prod)
     await _edit_or_answer(
         cb,
-        f"ØªÙ… Ø§Ù„ØªØ­Ø¯ÙŠØ« ({prod}).\n"
+        f"ØªÙ… Ø§Ù„ØªØØ¯ÙŠØ« ({prod}).\n"
         f"â€¢ Ù†Ø¬ÙˆÙ…: {'Ù…ÙØ¹Ù‘Ù„' if pm2.get('stars', True) else 'Ù…ØªÙˆÙ‚Ù'}\n"
         f"â€¢ ÙƒØ±ÙŠØ¨ØªÙˆ: {'Ù…ÙØ¹Ù‘Ù„' if pm2.get('crypto', True) else 'Ù…ØªÙˆÙ‚Ù'}",
         reply_markup=_pay_edit_kb(prod, pm2)
@@ -1078,11 +1078,11 @@ async def stars_which(cb: CallbackQuery):
     prod = cb.data.split(":")[-1].lower()
     S = _prices_stars_effective(prod if prod != "default" else "default")
     txt = (
-        f"â­ Ø£Ø³Ø¹Ø§Ø± Ø§Ù„Ù†Ø¬ÙˆÙ… Ø§Ù„Ø­Ø§Ù„ÙŠØ© ({prod}):\n"
-        f"â€¢ 3d: â­{S[3]}\n"
-        f"â€¢ 10d: â­{S[10]}\n"
-        f"â€¢ 30d: â­{S[30]}\n\n"
-        "Ø§Ø®ØªØ± Â«ØªØ¹Ø¯ÙŠÙ„Â» Ø«Ù… Ø£Ø±Ø³Ù„ Ù‚ÙŠÙ…Ø© Ø§Ù„Ù†Ø¬ÙˆÙ… ÙƒØ¹Ø¯Ø¯ ØµØ­ÙŠØ­ (Ù…Ø«Ø§Ù„: 13)."
+        f"â Ø£Ø³Ø¹Ø§Ø± Ø§Ù„Ù†Ø¬ÙˆÙ… Ø§Ù„ØØ§Ù„ÙŠØ© ({prod}):\n"
+        f"â€¢ 3d: â{S[3]}\n"
+        f"â€¢ 10d: â{S[10]}\n"
+        f"â€¢ 30d: â{S[30]}\n\n"
+        "Ø§Ø®ØªØ± Â«ØªØ¹Ø¯ÙŠÙ„Â» Ø«Ù… Ø£Ø±Ø³Ù„ Ù‚ÙŠÙ…Ø© Ø§Ù„Ù†Ø¬ÙˆÙ… ÙƒØ¹Ø¯Ø¯ ØµØÙŠØ (Ù…Ø«Ø§Ù„: 13)."
     )
     await _edit_or_answer(cb, txt, reply_markup=_stars_edit_kb(prod, S))
     await cb.answer()
@@ -1094,7 +1094,7 @@ async def stars_edit(cb: CallbackQuery):
     _, _, _, prod, days_s = cb.data.split(":")
     days = int(days_s)
     if days not in (3, 10, 30):
-        return await cb.answer("Ù‚ÙŠÙ…Ø© Ø£ÙŠØ§Ù… ØºÙŠØ± ØµØ§Ù„Ø­Ø©.", show_alert=True)
+        return await cb.answer("Ù‚ÙŠÙ…Ø© Ø£ÙŠØ§Ù… ØºÙŠØ± ØµØ§Ù„ØØ©.", show_alert=True)
     _STAR_SESS[cb.from_user.id] = (prod, days)
     await cb.answer()
     try:
@@ -1111,7 +1111,7 @@ try:
     def is_product_enabled(prod: str) -> bool: return _p_is_product_enabled(prod)
     def set_product_enabled(prod: str, enabled: bool): return _p_set_product_enabled(prod, enabled)
 except Exception:
-    # ØªØ®Ø²ÙŠÙ† Ø¨Ø§Ù„Ø­Ù‚Ù„ "product_enabled" ÙÙŠ FLAGS_PATH
+    # ØªØ®Ø²ÙŠÙ† Ø¨Ø§Ù„ØÙ‚Ù„ "product_enabled" ÙÙŠ FLAGS_PATH
     def _prod_enabled_all() -> dict:
         return (_jload(FLAGS_PATH).get("product_enabled") or {})
     def _prod_enabled_save(mp: dict):
@@ -1144,14 +1144,14 @@ async def text_mux(msg: Message):
             if val <= 0:
                 raise ValueError
         except Exception:
-            return await msg.reply("Ø§Ù„Ø±Ø¬Ø§Ø¡ Ø¥Ø¯Ø®Ø§Ù„ Ø±Ù‚Ù… ØµØ§Ù„Ø­ Ù…Ø«Ù„ 4.99")
+            return await msg.reply("Ø§Ù„Ø±Ø¬Ø§Ø¡ Ø¥Ø¯Ø®Ø§Ù„ Ø±Ù‚Ù… ØµØ§Ù„Ø Ù…Ø«Ù„ 4.99")
         mp = _load_prices_map()
         mp.setdefault(prod, {})
         mp[prod][int(days)] = val
         _save_prices_map(mp)
         return await msg.reply(f"âœ… ØªÙ… Ø¶Ø¨Ø· Ø³Ø¹Ø± {days}d ({prod}) Ø¥Ù„Ù‰ ${_money(val)}.")
 
-    # 2) Ø¬Ù„Ø³Ø© Ø£Ø³Ø¹Ø§Ø± Ø§Ù„Ù†Ø¬ÙˆÙ… â­
+    # 2) Ø¬Ù„Ø³Ø© Ø£Ø³Ø¹Ø§Ø± Ø§Ù„Ù†Ø¬ÙˆÙ… â
     if uid in _STAR_SESS:
         prod, days = _STAR_SESS.pop(uid, (None, None))
         if not prod or not days:
@@ -1162,12 +1162,12 @@ async def text_mux(msg: Message):
             if val <= 0:
                 raise ValueError
         except Exception:
-            return await msg.reply("Ø£Ø¯Ø®Ù„ Ø¹Ø¯Ø¯ Ù†Ø¬ÙˆÙ… ØµØ­ÙŠØ­ (Ù…Ø«Ø§Ù„: 13)")
+            return await msg.reply("Ø£Ø¯Ø®Ù„ Ø¹Ø¯Ø¯ Ù†Ø¬ÙˆÙ… ØµØÙŠØ (Ù…Ø«Ø§Ù„: 13)")
         mp = _load_stars_map()
         mp.setdefault(prod, {})
         mp[prod][int(days)] = int(val)
         _save_stars_map(mp)
-        return await msg.reply(f"âœ… ØªÙ… Ø¶Ø¨Ø· Ù†Ø¬ÙˆÙ… {days}d ({prod}) Ø¥Ù„Ù‰ â­{val}.")
+        return await msg.reply(f"âœ… ØªÙ… Ø¶Ø¨Ø· Ù†Ø¬ÙˆÙ… {days}d ({prod}) Ø¥Ù„Ù‰ â{val}.")
 
     # 3) Ø¬Ù„Ø³Ø© Ø§Ù„Ù…Ø®Ø²ÙˆÙ†/Ø§Ù„Ø±Ø³Ø§Ù„Ø©ØŸ
     sess = _INV_SESS.get(uid)
@@ -1181,7 +1181,7 @@ async def text_mux(msg: Message):
         _INV_SESS.pop(uid, None)
         return await msg.answer("ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø§Ù„Ø¬Ù„Ø³Ø©.")
     if raw.startswith("/"):
-        return await msg.answer("Ø£Ù†Øª Ø¯Ø§Ø®Ù„ Ø¬Ù„Ø³Ø©. Ø£Ø±Ø³Ù„ Ø§Ù„Ù…Ø­ØªÙˆÙ‰ Ø§Ù„Ù…Ø·Ù„ÙˆØ¨ ÙÙ‚Ø·ØŒ Ø«Ù… Ø§Ø¶ØºØ· Â«Ø­ÙØ¸Â» Ø£Ùˆ Ø£Ø±Ø³Ù„ /done.")
+        return await msg.answer("Ø£Ù†Øª Ø¯Ø§Ø®Ù„ Ø¬Ù„Ø³Ø©. Ø£Ø±Ø³Ù„ Ø§Ù„Ù…ØØªÙˆÙ‰ Ø§Ù„Ù…Ø·Ù„ÙˆØ¨ ÙÙ‚Ø·ØŒ Ø«Ù… Ø§Ø¶ØºØ· Â«ØÙØ¸Â» Ø£Ùˆ Ø£Ø±Ø³Ù„ /done.")
 
     mode = sess.get("mode")
     if mode == "stop_msg":
@@ -1194,7 +1194,7 @@ async def text_mux(msg: Message):
         text_blob += ("\n" if text_blob else "") + raw
         sess["buf_text"] = text_blob
         approx = len(_extract_loose(text_blob))
-        return await msg.answer(f"ðŸ“¥ ØªÙ… Ø§Ù„Ø§Ø³ØªÙ„Ø§Ù…. Ø§Ù„Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…Ø¤Ù‚Øª ~{approx} Ù…ÙØªØ§Ø­.")
+        return await msg.answer(f"ðŸ“¥ ØªÙ… Ø§Ù„Ø§Ø³ØªÙ„Ø§Ù…. Ø§Ù„Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…Ø¤Ù‚Øª ~{approx} Ù…ÙØªØ§Ø.")
 
 
 # =========================
@@ -1202,7 +1202,7 @@ async def text_mux(msg: Message):
 # =========================
 def _orders_kb(page: int = 1):
     kb = InlineKeyboardBuilder()
-    kb.button(text="â†» ØªØ­Ø¯ÙŠØ«", callback_data=f"sad:orders:{page}")
+    kb.button(text="â†» ØªØØ¯ÙŠØ«", callback_data=f"sad:orders:{page}")
     kb.button(text="â—€ï¸ Ø±Ø¬ÙˆØ¹", callback_data="sad:home")
     kb.adjust(2)
     return kb.as_markup()
@@ -1216,14 +1216,14 @@ async def orders_page(cb: CallbackQuery):
     rows = await ords.list_pending()
     lines = ["ðŸ§¾ Ø§Ù„Ø·Ù„Ø¨Ø§Øª Ø§Ù„Ù…Ø¹Ù„Ù‘Ù‚Ø©:"]
     if not rows:
-        lines.append("â€¢ Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø·Ù„Ø¨Ø§Øª Ø­Ø§Ù„ÙŠØ§Ù‹.")
+        lines.append("â€¢ Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø·Ù„Ø¨Ø§Øª ØØ§Ù„ÙŠØ§Ù‹.")
     else:
         for r in rows[-20:][::-1]:
             amt = r.usd_amount if r.asset == "USDT" else r.ton_amount
             cur = "USDT" if r.asset == "USDT" else "TON"
             prod = getattr(r, "product", None) or getattr(r, "slug", None) or "?"
             lines.append(f"â€¢ #{r.id} | {prod} | {r.days}dÃ—{r.qty} | {amt} {cur} | @{r.username or '-'} | {r.status}")
-        lines.append("\nÙ„Ù„ØªØ­ÙƒÙ… Ø¨Ø·Ù„Ø¨ Ù…Ø­Ø¯Ø¯ Ø£Ø±Ø³Ù„: /oid 123")
+        lines.append("\nÙ„Ù„ØªØÙƒÙ… Ø¨Ø·Ù„Ø¨ Ù…ØØ¯Ø¯ Ø£Ø±Ø³Ù„: /oid 123")
     await _edit_or_answer(cb, "\n".join(lines), reply_markup=_orders_kb(page))
     await cb.answer()
 
@@ -1247,7 +1247,7 @@ async def order_view_cmd(msg: Message):
         f"â€¢ Ø§Ù„Ù…Ù†ØªØ¬: {prod}\n"
         f"â€¢ Ø§Ù„Ø®Ø·Ø©: {r.days}d Ã— {r.qty}\n"
         f"â€¢ Ø§Ù„Ù…Ø¨Ù„Øº: {amt} {cur}\n"
-        f"â€¢ Ø§Ù„Ø­Ø§Ù„Ø©: {r.status}\n"
+        f"â€¢ Ø§Ù„ØØ§Ù„Ø©: {r.status}\n"
         f"â€¢ Ø£Ù†Ø´Ø¦: {r.created_at}\n"
         f"â€¢ ÙŠÙ†ØªÙ‡ÙŠ: {r.expires_at}\n"
         f"â€¢ ÙØ§ØªÙˆØ±Ø©/Ù…Ø±Ø¬Ø¹: {r.invoice_hash or '-'}"
@@ -1274,7 +1274,7 @@ async def ord_deliver(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
         return await cb.answer("Admins only.", show_alert=True)
     if not keys_service_enabled():
-        return await cb.answer("Ø®Ø¯Ù…Ø© Ø§Ù„Ù…ÙØ§ØªÙŠØ­ Ù…ØªÙˆÙ‚ÙØ© Ø­Ø§Ù„ÙŠÙ‹Ø§.", show_alert=True)
+        return await cb.answer("Ø®Ø¯Ù…Ø© Ø§Ù„Ù…ÙØ§ØªÙŠØ Ù…ØªÙˆÙ‚ÙØ© ØØ§Ù„ÙŠÙ‹Ø§.", show_alert=True)
     oid = int(cb.data.split(":")[-1])
     ok, delivered_text = await check_and_deliver_one(cb.bot, oid)
     if ok:
@@ -1284,7 +1284,7 @@ async def ord_deliver(cb: CallbackQuery):
             await cb.message.answer("ØªÙ… Ø§Ù„ØªØ³Ù„ÙŠÙ….")
         await cb.answer("Ø³ÙÙ„Ù‘Ù….", show_alert=False)
     else:
-        await cb.answer("Ø¨Ø§Ù†ØªØ¸Ø§Ø± Ø§Ù„Ø¯ÙØ¹ Ø£Ùˆ Ù„Ø§ ØªØªÙˆÙØ± Ù…ÙØ§ØªÙŠØ­ ÙƒØ§ÙÙŠØ©.", show_alert=True)
+        await cb.answer("Ø¨Ø§Ù†ØªØ¸Ø§Ø± Ø§Ù„Ø¯ÙØ¹ Ø£Ùˆ Ù„Ø§ ØªØªÙˆÙØ± Ù…ÙØ§ØªÙŠØ ÙƒØ§ÙÙŠØ©.", show_alert=True)
     await orders_page(cb)
 
 @router.callback_query(F.data.startswith("sad:ord:cancel:"))
@@ -1297,7 +1297,7 @@ async def ord_cancel(cb: CallbackQuery):
     await orders_page(cb)
 
 # =========================
-# Ø§Ù„Ø¥Ø­ØµØ§Ø¦ÙŠØ§Øª ÙˆØ§Ù„ØªØµØ¯ÙŠØ±
+# Ø§Ù„Ø¥ØØµØ§Ø¦ÙŠØ§Øª ÙˆØ§Ù„ØªØµØ¯ÙŠØ±
 # =========================
 @router.callback_query(F.data == "sad:stats")
 async def stats_page(cb: CallbackQuery):
@@ -1307,7 +1307,7 @@ async def stats_page(cb: CallbackQuery):
     usd_30, ton_30, n_30 = await _sales_sum("datetime(created_at)>=datetime('now', ?)", ("-30 days",))
     usd_7, ton_7, n_7 = await _sales_sum("datetime(created_at)>=datetime('now', ?)", ("-7 days",))
     txt = (
-        "ðŸ“Š Ø¥Ø­ØµØ§Ø¦ÙŠØ§Øª Ø§Ù„Ù…Ø¨ÙŠØ¹Ø§Øª\n"
+        "ðŸ“Š Ø¥ØØµØ§Ø¦ÙŠØ§Øª Ø§Ù„Ù…Ø¨ÙŠØ¹Ø§Øª\n"
         f"â€” Ø¢Ø®Ø± 7 Ø£ÙŠØ§Ù…:   ${_money(usd_7)} USDT | {ton_7:.3f} TON | {n_7} Ø·Ù„Ø¨\n"
         f"â€” Ø¢Ø®Ø± 30 ÙŠÙˆÙ…:  ${_money(usd_30)} USDT | {ton_30:.3f} TON | {n_30} Ø·Ù„Ø¨\n"
         f"â€” ÙƒÙ„ Ø§Ù„ÙˆÙ‚Øª:    ${_money(usd_all)} USDT | {ton_all:.3f} TON | {n_all} Ø·Ù„Ø¨\n"
@@ -1351,20 +1351,20 @@ async def settings_page(cb: CallbackQuery):
     S_def = _prices_stars_effective("default")
     S_cur = _prices_stars_effective(prod)
     txt = (
-        "âš™ï¸ Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ø­Ø§Ù„ÙŠØ©\n"
-        f"â€¢ Ø§Ù„Ù…Ù†ØªØ¬ Ø§Ù„Ø­Ø§Ù„ÙŠ: {prod}\n"
-        f"â€¢ Ø­Ø§Ù„Ø© Ø¨ÙŠØ¹ Ø§Ù„Ù…Ù†ØªØ¬: {enabled_line}\n"
+        "âš™ï¸ Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„ØØ§Ù„ÙŠØ©\n"
+        f"â€¢ Ø§Ù„Ù…Ù†ØªØ¬ Ø§Ù„ØØ§Ù„ÙŠ: {prod}\n"
+        f"â€¢ ØØ§Ù„Ø© Ø¨ÙŠØ¹ Ø§Ù„Ù…Ù†ØªØ¬: {enabled_line}\n"
         f"â€¢ Ø§Ù„Ø¯ÙØ¹: {mode}\n"
         f"â€¢ Ø·Ø±Ù‚ Ø§Ù„Ø¯ÙØ¹ ({prod}): Ù†Ø¬ÙˆÙ…={'Ù…ÙØ¹Ù‘Ù„' if pm.get('stars',True) else 'Ù…ØªÙˆÙ‚Ù'} | ÙƒØ±ÙŠØ¨ØªÙˆ={'Ù…ÙØ¹Ù‘Ù„' if pm.get('crypto',True) else 'Ù…ØªÙˆÙ‚Ù'}\n"
         f"â€¢ Ù…Ù‡Ù„Ø© Ø§Ù„ÙØ§ØªÙˆØ±Ø©: {INVOICE_TTL_MIN} Ø¯Ù‚ÙŠÙ‚Ø©\n"
         f"â€¢ TON_WALLET: {TON_WALLET}\n"
-        f"â€¢ Ø®Ø¯Ù…Ø© Ø§Ù„Ù…ÙØ§ØªÙŠØ­ Ù…ØªÙˆÙ‚ÙØ©ØŸ {disabled}\n"
+        f"â€¢ Ø®Ø¯Ù…Ø© Ø§Ù„Ù…ÙØ§ØªÙŠØ Ù…ØªÙˆÙ‚ÙØ©ØŸ {disabled}\n"
         f"â€¢ Ø±Ø³Ø§Ù„Ø© Ø¥ÙŠÙ‚Ø§Ù Ù…Ø®ØµØµØ©ØŸ {has_msg}\n"
         f"â€¢ Ø§Ù„Ø£Ø³Ø¹Ø§Ø± (USD default): 3d=${_money(P_def[3])} â€¢ 10d=${_money(P_def[10])} â€¢ 30d=${_money(P_def[30])}\n"
         f"â€¢ Ø§Ù„Ø£Ø³Ø¹Ø§Ø± (USD {prod}): 3d=${_money(P_cur[3])} â€¢ 10d=${_money(P_cur[10])} â€¢ 30d=${_money(P_cur[30])}\n"
-        f"â€¢ â­ Ø§Ù„Ù†Ø¬ÙˆÙ… (default): 3d=â­{S_def[3]} â€¢ 10d=â­{S_def[10]} â€¢ 30d=â­{S_def[30]}\n"
-        f"â€¢ â­ Ø§Ù„Ù†Ø¬ÙˆÙ… ({prod}): 3d=â­{S_cur[3]} â€¢ 10d=â­{S_cur[10]} â€¢ 30d=â­{S_cur[30]}\n\n"
-        "ÙŠÙ…ÙƒÙ† ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ø£Ø³Ø¹Ø§Ø± Ø¹Ø¨Ø± Ø§Ù„Ù„ÙˆØ­Ø§Øªâ€¦"
+        f"â€¢ â Ø§Ù„Ù†Ø¬ÙˆÙ… (default): 3d=â{S_def[3]} â€¢ 10d=â{S_def[10]} â€¢ 30d=â{S_def[30]}\n"
+        f"â€¢ â Ø§Ù„Ù†Ø¬ÙˆÙ… ({prod}): 3d=â{S_cur[3]} â€¢ 10d=â{S_cur[10]} â€¢ 30d=â{S_cur[30]}\n\n"
+        "ÙŠÙ…ÙƒÙ† ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ø£Ø³Ø¹Ø§Ø± Ø¹Ø¨Ø± Ø§Ù„Ù„ÙˆØØ§Øªâ€¦"
     )
     await _edit_or_answer(cb, txt, reply_markup=_back_home_kb())
     await cb.answer()
@@ -1393,7 +1393,7 @@ async def prices_cmd(msg: Message):
     lines += [
         "Ø£ÙˆØ§Ù…Ø± Ø§Ù„ØªØ¹Ø¯ÙŠÙ„:",
         "/set_price 3 4.99                â† default",
-        "/set_price carrom 3 4.99         â† Ù…Ù†ØªØ¬ Ù…Ø­Ø¯Ø¯",
+        "/set_price carrom 3 4.99         â† Ù…Ù†ØªØ¬ Ù…ØØ¯Ø¯",
         "/set_prices 3=4.99 10=12.5 30=25 â† default",
         "/set_prices carrom:3=5 8bp:10=3.5 â† Ù…ØªØ¹Ø¯Ø¯ Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª",
     ]
@@ -1405,25 +1405,25 @@ async def stars_cmd(msg: Message):
         return
     S_def = _prices_stars_effective("default")
     lines = [
-        "â­ Ø£Ø³Ø¹Ø§Ø± Ø§Ù„Ù†Ø¬ÙˆÙ… (default):",
-        f"â€¢ 3d: â­{S_def[3]}",
-        f"â€¢ 10d: â­{S_def[10]}",
-        f"â€¢ 30d: â­{S_def[30]}",
+        "â Ø£Ø³Ø¹Ø§Ø± Ø§Ù„Ù†Ø¬ÙˆÙ… (default):",
+        f"â€¢ 3d: â{S_def[3]}",
+        f"â€¢ 10d: â{S_def[10]}",
+        f"â€¢ 30d: â{S_def[30]}",
         "",
     ]
     for p in PRODUCTS:
         Sp = _prices_stars_effective(p)
         lines += [
             f"⭐ أسعار ({p}):",
-            f"â€¢ 3d: â­{Sp[3]}",
-            f"â€¢ 10d: â­{Sp[10]}",
-            f"â€¢ 30d: â­{Sp[30]}",
+            f"â€¢ 3d: â{Sp[3]}",
+            f"â€¢ 10d: â{Sp[10]}",
+            f"â€¢ 30d: â{Sp[30]}",
             "",
         ]
     lines += [
         "Ø£ÙˆØ§Ù…Ø± Ø§Ù„ØªØ¹Ø¯ÙŠÙ„:",
         "/set_star 3 13                   â† default",
-        "/set_star carrom 10 27           â† Ù…Ù†ØªØ¬ Ù…Ø­Ø¯Ø¯",
+        "/set_star carrom 10 27           â† Ù…Ù†ØªØ¬ Ù…ØØ¯Ø¯",
         "/set_stars 3=13 10=27 30=55      â† default",
         "/set_stars carrom:3=12 8bp:10=23 â† Ù…ØªØ¹Ø¯Ø¯ Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª",
     ]
@@ -1478,7 +1478,7 @@ async def set_prices_cmd(msg: Message):
         except Exception:
             continue
     _save_prices_map(mp)
-    await msg.reply("âœ… ØªÙ… Ø§Ù„ØªØ­Ø¯ÙŠØ«: " + (", ".join(changed) if changed else "Ù„Ø§ Ø´ÙŠØ¡."))
+    await msg.reply("âœ… ØªÙ… Ø§Ù„ØªØØ¯ÙŠØ«: " + (", ".join(changed) if changed else "Ù„Ø§ Ø´ÙŠØ¡."))
 
 @router.message(Command("set_star"))
 async def set_star_cmd(msg: Message):
@@ -1500,7 +1500,7 @@ async def set_star_cmd(msg: Message):
     mp.setdefault(prod, {})
     mp[prod][d] = int(val)
     _save_stars_map(mp)
-    await msg.reply(f"âœ… ØªÙ… Ø¶Ø¨Ø· Ù†Ø¬ÙˆÙ… {d}d ({prod}) Ø¥Ù„Ù‰ â­{int(val)}.")
+    await msg.reply(f"âœ… ØªÙ… Ø¶Ø¨Ø· Ù†Ø¬ÙˆÙ… {d}d ({prod}) Ø¥Ù„Ù‰ â{int(val)}.")
 
 @router.message(Command("set_stars"))
 async def set_stars_cmd(msg: Message):
@@ -1519,20 +1519,20 @@ async def set_stars_cmd(msg: Message):
                 d = int(days_s); val = int(float(val_s))
                 if d in (3, 10, 30) and val > 0:
                     mp.setdefault(prod, {})[d] = val
-                    changed.append(f"{prod}:{d}d=â­{val}")
+                    changed.append(f"{prod}:{d}d=â{val}")
             else:
                 days_s, val_s = part.split("=", 1)
                 d = int(days_s); val = int(float(val_s))
                 if d in (3, 10, 30) and val > 0:
                     mp.setdefault("default", {})[d] = val
-                    changed.append(f"default:{d}d=â­{val}")
+                    changed.append(f"default:{d}d=â{val}")
         except Exception:
             continue
     _save_stars_map(mp)
-    await msg.reply("âœ… ØªÙ… Ø§Ù„ØªØ­Ø¯ÙŠØ«: " + (", ".join(changed) if changed else "Ù„Ø§ Ø´ÙŠØ¡."))
+    await msg.reply("âœ… ØªÙ… Ø§Ù„ØªØØ¯ÙŠØ«: " + (", ".join(changed) if changed else "Ù„Ø§ Ø´ÙŠØ¡."))
 
 # =========================
-# Ø­Ø°Ù Ù…ÙØ§ØªÙŠØ­ Ø¹Ø§Ù… (ØªÙØ³ØªØ®Ø¯Ù… Ø¯Ø§Ø®Ù„ _inv_del_any)
+# ØØ°Ù Ù…ÙØ§ØªÙŠØ Ø¹Ø§Ù… (ØªÙØ³ØªØ®Ø¯Ù… Ø¯Ø§Ø®Ù„ _inv_del_any)
 # =========================
-# Ù„Ø§ Ø­Ø§Ø¬Ø© Ù„Ø¯Ø§Ù„Ø© Ù…Ø³ØªÙ‚Ù„Ø© Ù‡Ù†Ø§Ø› ØªÙ…Øª Ù…Ø¹Ø§Ù„Ø¬ØªÙ‡Ø§ ÙÙŠ _inv_del_any
+# Ù„Ø§ ØØ§Ø¬Ø© Ù„Ø¯Ø§Ù„Ø© Ù…Ø³ØªÙ‚Ù„Ø© Ù‡Ù†Ø§Ø› ØªÙ…Øª Ù…Ø¹Ø§Ù„Ø¬ØªÙ‡Ø§ ÙÙŠ _inv_del_any
 

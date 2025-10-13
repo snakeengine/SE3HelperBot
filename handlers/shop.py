@@ -97,7 +97,7 @@ _DELIVERED_POSTED: set[int] = set()
 def _code(txt: str) -> str:
     return f"<code>{h(str(txt))}</code>"
 
-# ========= Ù…Ù„ÙØ§Øª Ø­Ø§Ù„Ø©/Ø¥Ø¹Ø¯Ø§Ø¯ =========
+# ========= Ù…Ù„ÙØ§Øª ØØ§Ù„Ø©/Ø¥Ø¹Ø¯Ø§Ø¯ =========
 FLAGS_PATH   = BASE / "shop_flags.json"
 SHOP_CFG     = BASE / "shop_config.json"
 PRICES_PATH  = BASE / "shop_prices.json"        # Ø£Ø³Ø¹Ø§Ø± USD (Ù…ØªØ¹Ø¯Ø¯Ø© Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª)
@@ -269,7 +269,7 @@ def _jsave(p: Path, d: dict):
 def _stars_per_usd_from_env() -> float:
     """
     STARS_PER_USD = Ù†Ø¬ÙˆÙ… Ù„ÙƒÙ„ 1$
-    Ø£Ùˆ USD_PER_STAR = Ø³Ø¹Ø± Ø§Ù„Ù†Ø¬Ù…Ø© Ø¨Ø§Ù„Ø¯ÙˆÙ„Ø§Ø± (Ù†Ø­ÙˆÙ‘Ù„ ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‹Ø§)
+    Ø£Ùˆ USD_PER_STAR = Ø³Ø¹Ø± Ø§Ù„Ù†Ø¬Ù…Ø© Ø¨Ø§Ù„Ø¯ÙˆÙ„Ø§Ø± (Ù†ØÙˆÙ‘Ù„ ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‹Ø§)
     """
     raw = (os.getenv("STARS_PER_USD") or os.getenv("USD_PER_STAR") or "50").strip()
     try:
@@ -316,7 +316,7 @@ def _save_stars_map(mp: dict[str, dict[int, int]]):
 def _prices_stars(product: str) -> Dict[int, int]:
     """
     ÙŠØ±Ø¬Ù‘Ø¹ Ø£Ø³Ø¹Ø§Ø± Ø§Ù„Ù†Ø¬ÙˆÙ… Ù„Ù„Ù…Ù†ØªØ¬.
-    Ø¥Ù† Ù„Ù… ÙŠÙƒÙ† Ù‡Ù†Ø§Ùƒ Ù…Ù„Ù/Ø³Ø¹Ø± Ù…Ø­Ø¯Ù‘Ø¯ â†’ ÙŠØ­ÙˆÙ‘Ù„ Ù…Ù† USD Ø¨Ø§Ø³ØªØ®Ø¯Ø§Ù… STARS_PER_USD.
+    Ø¥Ù† Ù„Ù… ÙŠÙƒÙ† Ù‡Ù†Ø§Ùƒ Ù…Ù„Ù/Ø³Ø¹Ø± Ù…ØØ¯Ù‘Ø¯ â†’ ÙŠØÙˆÙ‘Ù„ Ù…Ù† USD Ø¨Ø§Ø³ØªØ®Ø¯Ø§Ù… STARS_PER_USD.
     """
     product = (product or "").lower().strip()
     mp = _load_stars_map()
@@ -381,13 +381,13 @@ def _fmt_money(amount: float, digits: int = 2) -> str:
 
 # ========= Ù†Øµ Ø·Ø±ÙŠÙ‚Ø© Ø§Ù„ØªÙØ¹ÙŠÙ„ =========
 AR_ACTIVATION_STEPS = (
-    "ðŸ” Ø·Ø±ÙŠÙ‚Ø© ØªÙØ¹ÙŠÙ„ Ø§Ù„Ù…ÙØªØ§Ø­\n"
-    "â€¢ Ø¨Ø¹Ø¯ Ø§Ø³ØªÙ„Ø§Ù… Ø§Ù„Ù…ÙØªØ§Ø­ØŒ Ø§ÙØªØ­ ØªØ·Ø¨ÙŠÙ‚ Ù…Ø­Ø±Ùƒ Ø§Ù„Ø«Ø¹Ø¨Ø§Ù†.\n"
+    "ðŸ” Ø·Ø±ÙŠÙ‚Ø© ØªÙØ¹ÙŠÙ„ Ø§Ù„Ù…ÙØªØ§Ø\n"
+    "â€¢ Ø¨Ø¹Ø¯ Ø§Ø³ØªÙ„Ø§Ù… Ø§Ù„Ù…ÙØªØ§ØØŒ Ø§ÙØªØ ØªØ·Ø¨ÙŠÙ‚ Ù…ØØ±Ùƒ Ø§Ù„Ø«Ø¹Ø¨Ø§Ù†.\n"
     "â€¢ Ù…Ù† Ø§Ù„Ø²Ø§ÙˆÙŠØ© Ø§Ù„Ø¹Ù„ÙˆÙŠØ© (ÙŠÙ…ÙŠÙ†/ÙŠØ³Ø§Ø±) Ø§Ø¶ØºØ· Ø¹Ù„Ù‰ Ù…Ø¹Ø±Ù‘Ù Ø§Ù„ØªØ·Ø¨ÙŠÙ‚.\n"
     "â€¢ ÙÙŠ Ø£Ø³ÙÙ„ Ø§Ù„Ø´Ø§Ø´Ø© Ø§Ø¶ØºØ· Ø²Ø± Entry Key.\n"
-    "â€¢ Ø§Ù†Ø³Ø® Ù…ÙØªØ§Ø­ Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ Ø§Ù„Ø°ÙŠ ÙˆØµÙ„Ùƒ Ù‡Ù†Ø§ØŒ Ø«Ù… Ø§Ù„ØµÙ‚Ù‡ ÙˆØ§Ø¶ØºØ· Activate.\n"
-    "â€¢ Ø§Ù„Ù…ÙØªØ§Ø­ ÙŠÙÙØ¹Ù‘ÙŽÙ„ Ù…Ø±Ø© ÙˆØ§Ø­Ø¯Ø© ÙÙ‚Ø·Ø› Ø¥Ù† Ø­Ø§ÙˆÙ„Øª Ø§Ø³ØªØ®Ø¯Ø§Ù…Ù‡ Ø«Ø§Ù†ÙŠØ© Ø³ÙŠØ¸Ù‡Ø± â€œÙ…Ø³ØªØ®Ø¯Ù…â€.\n"
-    "â€¢ ÙŠÙ…ÙƒÙ†Ùƒ ØªÙØ¹ÙŠÙ„ Ø§Ù„Ù…ÙØªØ§Ø­ ÙÙŠ Ø£ÙŠ ÙˆÙ‚ØªØ› Ø§Ù„ÙˆÙ‚Øª Ù„Ø§ ÙŠØ¨Ø¯Ø£ Ø¥Ù„Ø§ Ø¨Ø¹Ø¯ Ø§Ù„ØªÙØ¹ÙŠÙ„."
+    "â€¢ Ø§Ù†Ø³Ø® Ù…ÙØªØ§Ø Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ Ø§Ù„Ø°ÙŠ ÙˆØµÙ„Ùƒ Ù‡Ù†Ø§ØŒ Ø«Ù… Ø§Ù„ØµÙ‚Ù‡ ÙˆØ§Ø¶ØºØ· Activate.\n"
+    "â€¢ Ø§Ù„Ù…ÙØªØ§Ø ÙŠÙÙØ¹Ù‘ÙŽÙ„ Ù…Ø±Ø© ÙˆØ§ØØ¯Ø© ÙÙ‚Ø·Ø› Ø¥Ù† ØØ§ÙˆÙ„Øª Ø§Ø³ØªØ®Ø¯Ø§Ù…Ù‡ Ø«Ø§Ù†ÙŠØ© Ø³ÙŠØ¸Ù‡Ø± â€œÙ…Ø³ØªØ®Ø¯Ù…â€.\n"
+    "â€¢ ÙŠÙ…ÙƒÙ†Ùƒ ØªÙØ¹ÙŠÙ„ Ø§Ù„Ù…ÙØªØ§Ø ÙÙŠ Ø£ÙŠ ÙˆÙ‚ØªØ› Ø§Ù„ÙˆÙ‚Øª Ù„Ø§ ÙŠØ¨Ø¯Ø£ Ø¥Ù„Ø§ Ø¨Ø¹Ø¯ Ø§Ù„ØªÙØ¹ÙŠÙ„."
 )
 
 EN_ACTIVATION_STEPS = (
@@ -409,11 +409,11 @@ def _activation_kb(lang: str, product: str, oid: int | None = None):
     added = 0
     if tut:
         cb = f"shop:tutorial:{oid}" if oid else f"shop:tutorial:0"
-        kb.button(text=L(lang, "ðŸŽ¥ Ø´Ø±Ø­ Ø¨Ø§Ù„ÙÙŠØ¯ÙŠÙˆ", "ðŸŽ¥ Video tutorial"), callback_data=cb); added += 1
+        kb.button(text=L(lang, "ðŸŽ¥ Ø´Ø±Ø Ø¨Ø§Ù„ÙÙŠØ¯ÙŠÙˆ", "ðŸŽ¥ Video tutorial"), callback_data=cb); added += 1
     if app:
-        kb.button(text="ðŸ“¦ ØªØ­Ù…ÙŠÙ„ Ø§Ù„ØªØ·Ø¨ÙŠÙ‚" if str(lang).startswith("ar") else "ðŸ“¦ Download App", url=app); added += 1
+        kb.button(text="ðŸ“¦ ØªØÙ…ÙŠÙ„ Ø§Ù„ØªØ·Ø¨ÙŠÙ‚" if str(lang).startswith("ar") else "ðŸ“¦ Download App", url=app); added += 1
     if guide:
-        kb.button(text="ðŸ“˜ Ø´Ø±Ø­ Ø§Ù„ØªÙØ¹ÙŠÙ„" if str(lang).startswith("ar") else "ðŸ“˜ Activation Guide", url=guide); added += 1
+        kb.button(text="ðŸ“˜ Ø´Ø±Ø Ø§Ù„ØªÙØ¹ÙŠÙ„" if str(lang).startswith("ar") else "ðŸ“˜ Activation Guide", url=guide); added += 1
     if added == 0:
         return None
     kb.adjust(1)
@@ -426,11 +426,11 @@ async def _send_activation_help(bot, user_id: int, lang: str, product: str, oid:
 
 # ========= Ø¥ÙŠÙ‚Ø§Ù Ø§Ù„Ø®Ø¯Ù…Ø© =========
 def _service_paused_text(lang: str) -> str:
-    return _stop_message() or ("â¸ï¸ Ø®Ø¯Ù…Ø© Ø§Ù„Ù…ÙØ§ØªÙŠØ­ Ù…ØªÙˆÙ‚ÙØ© Ù…Ø¤Ù‚ØªÙ‹Ø§ Ù„Ù„ØµÙŠØ§Ù†Ø©." if str(lang).startswith("ar") else "â¸ï¸ Keys store is temporarily paused for maintenance.")
+    return _stop_message() or ("â¸ï¸ Ø®Ø¯Ù…Ø© Ø§Ù„Ù…ÙØ§ØªÙŠØ Ù…ØªÙˆÙ‚ÙØ© Ù…Ø¤Ù‚ØªÙ‹Ø§ Ù„Ù„ØµÙŠØ§Ù†Ø©." if str(lang).startswith("ar") else "â¸ï¸ Keys store is temporarily paused for maintenance.")
 
 def _paused_kb(lang: str):
     kb = InlineKeyboardBuilder()
-    kb.button(text="ØªØ­Ø¯ÙŠØ«" if str(lang).startswith("ar") else "Refresh", callback_data="shop:home")
+    kb.button(text="ØªØØ¯ÙŠØ«" if str(lang).startswith("ar") else "Refresh", callback_data="shop:home")
     return kb.as_markup()
 
 async def _ensure_service_available(ev: Union[Message, CallbackQuery]) -> bool:
@@ -454,23 +454,23 @@ async def _ensure_service_available(ev: Union[Message, CallbackQuery]) -> bool:
 # ========= ÙˆØ§Ø¬Ù‡Ø© Ø§Ù„Ù…ØªØ¬Ø± =========
 def _shop_home_text(lang: str, discount_rate: float = 0.30) -> str:
     """
-    ÙŠØ¹Ø±Ø¶ ÙÙ‚Ø±Ø© Ù…ØªØ¬Ø± Ø§Ù„Ù…ÙØ§ØªÙŠØ­ Ù…Ø¹ Ø³Ø·Ø± Ø®ØµÙ… Ù„ØºÙˆÙŠ.
+    ÙŠØ¹Ø±Ø¶ ÙÙ‚Ø±Ø© Ù…ØªØ¬Ø± Ø§Ù„Ù…ÙØ§ØªÙŠØ Ù…Ø¹ Ø³Ø·Ø± Ø®ØµÙ… Ù„ØºÙˆÙŠ.
     ÙŠÙ…ÙƒÙ† ØªØºÙŠÙŠØ± Ù†Ø³Ø¨Ø© Ø§Ù„Ø®ØµÙ… Ø¹Ø¨Ø± discount_rate (Ù…Ø«Ù„Ø§Ù‹ 0.25 = 25%).
     """
     is_ar = str(lang).startswith("ar")
     pct = int(round(discount_rate * 100))
 
-    title = "Ù…ØªØ¬Ø± Ø§Ù„Ù…ÙØ§ØªÙŠØ­" if is_ar else "Key Store"
+    title = "Ù…ØªØ¬Ø± Ø§Ù„Ù…ÙØ§ØªÙŠØ" if is_ar else "Key Store"
 
     if is_ar:
         lines = [
             f"ðŸŽ‰ Ø®ØµÙ… {pct}Ùª Ø¹Ù„Ù‰ Ø§Ù„Ø£Ø³Ø¹Ø§Ø± Ø§Ù„ÙŠÙˆÙ…! ÙŠÙØ·Ø¨Ù‘ÙŽÙ‚ ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‹Ø§ Ø¹Ù†Ø¯ Ø§Ù„Ø¯ÙØ¹.",
             "Ø§Ø®ØªØ± Ø§Ù„Ù…Ù†ØªØ¬ Ø«Ù… Ø·Ø±ÙŠÙ‚Ø© Ø§Ù„Ø¯ÙØ¹ ÙˆØ§Ù„Ù…Ø¯Ø© â€” ÙƒÙ„Ù‡Ø§ Ø¯Ø§Ø®Ù„ ØªÙŠÙ„ÙŠØ¬Ø±Ø§Ù….",
-            "ðŸ’³ Ø·Ø±Ù‚ Ø§Ù„Ø¯ÙØ¹ Ø§Ù„Ù…ØªØ§Ø­Ø©: " +
+            "ðŸ’³ Ø·Ø±Ù‚ Ø§Ù„Ø¯ÙØ¹ Ø§Ù„Ù…ØªØ§ØØ©: " +
             ("Crypto Pay: " + ", ".join(CRYPTO_ASSETS) if CRYPTO_ENABLED else "TON transfer")
-            + (" â€¢ â­ï¸ Ù†Ø¬ÙˆÙ… ØªÙŠÙ„ÙŠØ¬Ø±Ø§Ù…" if ENABLE_STARS else ""),
-            "âš¡ï¸ Ø§Ù„ØªØ³Ù„ÙŠÙ… ÙÙˆØ±ÙŠ Ø¨Ø¹Ø¯ Ø§Ù„Ø¯ÙØ¹: ÙŠØµÙ„Ùƒ Ø§Ù„Ù…ÙØªØ§Ø­ Ù‡Ù†Ø§ Ù…Ø¹ Ø¨Ø·Ø§Ù‚Ø© Ø§Ù„Ø´Ø±Ø§Ø¡.",
-            "Ù…Ù„Ø§Ø­Ø¸Ø©: Ø·Ø±Ù‚ Ø§Ù„Ø¯ÙØ¹ Ù‚Ø¯ ØªØ®ØªÙ„Ù Ø­Ø³Ø¨ Ø§Ù„Ù…Ù†ØªØ¬."
+            + (" â€¢ âï¸ Ù†Ø¬ÙˆÙ… ØªÙŠÙ„ÙŠØ¬Ø±Ø§Ù…" if ENABLE_STARS else ""),
+            "âš¡ï¸ Ø§Ù„ØªØ³Ù„ÙŠÙ… ÙÙˆØ±ÙŠ Ø¨Ø¹Ø¯ Ø§Ù„Ø¯ÙØ¹: ÙŠØµÙ„Ùƒ Ø§Ù„Ù…ÙØªØ§Ø Ù‡Ù†Ø§ Ù…Ø¹ Ø¨Ø·Ø§Ù‚Ø© Ø§Ù„Ø´Ø±Ø§Ø¡.",
+            "Ù…Ù„Ø§ØØ¸Ø©: Ø·Ø±Ù‚ Ø§Ù„Ø¯ÙØ¹ Ù‚Ø¯ ØªØ®ØªÙ„Ù ØØ³Ø¨ Ø§Ù„Ù…Ù†ØªØ¬."
         ]
     else:
         lines = [
@@ -478,7 +478,7 @@ def _shop_home_text(lang: str, discount_rate: float = 0.30) -> str:
             "Pick a product, then payment method & duration â€” all inside Telegram.",
             "ðŸ’³ Payments: " +
             ("Crypto Pay: " + ", ".join(CRYPTO_ASSETS) if CRYPTO_ENABLED else "TON transfer")
-            + (" â€¢ â­ Telegram Stars" if ENABLE_STARS else ""),
+            + (" â€¢ â Telegram Stars" if ENABLE_STARS else ""),
             "âš¡ï¸ Instant delivery: key + purchase card here.",
             "Note: available methods may vary per product."
         ]
@@ -516,7 +516,7 @@ async def shop_entry(msg: Message):
     lang = _user_lang(msg)
     await msg.answer(_shop_home_text(lang), reply_markup=_shop_home_kb(lang))
 
-# ÙØªØ­ ÙˆØ§Ø¬Ù‡Ø© Ø§Ù„Ù…ØªØ¬Ø± (Ù…Ù† /shop Ø£Ùˆ Ù…Ù† Ø²Ø± Ø´Ø±Ø§Ø¡/ÙØªØ­ Ø§Ù„Ù…ØªØ¬Ø±)
+# ÙØªØ ÙˆØ§Ø¬Ù‡Ø© Ø§Ù„Ù…ØªØ¬Ø± (Ù…Ù† /shop Ø£Ùˆ Ù…Ù† Ø²Ø± Ø´Ø±Ø§Ø¡/ÙØªØ Ø§Ù„Ù…ØªØ¬Ø±)
 @router.callback_query(F.data.in_({"shop:open", "shop:home", "shop:sevip"}))
 async def shop_open(cb: CallbackQuery):
     if not await _ensure_service_available(cb): 
@@ -536,7 +536,7 @@ async def shop_to_main(cb: CallbackQuery, state: FSMContext):
     except Exception:
         pass
 
-    # Ø®Ø° Ù„ØºØ© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… (Ù…Ø­ÙÙˆØ¸Ø© Ø¥Ù† ÙˆØ¬Ø¯ØªØŒ ÙˆØ¥Ù„Ø§ Ù…Ù† Telegram)
+    # Ø®Ø° Ù„ØºØ© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… (Ù…ØÙÙˆØ¸Ø© Ø¥Ù† ÙˆØ¬Ø¯ØªØŒ ÙˆØ¥Ù„Ø§ Ù…Ù† Telegram)
     lang = _user_lang(cb)   # "ar" Ø£Ùˆ "en"
 
     # Ø£Ø¹Ø±Ø¶ Ø¨Ø·Ø§Ù‚Ø© Ø§Ù„Ø¨Ø¯Ø§ÙŠØ© Ø¨Ù†ÙØ³ Ø§Ù„Ù„ØºØ©
@@ -545,18 +545,18 @@ async def shop_to_main(cb: CallbackQuery, state: FSMContext):
 # ========= Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„Ù…Ù†ØªØ¬ Ø«Ù… Ø·Ø±ÙŠÙ‚Ø© Ø§Ù„Ø¯ÙØ¹ =========
 def _pay_methods_for(product: str) -> List[str]:
     """
-    ØªÙØ±Ø¬Ø¹ Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø·Ø±Ù‚ Ø§Ù„Ù…Ø³Ù…ÙˆØ­Ø© Ù„Ù‡Ø°Ø§ Ø§Ù„Ù…Ù†ØªØ¬ Ø¨Ø¹Ø¯ Ø§Ù„ØªÙ‚Ø§Ø·Ø¹ Ø¨ÙŠÙ†:
+    ØªÙØ±Ø¬Ø¹ Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø·Ø±Ù‚ Ø§Ù„Ù…Ø³Ù…ÙˆØØ© Ù„Ù‡Ø°Ø§ Ø§Ù„Ù…Ù†ØªØ¬ Ø¨Ø¹Ø¯ Ø§Ù„ØªÙ‚Ø§Ø·Ø¹ Ø¨ÙŠÙ†:
     - Ø§Ù„ØªÙØ¹ÙŠÙ„ Ø§Ù„Ø¹Ø§Ù„Ù…ÙŠ (ENABLE_STARS / CRYPTO_ENABLED Ø£Ùˆ TON_ADDRESS)
     - Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ø¥Ø¯Ù…Ù† Ù„ÙƒÙ„ Ù…Ù†ØªØ¬ (pay_modes)
     - Ø£ÙŠ ØªÙ‚ÙŠÙŠØ¯ Ø¹Ø¨Ø± Ù…ØªØºÙŠØ± Ø¨ÙŠØ¦Ø© Ù…Ø«Ù„ 8BP_PAY=stars,crypto Ø£Ùˆ SOCCER_PAY=stars
     """
     product = (product or "").lower().strip()
 
-    # Ø§Ù„Ø­Ø§Ù„Ø© Ø§Ù„Ø¹Ø§Ù„Ù…ÙŠØ©
+    # Ø§Ù„ØØ§Ù„Ø© Ø§Ù„Ø¹Ø§Ù„Ù…ÙŠØ©
     allow_stars_global  = bool(ENABLE_STARS)
     allow_crypto_global = bool(CRYPTO_ENABLED or TON_ADDRESS)
 
-    # Ø­Ø§Ù„Ø© Ø§Ù„Ø¥Ø¯Ù…Ù† Ù„ÙƒÙ„ Ù…Ù†ØªØ¬
+    # ØØ§Ù„Ø© Ø§Ù„Ø¥Ø¯Ù…Ù† Ù„ÙƒÙ„ Ù…Ù†ØªØ¬
     allow_stars_admin   = _is_stars_ok(product)
     allow_crypto_admin  = _is_crypto_ok(product)
 
@@ -575,7 +575,7 @@ def _pay_methods_for(product: str) -> List[str]:
             methods.append("crypto")
         return methods
 
-    # Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠ Ø¨Ø¯ÙˆÙ† ØªÙ‚ÙŠÙŠØ¯ env: Ù…Ø§ Ø¯Ø§Ù… Ù…Ø³Ù…ÙˆØ­ Ø¹Ø§Ù„Ù…ÙŠÙ‹Ø§ ÙˆØ¥Ø¯Ø§Ø±ÙŠÙ‹Ø§
+    # Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠ Ø¨Ø¯ÙˆÙ† ØªÙ‚ÙŠÙŠØ¯ env: Ù…Ø§ Ø¯Ø§Ù… Ù…Ø³Ù…ÙˆØ Ø¹Ø§Ù„Ù…ÙŠÙ‹Ø§ ÙˆØ¥Ø¯Ø§Ø±ÙŠÙ‹Ø§
     if allow_stars:
         methods.append("stars")
     if allow_crypto:
@@ -599,7 +599,7 @@ def _pay_methods_kb(lang: str, product: str):
     for m in methods:
         if m == "stars":
             kb.button(
-                text=("â­ Ø§Ù„Ø¯ÙØ¹ Ø¨Ù†Ø¬ÙˆÙ… ØªÙŠÙ„ÙŠØ¬Ø±Ø§Ù…" if str(lang).startswith("ar") else "â­ Pay with Telegram Stars"),
+                text=("â Ø§Ù„Ø¯ÙØ¹ Ø¨Ù†Ø¬ÙˆÙ… ØªÙŠÙ„ÙŠØ¬Ø±Ø§Ù…" if str(lang).startswith("ar") else "â Pay with Telegram Stars"),
                 callback_data=f"shop:pm:{product}:stars"
             )
         elif m == "crypto":
@@ -615,7 +615,7 @@ def _pay_methods_kb(lang: str, product: str):
         callback_data="shop:home"
     )
 
-    # ØªØ±ØªÙŠØ¨ Ø§Ù„Ø£Ø¹Ù…Ø¯Ø© (Ø²Ø±ÙŠÙ† ÙÙŠ Ø§Ù„ØµÙ ÙƒØ­Ø¯ Ø£Ù‚ØµÙ‰)
+    # ØªØ±ØªÙŠØ¨ Ø§Ù„Ø£Ø¹Ù…Ø¯Ø© (Ø²Ø±ÙŠÙ† ÙÙŠ Ø§Ù„ØµÙ ÙƒØØ¯ Ø£Ù‚ØµÙ‰)
     kb.adjust(1, 1)
     return kb.as_markup()
 
@@ -652,7 +652,7 @@ async def choose_payment_method(cb: CallbackQuery):
     await cb.answer()
 
 
-# ========= Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„Ø®Ø·Ø© (Ø­Ø³Ø¨ Ø§Ù„Ø·Ø±ÙŠÙ‚Ø©) =========
+# ========= Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„Ø®Ø·Ø© (ØØ³Ø¨ Ø§Ù„Ø·Ø±ÙŠÙ‚Ø©) =========
 def _labels_for_usd(lang: str, product: str) -> Dict[int, str]:
     prices = _apply_tiers(_prices_usd(product), product)
     def label(days: int) -> str:
@@ -664,7 +664,7 @@ def _labels_for_stars(lang: str, product: str) -> Dict[int, str]:
     prices = _prices_stars(product)
     def label(days: int) -> str:
         s = int(prices[days])
-        return f"â­ {s} | {days} ÙŠÙˆÙ…" if str(lang).startswith("ar") else f"â­ {s} â€” {days}d"
+        return f"â {s} | {days} ÙŠÙˆÙ…" if str(lang).startswith("ar") else f"â {s} â€” {days}d"
     return {d: label(d) for d in (3, 10, 30)}
 
 @router.callback_query(F.data.startswith("shop:pm:"))
@@ -701,7 +701,7 @@ async def choose_qty(cb: CallbackQuery):
     # Ø¹Ø±Ø¶ Ø§Ù„Ø³Ø¹Ø± ÙÙŠ Ø§Ù„Ø¹Ù†ÙˆØ§Ù†
     if method == "stars":
         price = _prices_stars(product)[days]
-        head = "Ø§Ù„Ø®Ø·Ø©: {days} ÙŠÙˆÙ… â€” â­ {price} | Ø§Ø®ØªØ± Ø§Ù„ÙƒÙ…ÙŠØ©:" if str(lang).startswith("ar") else "Plan: {days}d â€” â­ {price} | Choose quantity:"
+        head = "Ø§Ù„Ø®Ø·Ø©: {days} ÙŠÙˆÙ… â€” â {price} | Ø§Ø®ØªØ± Ø§Ù„ÙƒÙ…ÙŠØ©:" if str(lang).startswith("ar") else "Plan: {days}d â€” â {price} | Choose quantity:"
         txt = head.format(days=days, price=price)
     else:
         usd = _apply_tiers(_prices_usd(product), product)[days]
@@ -756,13 +756,13 @@ async def _count_for_safe(days: int, product: str) -> int:
     except Exception:
         return 0
 
-# === Helpers: Ù†Øµ ÙˆØ£Ø²Ø±Ø§Ø± Ø§Ù‚ØªØ±Ø§Ø­ ÙƒÙ…ÙŠØ© Ø£Ù‚Ù„ ===
+# === Helpers: Ù†Øµ ÙˆØ£Ø²Ø±Ø§Ø± Ø§Ù‚ØªØ±Ø§Ø ÙƒÙ…ÙŠØ© Ø£Ù‚Ù„ ===
 def _not_enough_stock_text(lang: str, days: int, left: int) -> str:
     if str(lang).startswith("ar"):
         if left <= 0:
             return f"Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ù…Ø®Ø²ÙˆÙ† Ù„Ù…Ø¯Ø© {days} ÙŠÙˆÙ…."
-        unit = "Ù…ÙØªØ§Ø­" if left == 1 else ("Ù…ÙØªØ§Ø­ÙŠÙ†" if left == 2 else "Ù…ÙØ§ØªÙŠØ­")
-        return f"Ø§Ù„ÙƒÙ…ÙŠØ© Ø§Ù„Ù…Ø·Ù„ÙˆØ¨Ø© ØºÙŠØ± Ù…ØªØ§Ø­Ø© Ù„Ù…Ø¯Ø© {days} ÙŠÙˆÙ….\nØ§Ù„Ù…ØªÙˆÙØ± Ø§Ù„Ø¢Ù†: {left} {unit}.\nðŸ’¡ Ø¬Ø±Ù‘Ø¨ ÙƒÙ…ÙŠØ© Ø£Ù‚Ù„."
+        unit = "Ù…ÙØªØ§Ø" if left == 1 else ("Ù…ÙØªØ§ØÙŠÙ†" if left == 2 else "Ù…ÙØ§ØªÙŠØ")
+        return f"Ø§Ù„ÙƒÙ…ÙŠØ© Ø§Ù„Ù…Ø·Ù„ÙˆØ¨Ø© ØºÙŠØ± Ù…ØªØ§ØØ© Ù„Ù…Ø¯Ø© {days} ÙŠÙˆÙ….\nØ§Ù„Ù…ØªÙˆÙØ± Ø§Ù„Ø¢Ù†: {left} {unit}.\nðŸ’¡ Ø¬Ø±Ù‘Ø¨ ÙƒÙ…ÙŠØ© Ø£Ù‚Ù„."
     else:
         if left <= 0:
             return f"No inventory for {days}d."
@@ -771,11 +771,11 @@ def _not_enough_stock_text(lang: str, days: int, left: int) -> str:
 
 def _suggest_qty_kb(lang: str, product: str, method: str, days: int, left: int):
     """
-    ÙŠØ¨Ù†ÙŠ ÙƒÙŠØ¨ÙˆØ±Ø¯ Ø¨Ø§Ù‚ØªØ±Ø§Ø­Ø§Øª ÙƒÙ…ÙŠØ§Øª <= Ø§Ù„Ù…ØªÙˆÙØ±.
+    ÙŠØ¨Ù†ÙŠ ÙƒÙŠØ¨ÙˆØ±Ø¯ Ø¨Ø§Ù‚ØªØ±Ø§ØØ§Øª ÙƒÙ…ÙŠØ§Øª <= Ø§Ù„Ù…ØªÙˆÙØ±.
     ÙŠØ³ØªØ®Ø¯Ù… Ù†ÙØ³ callback Ø§Ù„Ù…Ø³ØªØ¹Ù…Ù„ Ø³Ø§Ø¨Ù‚Ù‹Ø§: shop:q:{product}:{method}:{days}:{qty}
     """
     kb = InlineKeyboardBuilder()
-    # ÙƒÙ…ÙŠØ§Øª Ù…Ù‚ØªØ±Ø­Ø©: Ø¥Ù† ÙƒØ§Ù† Ø§Ù„Ù…ØªÙˆÙØ± Ù‚Ù„ÙŠÙ„ (<=5) Ù†Ø¹Ø±Ø¶ 1..left
+    # ÙƒÙ…ÙŠØ§Øª Ù…Ù‚ØªØ±ØØ©: Ø¥Ù† ÙƒØ§Ù† Ø§Ù„Ù…ØªÙˆÙØ± Ù‚Ù„ÙŠÙ„ (<=5) Ù†Ø¹Ø±Ø¶ 1..left
     # ÙˆØ¥Ù„Ø§ Ù†Ø¹Ø±Ø¶ Ø¨Ø¹Ø¶ Ø§Ù„Ø®ÙŠØ§Ø±Ø§Øª Ø§Ù„Ø°ÙƒÙŠØ© + Ø²Ø± Ø§Ù„Ù…ØªÙˆÙØ± Ø¨Ø§Ù„Ø¶Ø¨Ø·
     if left <= 5:
         options = list(range(1, left + 1))
@@ -795,7 +795,7 @@ def _suggest_qty_kb(lang: str, product: str, method: str, days: int, left: int):
         kb.adjust(3, 2, 1)
     return kb.as_markup()
 
-# ========= ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ù…Ø®Ø²ÙˆÙ† Ø«Ù… Ø¥Ù†Ø´Ø§Ø¡ Ø§Ù„ÙØ§ØªÙˆØ±Ø© Ø­Ø³Ø¨ Ø§Ù„Ø·Ø±ÙŠÙ‚Ø© =========
+# ========= ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ù…Ø®Ø²ÙˆÙ† Ø«Ù… Ø¥Ù†Ø´Ø§Ø¡ Ø§Ù„ÙØ§ØªÙˆØ±Ø© ØØ³Ø¨ Ø§Ù„Ø·Ø±ÙŠÙ‚Ø© =========
 @router.callback_query(F.data.startswith("shop:q:"))
 async def prepare_invoice(cb: CallbackQuery):
     if not await _ensure_service_available(cb): return
@@ -830,7 +830,7 @@ async def prepare_invoice(cb: CallbackQuery):
             pass
         return
 
-    # ÙƒÙ…ÙŠØ© Ù…Ø·Ù„ÙˆØ¨Ø© Ø£ÙƒØ¨Ø± Ù…Ù† Ø§Ù„Ù…ØªÙˆÙØ± â†’ Ø§Ù‚ØªØ±Ø­ ÙƒÙ…ÙŠØ§Øª Ø£Ù‚Ù„
+    # ÙƒÙ…ÙŠØ© Ù…Ø·Ù„ÙˆØ¨Ø© Ø£ÙƒØ¨Ø± Ù…Ù† Ø§Ù„Ù…ØªÙˆÙØ± â†’ Ø§Ù‚ØªØ±Ø ÙƒÙ…ÙŠØ§Øª Ø£Ù‚Ù„
     if qty > left:
         text = _not_enough_stock_text(lang, days, left=left)
         try:
@@ -839,7 +839,7 @@ async def prepare_invoice(cb: CallbackQuery):
             pass
         try:
             kb = _suggest_qty_kb(lang, product, method, days, left)
-            # Ø¥Ù† Ø£Ù…ÙƒÙ† Ø¹Ø¯Ù‘Ù„ Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ø­Ø§Ù„ÙŠØ© Ù„ÙŠØ´ÙˆÙ Ø§Ù„Ø£Ø²Ø±Ø§Ø± ÙÙˆØ±Ù‹Ø§
+            # Ø¥Ù† Ø£Ù…ÙƒÙ† Ø¹Ø¯Ù‘Ù„ Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ø§Ù„ØØ§Ù„ÙŠØ© Ù„ÙŠØ´ÙˆÙ Ø§Ù„Ø£Ø²Ø±Ø§Ø± ÙÙˆØ±Ù‹Ø§
             try:
                 await cb.message.edit_text(text, reply_markup=kb)
             except Exception:
@@ -889,7 +889,7 @@ def _invoice_caption(lang, usd_total: float, ton_total: float, qty: int, days: i
             f"Ø·Ø±ÙŠÙ‚Ø© Ø§Ù„Ø¯ÙØ¹: {asset}\n"
             f"Ø§Ù„ÙƒÙ…ÙŠØ©: {qty}Ã— | Ø§Ù„Ø®Ø·Ø©: {days} ÙŠÙˆÙ…\n"
             f"â³ ØªÙ†ØªÙ‡ÙŠ Ø®Ù„Ø§Ù„ {INVOICE_TTL_MIN} Ø¯Ù‚ÙŠÙ‚Ø©.\n"
-            "ðŸ’¡ Ø§Ù„Ø³Ø¹Ø± ÙŠÙØ­Ø¯Ù‘ÙŽØ« ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‹Ø§ Ø­Ø³Ø¨ Ø§Ù„Ø³ÙˆÙ‚."
+            "ðŸ’¡ Ø§Ù„Ø³Ø¹Ø± ÙŠÙØØ¯Ù‘ÙŽØ« ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‹Ø§ ØØ³Ø¨ Ø§Ù„Ø³ÙˆÙ‚."
         )
     return (
         "Invoice ready.\n"
@@ -929,7 +929,7 @@ async def _create_invoice_crypto(cb: CallbackQuery, product: str, days: int, qty
             kb = InlineKeyboardBuilder()
             if pay_url:
                 kb.button(text=("Ø§Ø¯ÙØ¹ Ø§Ù„Ø¢Ù†" if str(lang).startswith("ar") else "Pay Now"), url=pay_url)
-            kb.button(text=("ØªØ­Ø¯ÙŠØ«" if str(lang).startswith("ar") else "Refresh"), callback_data=f"shop:r:{order.id}")
+            kb.button(text=("ØªØØ¯ÙŠØ«" if str(lang).startswith("ar") else "Refresh"), callback_data=f"shop:r:{order.id}")
             kb.button(text=("Ø¥Ù„ØºØ§Ø¡" if str(lang).startswith("ar") else "Cancel"),  callback_data=f"shop:c:{order.id}")
             kb.adjust(1, 2)
 
@@ -944,7 +944,7 @@ async def _create_invoice_crypto(cb: CallbackQuery, product: str, days: int, qty
             logging.exception("CryptoPay create_invoice failed: %r", e)
             if CRYPTO_ONLY:
                 try:
-                    await cb.answer(("âš ï¸ ØªØ¹Ø°Ù‘Ø± Ø¥Ù†Ø´Ø§Ø¡ Ø§Ù„ÙØ§ØªÙˆØ±Ø©. Ø­Ø§ÙˆÙ„ Ù„Ø§Ø­Ù‚Ù‹Ø§." if str(lang).startswith("ar") else "âš ï¸ Couldn't create invoice. Try again later."), show_alert=True)
+                    await cb.answer(("âš ï¸ ØªØ¹Ø°Ù‘Ø± Ø¥Ù†Ø´Ø§Ø¡ Ø§Ù„ÙØ§ØªÙˆØ±Ø©. ØØ§ÙˆÙ„ Ù„Ø§ØÙ‚Ù‹Ø§." if str(lang).startswith("ar") else "âš ï¸ Couldn't create invoice. Try again later."), show_alert=True)
                 except Exception:
                     pass
                 return
@@ -957,7 +957,7 @@ async def _create_invoice_crypto(cb: CallbackQuery, product: str, days: int, qty
     )
 
     kb = InlineKeyboardBuilder()
-    kb.button(text=("ØªØ­Ø¯ÙŠØ«" if str(lang).startswith("ar") else "Refresh"), callback_data=f"shop:r:{order.id}")
+    kb.button(text=("ØªØØ¯ÙŠØ«" if str(lang).startswith("ar") else "Refresh"), callback_data=f"shop:r:{order.id}")
     kb.button(text=("Ø¥Ù„ØºØ§Ø¡" if str(lang).startswith("ar") else "Cancel"),  callback_data=f"shop:c:{order.id}")
     kb.adjust(2)
 
@@ -977,7 +977,7 @@ async def _create_stars_invoice(cb: CallbackQuery, product: str, days: int, qty:
     stars_total = stars_one * qty
     expires_at = dt.datetime.utcnow() + dt.timedelta(minutes=INVOICE_TTL_MIN)
 
-    # Ù†Ø³Ø¬Ù‘Ù„ Ø§Ù„Ø·Ù„Ø¨ Ø£ÙˆÙ„Ø§Ù‹ (asset = XTR) â€” Ù†Ø®Ø²Ù† Ù…Ø¨Ù„Øº Ø§Ù„Ù†Ø¬ÙˆÙ… ÙÙŠ ton_amount ÙƒØ­Ù‚Ù„ Ø¹Ø§Ù…
+    # Ù†Ø³Ø¬Ù‘Ù„ Ø§Ù„Ø·Ù„Ø¨ Ø£ÙˆÙ„Ø§Ù‹ (asset = XTR) â€” Ù†Ø®Ø²Ù† Ù…Ø¨Ù„Øº Ø§Ù„Ù†Ø¬ÙˆÙ… ÙÙŠ ton_amount ÙƒØÙ‚Ù„ Ø¹Ø§Ù…
     order = await ords.create_order(
         user_id=cb.from_user.id,
         username=cb.from_user.username or "",
@@ -990,50 +990,50 @@ async def _create_stars_invoice(cb: CallbackQuery, product: str, days: int, qty:
     # Ù†Ø±Ø³Ù„ Ø§Ù„ÙØ§ØªÙˆØ±Ø©
     await cb.bot.send_invoice(
         chat_id=cb.from_user.id,
-        title=L(lang, "Ù…ÙØ§ØªÙŠØ­ Ø§Ø´ØªØ±Ø§Ùƒ", "Subscription keys"),
+        title=L(lang, "Ù…ÙØ§ØªÙŠØ Ø§Ø´ØªØ±Ø§Ùƒ", "Subscription keys"),
         description=L(lang, f"{product} â€¢ {days} ÙŠÙˆÙ… Ã— {qty}", f"{product} â€¢ {days}d Ã— {qty}"),
         payload=f"stars:{order.id}",
         currency="XTR",
         prices=[LabeledPrice(label=f"{product} {days}d Ã—{qty}", amount=int(stars_total))],
     )
 
-    # Ø±Ø³Ø§Ù„Ø© Ø¥Ø¯Ø§Ø±ÙŠØ© ØªØ­ØªÙ‡Ø§ ÙÙŠÙ‡Ø§ Â«ØªØ­Ø¯ÙŠØ«/Ø¥Ù„ØºØ§Ø¡Â»
+    # Ø±Ø³Ø§Ù„Ø© Ø¥Ø¯Ø§Ø±ÙŠØ© ØªØØªÙ‡Ø§ ÙÙŠÙ‡Ø§ Â«ØªØØ¯ÙŠØ«/Ø¥Ù„ØºØ§Ø¡Â»
     kb = InlineKeyboardBuilder()
-    kb.button(text=tr(lang, "btn_refresh", L(lang, "ØªØ­Ø¯ÙŠØ«", "Refresh")), callback_data=f"shop:r:{order.id}")
+    kb.button(text=tr(lang, "btn_refresh", L(lang, "ØªØØ¯ÙŠØ«", "Refresh")), callback_data=f"shop:r:{order.id}")
     kb.button(text=tr(lang, "btn_cancel",  L(lang, "Ø¥Ù„ØºØ§Ø¡", "Cancel")),  callback_data=f"shop:c:{order.id}")
     kb.adjust(2)
 
     try:
         await cb.message.edit_text(
-            L(lang, "ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ ÙØ§ØªÙˆØ±Ø© Ø§Ù„Ù†Ø¬ÙˆÙ…. Ø¨Ø¹Ø¯ Ø§Ù„Ø¯ÙØ¹ Ø§Ø¶ØºØ· Â«ØªØ­Ø¯ÙŠØ«Â» Ù„Ùˆ Ù„Ù… ÙŠØµÙ„Ùƒ Ø§Ù„Ù…ÙØªØ§Ø­.", 
+            L(lang, "ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ ÙØ§ØªÙˆØ±Ø© Ø§Ù„Ù†Ø¬ÙˆÙ…. Ø¨Ø¹Ø¯ Ø§Ù„Ø¯ÙØ¹ Ø§Ø¶ØºØ· Â«ØªØØ¯ÙŠØ«Â» Ù„Ùˆ Ù„Ù… ÙŠØµÙ„Ùƒ Ø§Ù„Ù…ÙØªØ§Ø.", 
                      "Stars invoice created. After payment tap â€œRefreshâ€ if the key didnâ€™t arrive."),
             reply_markup=kb.as_markup()
         )
     except Exception:
         await cb.message.answer(
-            L(lang, "ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ ÙØ§ØªÙˆØ±Ø© Ø§Ù„Ù†Ø¬ÙˆÙ…. Ø¨Ø¹Ø¯ Ø§Ù„Ø¯ÙØ¹ Ø§Ø¶ØºØ· Â«ØªØ­Ø¯ÙŠØ«Â».", 
+            L(lang, "ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ ÙØ§ØªÙˆØ±Ø© Ø§Ù„Ù†Ø¬ÙˆÙ…. Ø¨Ø¹Ø¯ Ø§Ù„Ø¯ÙØ¹ Ø§Ø¶ØºØ· Â«ØªØØ¯ÙŠØ«Â».", 
                      "Stars invoice created. After payment tap â€œRefreshâ€."),
             reply_markup=kb.as_markup()
         )
     await cb.answer()
 
-# ========= Ø²Ø± ØªØ­Ø¯ÙŠØ«/Ø¥Ù„ØºØ§Ø¡ =========
+# ========= Ø²Ø± ØªØØ¯ÙŠØ«/Ø¥Ù„ØºØ§Ø¡ =========
 @router.callback_query(F.data.startswith("shop:r:"))
 async def refresh_status(cb: CallbackQuery):
     lang = _user_lang(cb)
     oid  = int(cb.data.split(":")[-1])
 
-    # Ø­Ø§Ù„Ø© Ø§Ù„Ø·Ù„Ø¨ Ù‚Ø¨Ù„ Ø§Ù„ÙØ­Øµ
+    # ØØ§Ù„Ø© Ø§Ù„Ø·Ù„Ø¨ Ù‚Ø¨Ù„ Ø§Ù„ÙØØµ
     try:
         r0 = await ords.get_by_id(oid)
         pre_status = str(getattr(r0, "status", "") or "")
     except Exception:
         pre_status = ""
 
-    # ØªØ­Ù‚Ù‘Ù‚/ØªØ³Ù„ÙŠÙ… Ø¨Ø¯ÙˆÙ† Ø£ÙŠ Ø¥Ø±Ø³Ø§Ù„ ØªÙ„Ù‚Ø§Ø¦ÙŠ Ù…Ù† Ù‡Ù†Ø§
+    # ØªØÙ‚Ù‘Ù‚/ØªØ³Ù„ÙŠÙ… Ø¨Ø¯ÙˆÙ† Ø£ÙŠ Ø¥Ø±Ø³Ø§Ù„ ØªÙ„Ù‚Ø§Ø¦ÙŠ Ù…Ù† Ù‡Ù†Ø§
     ok, delivered_text = await check_and_deliver_one(cb.bot, oid, notify_user=False)
 
-    # Ø­Ø§Ù„Ø© Ø§Ù„Ø·Ù„Ø¨ Ø¨Ø¹Ø¯ Ø§Ù„ÙØ­Øµ
+    # ØØ§Ù„Ø© Ø§Ù„Ø·Ù„Ø¨ Ø¨Ø¹Ø¯ Ø§Ù„ÙØØµ
     try:
         r1 = await ords.get_by_id(oid)
         post_status = str(getattr(r1, "status", "") or "")
@@ -1048,7 +1048,7 @@ async def refresh_status(cb: CallbackQuery):
     # Ù„Ùˆ Ù…Ø§ Ø²Ø§Ù„ Ø¨Ø§Ù†ØªØ¸Ø§Ø± Ø§Ù„Ø¯ÙØ¹
     if not ok or post_status not in ("paid", "delivered"):
         await cb.answer(
-            "Ø¨Ø§Ù†ØªØ¸Ø§Ø± Ø§Ù„Ø¯ÙØ¹â€¦ (Ø³Ù†ØªØ­Ù‚Ù‚ ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‹Ø§)" if str(lang).startswith("ar") else "Waiting for paymentâ€¦ (auto-checking)"
+            "Ø¨Ø§Ù†ØªØ¸Ø§Ø± Ø§Ù„Ø¯ÙØ¹â€¦ (Ø³Ù†ØªØÙ‚Ù‚ ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‹Ø§)" if str(lang).startswith("ar") else "Waiting for paymentâ€¦ (auto-checking)"
         )
         return
 
@@ -1057,7 +1057,7 @@ async def refresh_status(cb: CallbackQuery):
         await cb.answer("ØªÙ… Ø§Ù„ØªØ£ÙƒÙŠØ¯ âœ…" if str(lang).startswith("ar") else "Confirmed âœ…")
         return
 
-    # Ù…Ù† Ù‡Ù†Ø§: ØªØºÙŠÙ‘Ø±Øª Ø§Ù„Ø­Ø§Ù„Ø© Ù„Ù„ØªÙˆ Ø¥Ù„Ù‰ delivered (Ø£ÙˆÙ„ Ù…Ø±Ø©)
+    # Ù…Ù† Ù‡Ù†Ø§: ØªØºÙŠÙ‘Ø±Øª Ø§Ù„ØØ§Ù„Ø© Ù„Ù„ØªÙˆ Ø¥Ù„Ù‰ delivered (Ø£ÙˆÙ„ Ù…Ø±Ø©)
     try:
         confirm_txt = (
             "âœ… ØªÙ… ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ø¯ÙØ¹.\nÙ„Ùˆ ÙˆØ§Ø¬Ù‡Øª Ù…Ø´ÙƒÙ„Ø© Ø§Ø³ØªØ®Ø¯Ù… Ø§Ù„Ø£Ù…Ø± /report"
@@ -1072,11 +1072,11 @@ async def refresh_status(cb: CallbackQuery):
     except Exception:
         pass
 
-    # Ø¬Ù‡Ù‘Ø² Ø§Ù„Ù…ÙØ§ØªÙŠØ­ Ø§Ù„Ù…Ø®Ø²Ù‘Ù†Ø© Ø¯Ø§Ø®Ù„ delivered_text (Ø¨Ø¯ÙˆÙ† Ø¥Ø¹Ø§Ø¯Ø© Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„ÙØ§ØªÙˆØ±Ø©/Ø§Ù„Ø¥ÙŠØµØ§Ù„)
+    # Ø¬Ù‡Ù‘Ø² Ø§Ù„Ù…ÙØ§ØªÙŠØ Ø§Ù„Ù…Ø®Ø²Ù‘Ù†Ø© Ø¯Ø§Ø®Ù„ delivered_text (Ø¨Ø¯ÙˆÙ† Ø¥Ø¹Ø§Ø¯Ø© Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„ÙØ§ØªÙˆØ±Ø©/Ø§Ù„Ø¥ÙŠØµØ§Ù„)
     keys = _extract_keys_from_text(delivered_text or "")
     _DELIVERED_KEYS[oid] = keys
 
-    # Ø£Ø±Ø³Ù„ Ø¨Ø·Ø§Ù‚Ø© Ø§Ù„Ø´Ø±Ø§Ø¡ Ù…Ø±Ø© ÙˆØ§Ø­Ø¯Ø© ÙÙ‚Ø·
+    # Ø£Ø±Ø³Ù„ Ø¨Ø·Ø§Ù‚Ø© Ø§Ù„Ø´Ø±Ø§Ø¡ Ù…Ø±Ø© ÙˆØ§ØØ¯Ø© ÙÙ‚Ø·
     if oid not in _PROFILE_SENT:
         try:
             await _send_profile_block(cb, lang, oid, days, qty, keys, product=product)
@@ -1099,14 +1099,14 @@ async def cancel_order(cb: CallbackQuery):
 # ========= Ù…Ø¹Ø§Ù„Ø¬Ø© Ù…Ø¯ÙÙˆØ¹Ø§Øª Ø§Ù„Ù†Ø¬ÙˆÙ… =========
 @router.pre_checkout_query()
 async def pre_checkout(pre: PreCheckoutQuery):
-    logging.info("[PAYâ­] pre_checkout payload=%s currency=%s amount=%s",
+    logging.info("[PAYâ] pre_checkout payload=%s currency=%s amount=%s",
                  pre.invoice_payload, getattr(pre, "currency", None), getattr(pre, "total_amount", None))
     await pre.answer(ok=True)
     
 @router.message(F.successful_payment)
 async def on_successful_payment(msg: Message):
     """
-    ÙŠÙ„ØªÙ‚Ø· Ù†Ø¬Ø§Ø­ Ø¯ÙØ¹ Ø§Ù„Ù†Ø¬ÙˆÙ…:
+    ÙŠÙ„ØªÙ‚Ø· Ù†Ø¬Ø§Ø Ø¯ÙØ¹ Ø§Ù„Ù†Ø¬ÙˆÙ…:
     payload = "stars:<oid>"
     """
     try:
@@ -1130,7 +1130,7 @@ async def on_successful_payment(msg: Message):
     try:
         ok, _ = await check_and_deliver_one(msg.bot, oid, notify_user=True)
         if ok:
-            await msg.answer("âœ… ØªÙ… Ø§Ù„Ø¯ÙØ¹ Ø¨Ù†Ø¬Ø§Ø­. ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ù…ÙØ§ØªÙŠØ­Ùƒ." if str(_user_lang(msg)).startswith("ar") else "âœ… Payment received. Your keys have been sent.")
+            await msg.answer("âœ… ØªÙ… Ø§Ù„Ø¯ÙØ¹ Ø¨Ù†Ø¬Ø§Ø. ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ù…ÙØ§ØªÙŠØÙƒ." if str(_user_lang(msg)).startswith("ar") else "âœ… Payment received. Your keys have been sent.")
         else:
             await msg.answer("ØªÙ… Ø§Ù„Ø¯ÙØ¹. Ø³Ù†Ø³Ù„Ù… Ù‚Ø±ÙŠØ¨Ù‹Ø§." if str(_user_lang(msg)).startswith("ar") else "Paid. We will deliver shortly.")
     except Exception as e:
@@ -1141,13 +1141,13 @@ async def _profile_kb(cb: CallbackQuery, lang: str, oid: int, product: str):
     app, guide, tut = _product_links(product)
     kb = InlineKeyboardBuilder()
     if tut:
-        kb.button(text=("ðŸŽ¥ Ø´Ø±Ø­ Ø¨Ø§Ù„ÙÙŠØ¯ÙŠÙˆ" if str(lang).startswith("ar") else "ðŸŽ¥ Video tutorial"), callback_data=f"shop:tutorial:{oid}")
+        kb.button(text=("ðŸŽ¥ Ø´Ø±Ø Ø¨Ø§Ù„ÙÙŠØ¯ÙŠÙˆ" if str(lang).startswith("ar") else "ðŸŽ¥ Video tutorial"), callback_data=f"shop:tutorial:{oid}")
     if guide:
-        kb.button(text=("ðŸ“˜ Ø´Ø±Ø­ Ø§Ù„ØªÙØ¹ÙŠÙ„" if str(lang).startswith("ar") else "ðŸ“˜ Activation Guide"), url=guide)
+        kb.button(text=("ðŸ“˜ Ø´Ø±Ø Ø§Ù„ØªÙØ¹ÙŠÙ„" if str(lang).startswith("ar") else "ðŸ“˜ Activation Guide"), url=guide)
     if app:
-        kb.button(text=("ðŸ“¦ ØªØ­Ù…ÙŠÙ„ Ø§Ù„ØªØ·Ø¨ÙŠÙ‚" if str(lang).startswith("ar") else "ðŸ“¦ Download App"), url=app)
+        kb.button(text=("ðŸ“¦ ØªØÙ…ÙŠÙ„ Ø§Ù„ØªØ·Ø¨ÙŠÙ‚" if str(lang).startswith("ar") else "ðŸ“¦ Download App"), url=app)
 
-    kb.button(text=("ðŸ’¾ Ø­ÙØ¸ Ø§Ù„Ù…ÙØ§ØªÙŠØ­" if str(lang).startswith("ar") else "ðŸ’¾ Save keys"), callback_data=f"shop:save:{oid}")
+    kb.button(text=("ðŸ’¾ ØÙØ¸ Ø§Ù„Ù…ÙØ§ØªÙŠØ" if str(lang).startswith("ar") else "ðŸ’¾ Save keys"), callback_data=f"shop:save:{oid}")
     kb.button(text=("â„¹ï¸ Ø·Ø±ÙŠÙ‚Ø© Ø§Ù„ØªÙØ¹ÙŠÙ„" if str(lang).startswith("ar") else "â„¹ï¸ How to activate"), callback_data=f"shop:howto:{oid}")
 
     if tut or guide or app:
@@ -1160,9 +1160,9 @@ def _profile_card_html(lang: str, days: int, qty: int, keys: List[str], product:
     product_disp = _product_label(lang, product) 
     title = "ðŸ§¾ Ø¨Ø·Ø§Ù‚Ø© Ø§Ù„Ø´Ø±Ø§Ø¡" if str(lang).startswith("ar") else "ðŸ§¾ Purchase Card"
     head  = (f"â€¢ Ø§Ù„Ù…Ù†ØªØ¬: {product}\nâ€¢ Ø§Ù„Ø®Ø·Ø©: {days} ÙŠÙˆÙ…\nâ€¢ Ø§Ù„ÙƒÙ…ÙŠØ©: {qty}Ã—") if str(lang).startswith("ar") else (f"â€¢ Product: {product}\nâ€¢ Plan: {days}d\nâ€¢ Qty: {qty}Ã—")
-    ks    = "\n".join(f"â€¢ {_code(k)}" for k in keys) if keys else ("â€” Ù„Ø§ Ù…ÙØ§ØªÙŠØ­ â€”" if str(lang).startswith("ar") else "â€” No keys â€”")
-    tip   = "â„¹ï¸ Ù„Ù„ØªÙØ¹ÙŠÙ„: Ø§ÙØªØ­ Ø§Ù„ØªØ·Ø¨ÙŠÙ‚ Ø§Ù„Ù…Ù†Ø§Ø³Ø¨ Ù„Ù…Ù†ØªØ¬Ùƒ Ø«Ù… Ø£Ø¯Ø®Ù„ Ø§Ù„Ù…ÙØªØ§Ø­ ÙƒÙ…Ø§ Ù‡Ùˆ Ù…ÙˆØ¶Ø­ ÙÙŠ Ø§Ù„Ø´Ø±Ø­." if str(lang).startswith("ar") else "â„¹ï¸ Activate: open the proper app for your product and enter the key as shown in the guide."
-    return f"{title}\n{head}\n\n{'ðŸ”‘ Ø§Ù„Ù…ÙØ§ØªÙŠØ­:' if str(lang).startswith('ar') else 'ðŸ”‘ Keys:'}\n{ks}\n\n{tip}"
+    ks    = "\n".join(f"â€¢ {_code(k)}" for k in keys) if keys else ("â€” Ù„Ø§ Ù…ÙØ§ØªÙŠØ â€”" if str(lang).startswith("ar") else "â€” No keys â€”")
+    tip   = "â„¹ï¸ Ù„Ù„ØªÙØ¹ÙŠÙ„: Ø§ÙØªØ Ø§Ù„ØªØ·Ø¨ÙŠÙ‚ Ø§Ù„Ù…Ù†Ø§Ø³Ø¨ Ù„Ù…Ù†ØªØ¬Ùƒ Ø«Ù… Ø£Ø¯Ø®Ù„ Ø§Ù„Ù…ÙØªØ§Ø ÙƒÙ…Ø§ Ù‡Ùˆ Ù…ÙˆØ¶Ø ÙÙŠ Ø§Ù„Ø´Ø±Ø." if str(lang).startswith("ar") else "â„¹ï¸ Activate: open the proper app for your product and enter the key as shown in the guide."
+    return f"{title}\n{head}\n\n{'ðŸ”‘ Ø§Ù„Ù…ÙØ§ØªÙŠØ:' if str(lang).startswith('ar') else 'ðŸ”‘ Keys:'}\n{ks}\n\n{tip}"
 
 async def _send_profile_block(cb_or_like, lang: str, oid: int, days: int, qty: int, keys: List[str], product: str):
     card = _profile_card_html(lang, days, qty, keys, product)
@@ -1231,12 +1231,12 @@ async def send_tutorial(cb: CallbackQuery):
 
     _app, _guide, tut = _product_links(product)
     if not tut:
-        await cb.answer("ÙÙŠØ¯ÙŠÙˆ Ø§Ù„Ø´Ø±Ø­ ØºÙŠØ± Ù…ØªØ§Ø­ Ø­Ø§Ù„ÙŠÙ‹Ø§." if str(lang).startswith("ar") else "Tutorial video not available.", show_alert=True)
+        await cb.answer("ÙÙŠØ¯ÙŠÙˆ Ø§Ù„Ø´Ø±Ø ØºÙŠØ± Ù…ØªØ§Ø ØØ§Ù„ÙŠÙ‹Ø§." if str(lang).startswith("ar") else "Tutorial video not available.", show_alert=True)
         return
     try:
         await cb.message.answer_video(
             tut,
-            caption=("Ø´Ø±Ø­ Ø³Ø±ÙŠØ¹ Ù„ØªÙØ¹ÙŠÙ„ Ø§Ù„Ù…ÙØªØ§Ø­." if str(lang).startswith("ar") else "Quick guide to activate your key."),
+            caption=("Ø´Ø±Ø Ø³Ø±ÙŠØ¹ Ù„ØªÙØ¹ÙŠÙ„ Ø§Ù„Ù…ÙØªØ§Ø." if str(lang).startswith("ar") else "Quick guide to activate your key."),
             parse_mode=ParseMode.HTML
         )
         await cb.answer()
@@ -1250,7 +1250,7 @@ async def save_keys_file(cb: CallbackQuery):
     try:
         oid = int(cb.data.split(":")[-1])
     except Exception:
-        return await cb.answer("Ù…Ø¹Ø±Ù‘Ù ØºÙŠØ± ØµØ§Ù„Ø­." if str(lang).startswith("ar") else "Invalid id.", show_alert=True)
+        return await cb.answer("Ù…Ø¹Ø±Ù‘Ù ØºÙŠØ± ØµØ§Ù„Ø." if str(lang).startswith("ar") else "Invalid id.", show_alert=True)
 
     keys = _DELIVERED_KEYS.get(oid) or []
     if not keys:
@@ -1268,7 +1268,7 @@ async def save_keys_file(cb: CallbackQuery):
 
     if not keys:
         return await cb.answer(
-            "Ù„Ù… Ø£Ø¬Ø¯ Ø§Ù„Ù…ÙØ§ØªÙŠØ­ Ù„Ù‡Ø°Ù‡ Ø§Ù„Ø¹Ù…Ù„ÙŠØ© (Ø±Ø¨Ù…Ø§ Ø§Ù†ØªÙ‡Øª Ø§Ù„Ø¬Ù„Ø³Ø©)." if str(lang).startswith("ar") else "Couldn't find keys for this order (session may have reset).",
+            "Ù„Ù… Ø£Ø¬Ø¯ Ø§Ù„Ù…ÙØ§ØªÙŠØ Ù„Ù‡Ø°Ù‡ Ø§Ù„Ø¹Ù…Ù„ÙŠØ© (Ø±Ø¨Ù…Ø§ Ø§Ù†ØªÙ‡Øª Ø§Ù„Ø¬Ù„Ø³Ø©)." if str(lang).startswith("ar") else "Couldn't find keys for this order (session may have reset).",
             show_alert=True
         )
 
@@ -1277,7 +1277,7 @@ async def save_keys_file(cb: CallbackQuery):
     try:
         await cb.message.answer_document(
             BufferedInputFile(data, filename=f"keys-{oid}.txt"),
-            caption=("ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ Ù…Ù„Ù Ø§Ù„Ù…ÙØ§ØªÙŠØ­. Ø§Ø­ÙØ¸Ù‡ Ù„Ø¯ÙŠÙƒ." if str(lang).startswith("ar") else "Keys file generated. Save it safely.")
+            caption=("ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ Ù…Ù„Ù Ø§Ù„Ù…ÙØ§ØªÙŠØ. Ø§ØÙØ¸Ù‡ Ù„Ø¯ÙŠÙƒ." if str(lang).startswith("ar") else "Keys file generated. Save it safely.")
         )
         await cb.answer()
     except Exception:
@@ -1300,10 +1300,10 @@ async def prices_cmd(msg: Message):
     def line_stars(prod: str) -> List[str]:
         p = _prices_stars(prod)
         return [
-            ("Ø§Ù„Ø£Ø³Ø¹Ø§Ø± â­ ({prod}):".format(prod=prod) if str(lang).startswith("ar") else f"Prices â­ ({prod}):"),
-            f"â€¢ 3d: {p[3]}â­",
-            f"â€¢ 10d: {p[10]}â­",
-            f"â€¢ 30d: {p[30]}â­"
+            ("Ø§Ù„Ø£Ø³Ø¹Ø§Ø± â ({prod}):".format(prod=prod) if str(lang).startswith("ar") else f"Prices â ({prod}):"),
+            f"â€¢ 3d: {p[3]}â",
+            f"â€¢ 10d: {p[10]}â",
+            f"â€¢ 30d: {p[30]}â"
         ]
 
     lines = []
@@ -1394,9 +1394,9 @@ async def set_prices_cmd(msg: Message):
             continue
     _save_prices_map(mp)
     if changed:
-        await msg.reply(("ØªÙ… Ø§Ù„ØªØ­Ø¯ÙŠØ«: " if str(lang).startswith("ar") else "Updated: ") + ", ".join(changed))
+        await msg.reply(("ØªÙ… Ø§Ù„ØªØØ¯ÙŠØ«: " if str(lang).startswith("ar") else "Updated: ") + ", ".join(changed))
     else:
-        await msg.reply("Ù„Ù… ÙŠØªÙ… ØªØ­Ø¯ÙŠØ« Ø£ÙŠ Ø³Ø¹Ø±." if str(lang).startswith("ar") else "No prices updated.")
+        await msg.reply("Ù„Ù… ÙŠØªÙ… ØªØØ¯ÙŠØ« Ø£ÙŠ Ø³Ø¹Ø±." if str(lang).startswith("ar") else "No prices updated.")
 
 # ====== Ø£ÙˆØ§Ù…Ø± Ø¥Ø¯Ù…Ù†: Ø£Ø³Ø¹Ø§Ø± Ø§Ù„Ù†Ø¬ÙˆÙ… ======
 @router.message(Command("set_star_price"))
@@ -1424,8 +1424,8 @@ async def set_star_price_cmd(msg: Message):
     mp[prod][d] = val
     _save_stars_map(mp)
     target = "Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠ" if str(lang).startswith("ar") and prod == "default" else (prod if prod != "default" else "default")
-    await msg.reply(("ØªÙ… Ø¶Ø¨Ø· Ø³Ø¹Ø± {d} ÙŠÙˆÙ… ({t}) Ø¥Ù„Ù‰ â­{v}.".format(d=d, t=target, v=val)
-                     if str(lang).startswith("ar") else f"Set Stars price {d}d ({target}) to â­{val}."))
+    await msg.reply(("ØªÙ… Ø¶Ø¨Ø· Ø³Ø¹Ø± {d} ÙŠÙˆÙ… ({t}) Ø¥Ù„Ù‰ â{v}.".format(d=d, t=target, v=val)
+                     if str(lang).startswith("ar") else f"Set Stars price {d}d ({target}) to â{val}."))
 
 @router.message(Command("set_star_prices"))
 async def set_star_prices_cmd(msg: Message):
@@ -1448,19 +1448,19 @@ async def set_star_prices_cmd(msg: Message):
                 d = int(days_s); val = int(val_s)
                 if d in (3, 10, 30) and val > 0:
                     mp.setdefault(prod, {})[d] = val
-                    changed.append(f"{prod}:{d}d=â­{val}")
+                    changed.append(f"{prod}:{d}d=â{val}")
             else:
                 days_s, val_s = part.split("=", 1)
                 d = int(days_s); val = int(val_s)
                 if d in (3, 10, 30) and val > 0:
                     mp.setdefault("default", {})[d] = val
-                    changed.append(f"default:{d}d=â­{val}")
+                    changed.append(f"default:{d}d=â{val}")
         except Exception:
             continue
 
     _save_stars_map(mp)
     if changed:
-        await msg.reply(("ØªÙ… Ø§Ù„ØªØ­Ø¯ÙŠØ«: " if str(lang).startswith("ar") else "Updated: ") + ", ".join(changed))
+        await msg.reply(("ØªÙ… Ø§Ù„ØªØØ¯ÙŠØ«: " if str(lang).startswith("ar") else "Updated: ") + ", ".join(changed))
     else:
-        await msg.reply("Ù„Ù… ÙŠØªÙ… ØªØ­Ø¯ÙŠØ« Ø£ÙŠ Ø³Ø¹Ø±." if str(lang).startswith("ar") else "No prices updated.")
+        await msg.reply("Ù„Ù… ÙŠØªÙ… ØªØØ¯ÙŠØ« Ø£ÙŠ Ø³Ø¹Ø±." if str(lang).startswith("ar") else "No prices updated.")
 

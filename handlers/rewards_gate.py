@@ -30,12 +30,12 @@ from handlers.live_chat import LiveChat
 
 
 router = Router(name="rewards_gate")
-# Ø§Ù…Ù†Ø¹ Ø§Ù„ØªÙ†ÙÙŠØ° Ø£Ø«Ù†Ø§Ø¡ Ø¬Ù„Ø³Ø© Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„Ø­ÙŠÙ‘Ø©ØŒ ÙˆØ§Ø´ØªØºÙ„ Ø¨Ø§Ù„Ø®Ø§Øµ ÙÙ‚Ø·
+# Ø§Ù…Ù†Ø¹ Ø§Ù„ØªÙ†ÙÙŠØ° Ø£Ø«Ù†Ø§Ø¡ Ø¬Ù„Ø³Ø© Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„ØÙŠÙ‘Ø©ØŒ ÙˆØ§Ø´ØªØºÙ„ Ø¨Ø§Ù„Ø®Ø§Øµ ÙÙ‚Ø·
 router.message.filter(F.chat.type == "private", ~StateFilter(LiveChat.active))
 router.callback_query.filter(F.message.chat.type == "private", ~StateFilter(LiveChat.active))
 
-# Ø§Ù…Ù†Ø¹ Ø£ÙŠ Ø±Ø³Ø§Ø¦Ù„/ÙƒÙˆÙ„Ø¨Ø§ÙƒØ§Øª Ø®Ø§ØµØ© Ø£Ø«Ù†Ø§Ø¡ Ø¬Ù„Ø³Ø© Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„Ø­ÙŠÙ‘Ø©ØŒ
-# ÙˆØ­ØµÙ‘Ø± ÙƒÙˆÙ„Ø¨Ø§ÙƒØ§Øª Ù‡Ø°Ø§ Ø§Ù„Ù…Ù„Ù Ø¹Ù„Ù‰ Ø¨Ø§Ø¯Ø¦Ø© rwd:gate:
+# Ø§Ù…Ù†Ø¹ Ø£ÙŠ Ø±Ø³Ø§Ø¦Ù„/ÙƒÙˆÙ„Ø¨Ø§ÙƒØ§Øª Ø®Ø§ØµØ© Ø£Ø«Ù†Ø§Ø¡ Ø¬Ù„Ø³Ø© Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„ØÙŠÙ‘Ø©ØŒ
+# ÙˆØØµÙ‘Ø± ÙƒÙˆÙ„Ø¨Ø§ÙƒØ§Øª Ù‡Ø°Ø§ Ø§Ù„Ù…Ù„Ù Ø¹Ù„Ù‰ Ø¨Ø§Ø¯Ø¦Ø© rwd:gate:
 router.message.filter(
     F.chat.type == "private",
     ~StateFilter(LiveChat.active)
@@ -46,8 +46,8 @@ router.callback_query.filter(
     F.data.func(lambda s: isinstance(s, str) and s.startswith("rwd:gate:"))
 )
 
-# Ù…Ù„Ø§Ø­Ø¸Ø©: chat_member updates Ù„Ø§ Ù†Ù‚ÙŠÙ‘Ø¯Ù‡Ø§ Ù„Ø£Ù†Ù‡Ø§ ØªØ£ØªÙŠ Ù…Ù† Ø§Ù„Ù‚Ù†ÙˆØ§Øª/Ø§Ù„Ø³ÙˆØ¨Ø±Ø¬Ø±ÙˆØ¨Ø§Øª
-# ÙˆÙ„ÙŠØ³Øª Ø¬Ø²Ø¡Ù‹Ø§ Ù…Ù† Ù…Ø­Ø§Ø¯Ø«Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø§Ù„Ø®Ø§ØµØ©ØŒ ÙˆØ¨Ø§Ù„ØªØ§Ù„ÙŠ Ù…Ø§ ØªØªØ£Ø«Ø± Ø¨Ù€ LiveChat.
+# Ù…Ù„Ø§ØØ¸Ø©: chat_member updates Ù„Ø§ Ù†Ù‚ÙŠÙ‘Ø¯Ù‡Ø§ Ù„Ø£Ù†Ù‡Ø§ ØªØ£ØªÙŠ Ù…Ù† Ø§Ù„Ù‚Ù†ÙˆØ§Øª/Ø§Ù„Ø³ÙˆØ¨Ø±Ø¬Ø±ÙˆØ¨Ø§Øª
+# ÙˆÙ„ÙŠØ³Øª Ø¬Ø²Ø¡Ù‹Ø§ Ù…Ù† Ù…ØØ§Ø¯Ø«Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø§Ù„Ø®Ø§ØµØ©ØŒ ÙˆØ¨Ø§Ù„ØªØ§Ù„ÙŠ Ù…Ø§ ØªØªØ£Ø«Ø± Ø¨Ù€ LiveChat.
 log = logging.getLogger(__name__)
 
 # ---------------------- Ø¥Ø¹Ø¯Ø§Ø¯ Ø¥Ø´Ø¹Ø§Ø± Ø§Ù„Ø£Ø¯Ù…Ù† ----------------------
@@ -56,7 +56,7 @@ ADMIN_IDS = get_admin_ids()
 
 async def _notify_admins(bot, text: str):
     """
-    ÙŠØ­Ø§ÙˆÙ„ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„ Ø¹Ø¨Ø± utils.admin_notify.notify_admins Ø¥Ù† ÙˆÙØ¬Ø¯Ø›
+    ÙŠØØ§ÙˆÙ„ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„ Ø¹Ø¨Ø± utils.admin_notify.notify_admins Ø¥Ù† ÙˆÙØ¬Ø¯Ø›
     ÙˆØ¥Ù„Ø§ ÙŠØ±Ø³Ù„ Ù…Ø¨Ø§Ø´Ø±Ø© Ø¥Ù„Ù‰ ADMIN_IDS.
     """
     try:
@@ -91,17 +91,17 @@ def _parse_channels(value: str) -> List[Union[int, str]]:
 REQUIRED_CHANNELS = _parse_channels(os.getenv("REWARDS_CHANNELS", ""))
 
 LEAVE_DEDUCT_DEFAULT = int(os.getenv("REWARDS_LEAVE_DEDUCT", "50"))
-GRACE_SECONDS        = int(os.getenv("REWARDS_GRACE_SECONDS", "120"))   # Ù…Ù‡Ù„Ø© Ø§Ù„Ø³Ù…Ø§Ø­
-MEMBERSHIP_TTL       = int(os.getenv("REWARDS_RECHECK_TTL", "60"))      # ÙƒØ§Ø´ ÙØ­Øµ Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ
+GRACE_SECONDS        = int(os.getenv("REWARDS_GRACE_SECONDS", "120"))   # Ù…Ù‡Ù„Ø© Ø§Ù„Ø³Ù…Ø§Ø
+MEMBERSHIP_TTL       = int(os.getenv("REWARDS_RECHECK_TTL", "60"))      # ÙƒØ§Ø´ ÙØØµ Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ
 ESCALATE             = os.getenv("REWARDS_DEDUCT_ESCALATE", "").strip() # "20,50,100"
 DEDUCT_SEQ           = [int(x) for x in ESCALATE.split(",") if x.strip().isdigit()]
 SKIP_ADMINS          = int(os.getenv("REWARDS_SKIP_ADMINS", "1"))       # Ø¥Ø¹ÙØ§Ø¡ Ø§Ù„Ø£Ø¯Ù…Ù†
 
-# ØªÙ†Ø¨ÙŠÙ‡ Ù…Ø¨ÙƒÙ‘Ø± ÙˆØ­Ø¯Ù‘ Ø§Ù„Ø³Ù„ÙˆÙƒ Ù…Ø¹ Ø§Ù„Ø±ØµÙŠØ¯ Ø§Ù„ØµÙØ±ÙŠ:
+# ØªÙ†Ø¨ÙŠÙ‡ Ù…Ø¨ÙƒÙ‘Ø± ÙˆØØ¯Ù‘ Ø§Ù„Ø³Ù„ÙˆÙƒ Ù…Ø¹ Ø§Ù„Ø±ØµÙŠØ¯ Ø§Ù„ØµÙØ±ÙŠ:
 PREWARN_ON_LEAVE = int(os.getenv("REWARDS_PREWARN", "1"))        # 1=ÙØ¹Ù‘Ø§Ù„
 WARN_ZERO_BAL    = int(os.getenv("REWARDS_WARN_ZERO_BAL", "0"))  # 0=Ù„Ø§ ØªÙ†Ø¨Ù‘Ù‡ Ø¥Ù† Ø§Ù„Ø±ØµÙŠØ¯ ØµÙØ±
 
-# âœ… Ù…ÙØ§ØªÙŠØ­ ÙƒØªÙ… Ø¥Ø´Ø¹Ø§Ø±Ø§Øª Ø§Ù„Ø£Ø¯Ù…Ù† (Ø§ÙØªØ±Ø§Ø¶ÙŠÙ‹Ø§ Ù…ØªÙˆÙ‚ÙØ©)
+# âœ… Ù…ÙØ§ØªÙŠØ ÙƒØªÙ… Ø¥Ø´Ø¹Ø§Ø±Ø§Øª Ø§Ù„Ø£Ø¯Ù…Ù† (Ø§ÙØªØ±Ø§Ø¶ÙŠÙ‹Ø§ Ù…ØªÙˆÙ‚ÙØ©)
 NOTIFY_LEAVE      = int(os.getenv("REWARDS_NOTIFY_LEAVE", "0"))        # Ø¥Ø´Ø¹Ø§Ø± "Leave detected"
 NOTIFY_JOIN_BACK  = int(os.getenv("REWARDS_NOTIFY_JOIN_BACK", "0"))    # Ø¥Ø´Ø¹Ø§Ø± "User re-subscribed"
 
@@ -166,7 +166,7 @@ async def join_keyboard(bot, lang: str) -> InlineKeyboardBuilder:
         btn_txt = t(lang, "rewards.gate.join_named", "Ø§Ø´ØªØ±Ùƒ ÙÙŠ {name}").format(name=title or str(ch))
         kb.row(InlineKeyboardButton(text=btn_txt, url=_channel_url(ch)))
     kb.row(
-        InlineKeyboardButton(text=t(lang, "rewards.gate.ive_joined", "âœ… Ø§Ø´ØªØ±ÙƒØª / ØªØ­Ù‚Ù‚"), callback_data="rwd:gate:recheck")
+        InlineKeyboardButton(text=t(lang, "rewards.gate.ive_joined", "âœ… Ø§Ø´ØªØ±ÙƒØª / ØªØÙ‚Ù‚"), callback_data="rwd:gate:recheck")
     )
     kb.row(InlineKeyboardButton(text=t(lang, "common.close", "Ø¥ØºÙ„Ø§Ù‚"), callback_data="rwd:gate:close"))
     return kb
@@ -211,7 +211,7 @@ async def require_membership(msg_or_cb: Message | CallbackQuery) -> bool:
         except TelegramBadRequest as e:
             if "message is not modified" in str(e):
                 await msg_or_cb.answer(
-                    t(lang, "rewards.gate.still_missing", "Ù„Ù… Ù†Ø±ØµØ¯ Ø§Ø´ØªØ±Ø§ÙƒÙƒ Ø¨Ø¹Ø¯. ØªØ£ÙƒØ¯ Ø«Ù… Ø§Ø¶ØºØ· \\"ØªØ­Ù‚Ù‚\\" Ù…Ø±Ø© Ø£Ø®Ø±Ù‰."),
+                    t(lang, "rewards.gate.still_missing", "Ù„Ù… Ù†Ø±ØµØ¯ Ø§Ø´ØªØ±Ø§ÙƒÙƒ Ø¨Ø¹Ø¯. ØªØ£ÙƒØ¯ Ø«Ù… Ø§Ø¶ØºØ· \\"ØªØÙ‚Ù‚\\" Ù…Ø±Ø© Ø£Ø®Ø±Ù‰."),
                     show_alert=True
                 )
             else:
@@ -245,7 +245,7 @@ async def cb_gate_recheck(cb: CallbackQuery):
     except Exception:
         await cb.answer("OK", show_alert=False)
 
-# ---------------------- Ø­Ø³Ø§Ø¨ Ù‚ÙŠÙ…Ø© Ø§Ù„Ø®ØµÙ… ----------------------
+# ---------------------- ØØ³Ø§Ø¨ Ù‚ÙŠÙ…Ø© Ø§Ù„Ø®ØµÙ… ----------------------
 def _calc_deduct(uid: int) -> int:
     u = ensure_user(uid)
     warns = int(u.get("warns", 0))
@@ -276,7 +276,7 @@ async def _send_preleave_notice(bot, uid: int, channel: Union[int, str]):
         text = t(
             lang,
             "rewards.gate.left_pre_nodeduct",
-            "â„¹ï¸ ØºØ§Ø¯Ø±Øª Ù‚Ù†Ø§Ø© Ø¥Ù„Ø²Ø§Ù…ÙŠØ© ({name}). Ø³ÙŠØªÙ… Ø¥ÙŠÙ‚Ø§Ù Ø§Ù„Ø¬ÙˆØ§Ø¦Ø² Ø­ØªÙ‰ ØªØ¹ÙˆØ¯ Ù„Ù„Ø§Ø´ØªØ±Ø§Ùƒ."
+            "â„¹ï¸ ØºØ§Ø¯Ø±Øª Ù‚Ù†Ø§Ø© Ø¥Ù„Ø²Ø§Ù…ÙŠØ© ({name}). Ø³ÙŠØªÙ… Ø¥ÙŠÙ‚Ø§Ù Ø§Ù„Ø¬ÙˆØ§Ø¦Ø² ØØªÙ‰ ØªØ¹ÙˆØ¯ Ù„Ù„Ø§Ø´ØªØ±Ø§Ùƒ."
         ).format(name=title)
     else:
         text = t(
@@ -295,7 +295,7 @@ async def _send_preleave_notice(bot, uid: int, channel: Union[int, str]):
     except Exception:
         pass
 
-# ---------------------- Ù…Ù‡Ù„Ø© Ø§Ù„Ø³Ù…Ø§Ø­ ÙˆØ§Ù„Ø®ØµÙ… ----------------------
+# ---------------------- Ù…Ù‡Ù„Ø© Ø§Ù„Ø³Ù…Ø§Ø ÙˆØ§Ù„Ø®ØµÙ… ----------------------
 async def _apply_grace_and_deduct(bot, uid: int, channel: Union[int, str], leave_ts: int):
     await asyncio.sleep(max(0, GRACE_SECONDS))
 
@@ -347,7 +347,7 @@ async def _apply_grace_and_deduct(bot, uid: int, channel: Union[int, str], leave
             text=t(
                 lang,
                 "rewards.gate.left_warn",
-                "âš ï¸ ØªÙ… Ø±ØµØ¯ Ø®Ø±ÙˆØ¬Ùƒ Ù…Ù† Ù‚Ù†Ø§Ø© Ø¥Ù„Ø²Ø§Ù…ÙŠØ© ({name}). Ø­ÙØ°ÙÙ {deduct} Ù†Ù‚Ø·Ø© ÙˆØªÙ… Ø¥ØºÙ„Ø§Ù‚ Ø§Ù„Ø¬ÙˆØ§Ø¦Ø² Ø­ØªÙ‰ ØªØ¹ÙˆØ¯ Ù„Ù„Ø§Ø´ØªØ±Ø§Ùƒ."
+                "âš ï¸ ØªÙ… Ø±ØµØ¯ Ø®Ø±ÙˆØ¬Ùƒ Ù…Ù† Ù‚Ù†Ø§Ø© Ø¥Ù„Ø²Ø§Ù…ÙŠØ© ({name}). ØÙØ°ÙÙ {deduct} Ù†Ù‚Ø·Ø© ÙˆØªÙ… Ø¥ØºÙ„Ø§Ù‚ Ø§Ù„Ø¬ÙˆØ§Ø¦Ø² ØØªÙ‰ ØªØ¹ÙˆØ¯ Ù„Ù„Ø§Ø´ØªØ±Ø§Ùƒ."
             ).format(name=title, deduct=deduct),
             reply_markup=(await join_keyboard(bot, lang)).as_markup(),
             disable_web_page_preview=True
@@ -375,8 +375,8 @@ async def _apply_grace_and_deduct(bot, uid: int, channel: Union[int, str], leave
 @router.chat_member()
 async def on_chat_member_update(event: ChatMemberUpdated):
     """
-    - Ø¹Ù†Ø¯ Ø§Ù„Ø§Ù†Ø¶Ù…Ø§Ù…: ÙÙƒÙ‘ Ø§Ù„Ø­Ø¸Ø± ÙˆØ£Ø±Ø³Ù„ ØªØ±Ø­ÙŠØ¨ Ù…Ø¹ Ø²Ø± ÙØªØ­ Ø§Ù„Ø¬ÙˆØ§Ø¦Ø² + (Ø¥Ø´Ø¹Ø§Ø± Ø£Ø¯Ù…Ù† Ø§Ø®ØªÙŠØ§Ø±ÙŠ).
-    - Ø¹Ù†Ø¯ Ø§Ù„Ù…ØºØ§Ø¯Ø±Ø©: ØªÙ†Ø¨ÙŠÙ‡ Ù…Ø¨ÙƒÙ‘Ø± + Ù…Ù‡Ù„Ø© Ø³Ù…Ø§Ø­ Ø«Ù… Ø®ØµÙ…/Ø¥Ù‚ÙØ§Ù„ + (Ø¥Ø´Ø¹Ø§Ø± Ø£Ø¯Ù…Ù† Ø§Ø®ØªÙŠØ§Ø±ÙŠ).
+    - Ø¹Ù†Ø¯ Ø§Ù„Ø§Ù†Ø¶Ù…Ø§Ù…: ÙÙƒÙ‘ Ø§Ù„ØØ¸Ø± ÙˆØ£Ø±Ø³Ù„ ØªØ±ØÙŠØ¨ Ù…Ø¹ Ø²Ø± ÙØªØ Ø§Ù„Ø¬ÙˆØ§Ø¦Ø² + (Ø¥Ø´Ø¹Ø§Ø± Ø£Ø¯Ù…Ù† Ø§Ø®ØªÙŠØ§Ø±ÙŠ).
+    - Ø¹Ù†Ø¯ Ø§Ù„Ù…ØºØ§Ø¯Ø±Ø©: ØªÙ†Ø¨ÙŠÙ‡ Ù…Ø¨ÙƒÙ‘Ø± + Ù…Ù‡Ù„Ø© Ø³Ù…Ø§Ø Ø«Ù… Ø®ØµÙ…/Ø¥Ù‚ÙØ§Ù„ + (Ø¥Ø´Ø¹Ø§Ø± Ø£Ø¯Ù…Ù† Ø§Ø®ØªÙŠØ§Ø±ÙŠ).
     """
     chat_id = event.chat.id
     if not REQUIRED_CHANNELS:
@@ -437,6 +437,6 @@ async def on_chat_member_update(event: ChatMemberUpdated):
         _leave_pending[(uid, chat_id)] = leave_ts
         # ØªÙ†Ø¨ÙŠÙ‡ Ù…Ø¨ÙƒÙ‘Ø±
         asyncio.create_task(_send_preleave_notice(event.bot, uid, chat_id))
-        # Ø«Ù… Ù…Ù‡Ù„Ø© Ø§Ù„Ø³Ù…Ø§Ø­ ÙˆØ§Ù„Ø®ØµÙ…
+        # Ø«Ù… Ù…Ù‡Ù„Ø© Ø§Ù„Ø³Ù…Ø§Ø ÙˆØ§Ù„Ø®ØµÙ…
         asyncio.create_task(_apply_grace_and_deduct(event.bot, uid, chat_id, leave_ts))
 

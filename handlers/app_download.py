@@ -15,13 +15,13 @@ from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from lang import t, get_user_lang
-from utils.paths import BASE  # âœ… ØªÙˆØ­ÙŠØ¯ Ø§Ù„Ù…Ø³Ø§Ø±Ø§Øª
+from utils.paths import BASE  # âœ… ØªÙˆØÙŠØ¯ Ø§Ù„Ù…Ø³Ø§Ø±Ø§Øª
 
 logging.info("âœ… handlers.app_download loaded")
 
 router = Router()
 
-# ===== Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø¹Ø§Ù…Ø© / ØµÙ„Ø§Ø­ÙŠØ§Øª =====
+# ===== Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø¹Ø§Ù…Ø© / ØµÙ„Ø§ØÙŠØ§Øª =====
 def _locale(uid: int) -> str:
     return get_user_lang(uid) or "ar"
 
@@ -31,8 +31,8 @@ ADMIN_IDS = get_admin_ids() or [7360982123]
 def _is_admin(uid: int) -> bool:
     return uid in ADMIN_IDS
 
-# ===== Ù…Ù„Ù Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¥ØµØ¯Ø§Ø± (Ù…ÙˆØ­Ù‘Ø¯ Ù…Ø¹ Ù„ÙˆØ­Ø© Ø§Ù„Ø£Ø¯Ù…Ù†) =====
-APP_FILE: Path = BASE / "app_latest.json"  # â† Ù†ÙØ³ Ø§Ù„Ù…Ù„Ù Ø§Ù„Ø°ÙŠ ØªØ¹ØªÙ…Ø¯ Ø¹Ù„ÙŠÙ‡ Ù„ÙˆØ­Ø© Ø§Ù„Ø£Ø¯Ù…Ù†
+# ===== Ù…Ù„Ù Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¥ØµØ¯Ø§Ø± (Ù…ÙˆØÙ‘Ø¯ Ù…Ø¹ Ù„ÙˆØØ© Ø§Ù„Ø£Ø¯Ù…Ù†) =====
+APP_FILE: Path = BASE / "app_latest.json"  # â† Ù†ÙØ³ Ø§Ù„Ù…Ù„Ù Ø§Ù„Ø°ÙŠ ØªØ¹ØªÙ…Ø¯ Ø¹Ù„ÙŠÙ‡ Ù„ÙˆØØ© Ø§Ù„Ø£Ø¯Ù…Ù†
 
 def _load_release() -> dict | None:
     try:
@@ -61,7 +61,7 @@ def _remove_release() -> bool:
         logging.error(f"[app] remove release failed: {e}")
     return False
 
-# ===== Ù†ØµÙˆØµ Ø§Ù„Ø¹Ø±Ø¶ (ØªÙØ³ØªØ®Ø¯Ù… ÙÙŠ Ù„ÙˆØ­Ø© Ø§Ù„Ø£Ø¯Ù…Ù†) =====
+# ===== Ù†ØµÙˆØµ Ø§Ù„Ø¹Ø±Ø¶ (ØªÙØ³ØªØ®Ø¯Ù… ÙÙŠ Ù„ÙˆØØ© Ø§Ù„Ø£Ø¯Ù…Ù†) =====
 def _caption(lang: str, rel: dict) -> str:
     return f"{t(lang, 'app.caption.title')}\n{t(lang, 'app.caption.version')}: <b>{rel.get('version','-')}</b>"
 
@@ -76,7 +76,7 @@ def _info_text(lang: str, rel: dict) -> str:
         f"{t(lang, 'app.info_uploaded_at')}: <code>{up_at}</code>"
     )
 
-# ===== FSM Ù„Ø­Ø§Ù„Ø© Ø§Ù„Ø±ÙØ¹ (ØªØ³ØªØ®Ø¯Ù…Ù‡Ø§ Ù„ÙˆØ­Ø© Ø§Ù„Ø£Ø¯Ù…Ù† Ø¹Ù†Ø¯ Ø§Ù„Ø¶ØºØ· Ø¹Ù„Ù‰ Â«Ø±ÙØ¹Â») =====
+# ===== FSM Ù„ØØ§Ù„Ø© Ø§Ù„Ø±ÙØ¹ (ØªØ³ØªØ®Ø¯Ù…Ù‡Ø§ Ù„ÙˆØØ© Ø§Ù„Ø£Ø¯Ù…Ù† Ø¹Ù†Ø¯ Ø§Ù„Ø¶ØºØ· Ø¹Ù„Ù‰ Â«Ø±ÙØ¹Â») =====
 class AppUpload(StatesGroup):
     wait_apk = State()
 
@@ -112,9 +112,9 @@ async def _save_and_ack(msg: Message, lang: str, doc) -> None:
     }
     _save_release(rel)
     logging.info(f"[app] release saved v={version} by {msg.from_user.id}")
-    await msg.reply(t(lang, "app.updated_ok") or "âœ… ØªÙ… ØªØ­Ø¯ÙŠØ« Ø§Ù„Ø¥ØµØ¯Ø§Ø±.")
+    await msg.reply(t(lang, "app.updated_ok") or "âœ… ØªÙ… ØªØØ¯ÙŠØ« Ø§Ù„Ø¥ØµØ¯Ø§Ø±.")
 
-# ===== Ø²Ø± Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… (ØªØ­Ù…ÙŠÙ„ Ø§Ù„ØªØ·Ø¨ÙŠÙ‚ Ù…Ù† Ø£ÙŠ Ù…ÙƒØ§Ù†) =====
+# ===== Ø²Ø± Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… (ØªØÙ…ÙŠÙ„ Ø§Ù„ØªØ·Ø¨ÙŠÙ‚ Ù…Ù† Ø£ÙŠ Ù…ÙƒØ§Ù†) =====
 @router.callback_query(F.data == "app:download")
 async def on_download_app(cb: CallbackQuery):
     lang = _locale(cb.from_user.id)
@@ -161,7 +161,7 @@ async def set_app_cmd(msg: Message):
         return
     await _save_and_ack(msg, lang, doc)
 
-# ===== Ø§Ù„Ø§Ø³ØªÙ„Ø§Ù… Ø£Ø«Ù†Ø§Ø¡ Ø­Ø§Ù„Ø© Ø§Ù„Ø±ÙØ¹ (Ù…Ù† Ù„ÙˆØ­Ø© Ø§Ù„Ø£Ø¯Ù…Ù†) =====
+# ===== Ø§Ù„Ø§Ø³ØªÙ„Ø§Ù… Ø£Ø«Ù†Ø§Ø¡ ØØ§Ù„Ø© Ø§Ù„Ø±ÙØ¹ (Ù…Ù† Ù„ÙˆØØ© Ø§Ù„Ø£Ø¯Ù…Ù†) =====
 @router.message(AppUpload.wait_apk, F.document)
 async def recv_apk_in_state(msg: Message, state: FSMContext):
     lang = _locale(msg.from_user.id)
@@ -177,7 +177,7 @@ async def recv_apk_in_state(msg: Message, state: FSMContext):
     except Exception:
         pass
 
-# ===== fallback Ù‚ÙˆÙŠ: Ø£ÙŠ Ø£Ø¯Ù…Ù† ÙŠØ±Ø³Ù„ APK Ù†Ø­ÙØ¸Ù‡ (Ø­ØªÙ‰ Ø¨Ø¯ÙˆÙ† Ø§Ù„Ø­Ø§Ù„Ø©) =====
+# ===== fallback Ù‚ÙˆÙŠ: Ø£ÙŠ Ø£Ø¯Ù…Ù† ÙŠØ±Ø³Ù„ APK Ù†ØÙØ¸Ù‡ (ØØªÙ‰ Ø¨Ø¯ÙˆÙ† Ø§Ù„ØØ§Ù„Ø©) =====
 @router.message(F.document)
 async def recv_apk_fallback(msg: Message):
     if not _is_admin(msg.from_user.id):
@@ -187,7 +187,7 @@ async def recv_apk_fallback(msg: Message):
     lang = _locale(msg.from_user.id)
     await _save_and_ack(msg, lang, msg.document)
 
-# ===== Ø­Ø°Ù Ø§Ù„Ø¥ØµØ¯Ø§Ø± Ø§Ù„Ø­Ø§Ù„ÙŠ (ØªÙÙ†ÙÙ‘ÙŽØ° Ø§Ù„Ø£Ø²Ø±Ø§Ø± Ù…Ù† Ù„ÙˆØ­Ø© Ø§Ù„Ø£Ø¯Ù…Ù†) =====
+# ===== ØØ°Ù Ø§Ù„Ø¥ØµØ¯Ø§Ø± Ø§Ù„ØØ§Ù„ÙŠ (ØªÙÙ†ÙÙ‘ÙŽØ° Ø§Ù„Ø£Ø²Ø±Ø§Ø± Ù…Ù† Ù„ÙˆØØ© Ø§Ù„Ø£Ø¯Ù…Ù†) =====
 def _rm_confirm_kb(lang: str):
     kb = InlineKeyboardBuilder()
     kb.button(text=t(lang, "app.remove_confirm_yes") or "Ù†Ø¹Ù…", callback_data="app:rm_yes")
@@ -205,5 +205,5 @@ async def remove_app_cmd(msg: Message):
     if not rel:
         await msg.reply(t(lang, "app.no_release_short") or "Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø¥ØµØ¯Ø§Ø± Ù…Ø±ÙÙˆØ¹ Ø¨Ø¹Ø¯.")
         return
-    await msg.reply(t(lang, "app.remove_confirm") or "ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ø­Ø°ÙØŸ", reply_markup=_rm_confirm_kb(lang))
+    await msg.reply(t(lang, "app.remove_confirm") or "ØªØ£ÙƒÙŠØ¯ Ø§Ù„ØØ°ÙØŸ", reply_markup=_rm_confirm_kb(lang))
 

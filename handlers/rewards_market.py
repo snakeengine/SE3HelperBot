@@ -24,7 +24,7 @@ from lang import t, get_user_lang
 from utils.rewards_store import (
     get_points, add_points, is_blocked, can_do
 )
-from .rewards_gate import require_membership  # Ø§Ø­ØªØ±Ø§Ù… Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ Ø§Ù„Ø¥Ù„Ø²Ø§Ù…ÙŠ
+from .rewards_gate import require_membership  # Ø§ØØªØ±Ø§Ù… Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ Ø§Ù„Ø¥Ù„Ø²Ø§Ù…ÙŠ
 
 # Ø·Ù„Ø¨Ø§Øª ÙˆØ¥Ø´Ø¹Ø§Ø±Ø§Øª
 from utils.rewards_orders import create_order, get_order, set_status
@@ -35,12 +35,12 @@ from utils.rewards_notify import (
     notify_user_vip_rejected,
 )
 
-# ÙˆØ¶Ø¹ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„Ø­ÙŠÙ‘Ø©
+# ÙˆØ¶Ø¹ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„ØÙŠÙ‘Ø©
 from handlers.live_chat import LiveChat
 
 # ========= Ø§Ù„Ø±Ø§ÙˆØªØ± + ÙÙ„Ø§ØªØ± Ø¹Ø§Ù…Ø© =========
 router = Router(name="rewards_market")
-# Ø§Ù…Ù†Ø¹ Ø§Ù„ØªÙ†ÙÙŠØ° Ø£Ø«Ù†Ø§Ø¡ Ø¬Ù„Ø³Ø© Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„Ø­ÙŠÙ‘Ø©ØŒ ÙˆØ§Ø´ØªØºÙ„ Ø¨Ø§Ù„Ø®Ø§Øµ ÙÙ‚Ø·
+# Ø§Ù…Ù†Ø¹ Ø§Ù„ØªÙ†ÙÙŠØ° Ø£Ø«Ù†Ø§Ø¡ Ø¬Ù„Ø³Ø© Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„ØÙŠÙ‘Ø©ØŒ ÙˆØ§Ø´ØªØºÙ„ Ø¨Ø§Ù„Ø®Ø§Øµ ÙÙ‚Ø·
 router.message.filter(F.chat.type == "private", ~StateFilter(LiveChat.active))
 router.callback_query.filter(
     F.message.chat.type == "private",
@@ -99,7 +99,7 @@ SHOP_ITEMS: Dict[str, Dict[str, Any]] = {
     "vip3d":  {"title_ar": f"Ø§Ø´ØªØ±Ø§Ùƒ VIP â€¢ {_fmt_hours_ar(72)}",      "title_en": "VIP â€¢ 3 days",   "cost": COST_3D,  "kind": "vip_hours", "hours": 72},
     "vip30d": {"title_ar": f"Ø§Ø´ØªØ±Ø§Ùƒ VIP â€¢ {_fmt_hours_ar(24 * 30)}", "title_en": "VIP â€¢ 30 days",  "cost": COST_30D, "kind": "vip_hours", "hours": 24 * 30},
 
-    # NEW: Ø§Ø³ØªØ¨Ø¯Ø§Ù„ Ù†Ù‚Ø§Ø· Ø¨Ø¯Ù„ Ø§Ø´ØªØ±Ø§Ùƒ â€” ÙŠØ¬Ø¨Ø± Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø¹Ù„Ù‰ ØªØ­Ø¯ÙŠØ¯ Ø§Ù„Ù„Ø¹Ø¨Ø© ÙˆÙŠÙØ¨Ù„Ù‘Øº Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©
+    # NEW: Ø§Ø³ØªØ¨Ø¯Ø§Ù„ Ù†Ù‚Ø§Ø· Ø¨Ø¯Ù„ Ø§Ø´ØªØ±Ø§Ùƒ â€” ÙŠØ¬Ø¨Ø± Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø¹Ù„Ù‰ ØªØØ¯ÙŠØ¯ Ø§Ù„Ù„Ø¹Ø¨Ø© ÙˆÙŠÙØ¨Ù„Ù‘Øº Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©
     "redeem": {"title_ar": "Ø§Ø³ØªØ¨Ø¯Ø§Ù„ Ù†Ù‚Ø§Ø· Ø¨Ø¯Ù„ Ø§Ø´ØªØ±Ø§Ùƒ", "title_en": "Redeem points (no subscription)",
                "cost": COST_REDEEM, "kind": "redeem"},
 }
@@ -144,7 +144,7 @@ async def _show_market(msg_or_cb: Message | CallbackQuery):
         await msg_or_cb.answer(title, reply_markup=kb)
 
 async def open_market(msg_or_cb: Message | CallbackQuery):
-    """ÙŠØ¹Ø±Ø¶ Ø§Ù„Ù…ØªØ¬Ø± Ù…Ø¹ ÙƒØ§Ø¨ØªØ´Ø§ Ø®ÙÙŠÙØ© ÙˆØ§Ø³ØªØ¦Ù†Ø§Ù ØªÙ„Ù‚Ø§Ø¦ÙŠ Ø¹Ù†Ø¯ Ø§Ù„Ø­Ø§Ø¬Ø©."""
+    """ÙŠØ¹Ø±Ø¶ Ø§Ù„Ù…ØªØ¬Ø± Ù…Ø¹ ÙƒØ§Ø¨ØªØ´Ø§ Ø®ÙÙŠÙØ© ÙˆØ§Ø³ØªØ¦Ù†Ø§Ù ØªÙ„Ù‚Ø§Ø¦ÙŠ Ø¹Ù†Ø¯ Ø§Ù„ØØ§Ø¬Ø©."""
     await ensure_human_then(msg_or_cb, level="normal", resume=_show_market)
 
 @router.callback_query(F.data == "rwd:hub:market")
@@ -167,7 +167,7 @@ async def cb_buy_item(cb: CallbackQuery):
     item_id = cb.data.split(":")[-1]
     it = SHOP_ITEMS.get(item_id)
     if not it:
-        return await cb.answer(t(lang, "market.unavailable", "Ù‡Ø°Ø§ Ø§Ù„Ø®ÙŠØ§Ø± ØºÙŠØ± Ù…ØªØ§Ø­ Ø­Ø§Ù„ÙŠÙ‹Ø§."), show_alert=True)
+        return await cb.answer(t(lang, "market.unavailable", "Ù‡Ø°Ø§ Ø§Ù„Ø®ÙŠØ§Ø± ØºÙŠØ± Ù…ØªØ§Ø ØØ§Ù„ÙŠÙ‹Ø§."), show_alert=True)
 
 
     # Ø¹Ø¶ÙˆÙŠØ© + ÙƒØ§Ø¨ØªØ´Ø§ Ø®ÙÙŠÙØ© + ØªØ¨Ø±ÙŠØ¯
@@ -178,7 +178,7 @@ async def cb_buy_item(cb: CallbackQuery):
     if is_blocked(uid):
         return await cb.answer(t(lang, "market.locked", "âš ï¸ Ù„Ø§ ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ù…ØªØ¬Ø± Ø§Ù„Ø¢Ù†."), show_alert=True)
     if not can_do(uid, f"mkt_buy_{item_id}", cooldown_sec=3):
-        return await cb.answer(t(lang, "common.too_fast", "â³ Ø­Ø§ÙˆÙ„ Ø¨Ø¹Ø¯ Ù‚Ù„ÙŠÙ„."), show_alert=False)
+        return await cb.answer(t(lang, "common.too_fast", "â³ ØØ§ÙˆÙ„ Ø¨Ø¹Ø¯ Ù‚Ù„ÙŠÙ„."), show_alert=False)
 
     title = it["title_ar"] if lang.startswith("ar") else it["title_en"]
     cost = it["cost"]
@@ -186,7 +186,7 @@ async def cb_buy_item(cb: CallbackQuery):
 
     txt = (
         t(lang, "market.confirm_title", "ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ø´Ø±Ø§Ø¡") + "\n" +
-        t(lang, "market.you_will_get", "Ø³ØªØ­ØµÙ„ Ø¹Ù„Ù‰") + f": <b>{title}</b>\n" +
+        t(lang, "market.you_will_get", "Ø³ØªØØµÙ„ Ø¹Ù„Ù‰") + f": <b>{title}</b>\n" +
         t(lang, "market.price", "Ø§Ù„Ø³Ø¹Ø±") + f": <b>{cost}</b>\n" +
         t(lang, "market.balance", "Ø±ØµÙŠØ¯Ùƒ") + f": <b>{bal}</b>\n" +
         t(lang, "market.ask_confirm", "Ù‡Ù„ ØªØ±ÙŠØ¯ Ø§Ù„Ù…ØªØ§Ø¨Ø¹Ø©ØŸ")
@@ -254,7 +254,7 @@ async def cb_confirm_buy(cb: CallbackQuery, state: FSMContext):
     item_id = cb.data.split(":")[-1]
     it = SHOP_ITEMS.get(item_id)
     if not it:
-        return await cb.answer(t(lang, "market.unavailable", "Ù‡Ø°Ø§ Ø§Ù„Ø®ÙŠØ§Ø± ØºÙŠØ± Ù…ØªØ§Ø­ Ø­Ø§Ù„ÙŠÙ‹Ø§."), show_alert=True)
+        return await cb.answer(t(lang, "market.unavailable", "Ù‡Ø°Ø§ Ø§Ù„Ø®ÙŠØ§Ø± ØºÙŠØ± Ù…ØªØ§Ø ØØ§Ù„ÙŠÙ‹Ø§."), show_alert=True)
 
     # Ø¹Ø¶ÙˆÙŠØ© + ÙƒØ§Ø¨ØªØ´Ø§ Ø£Ù‚ÙˆÙ‰ + Ù…Ù†Ø¹ Ø§Ù„Ù†Ù‚Ø± Ø§Ù„Ù…ÙƒØ±Ø±
     if await require_membership(cb) is False:
@@ -262,7 +262,7 @@ async def cb_confirm_buy(cb: CallbackQuery, state: FSMContext):
     if not await require_human(cb, level="high"):
         return
     if not can_do(uid, f"mkt_cfm_{item_id}", cooldown_sec=3):
-        return await cb.answer(t(lang, "common.too_fast", "â³ Ø­Ø§ÙˆÙ„ Ø¨Ø¹Ø¯ Ù‚Ù„ÙŠÙ„."), show_alert=False)
+        return await cb.answer(t(lang, "common.too_fast", "â³ ØØ§ÙˆÙ„ Ø¨Ø¹Ø¯ Ù‚Ù„ÙŠÙ„."), show_alert=False)
 
     cost = int(it["cost"])
     bal = get_points(uid)
@@ -290,14 +290,14 @@ async def cb_confirm_buy(cb: CallbackQuery, state: FSMContext):
         )
         return
 
-    # Ø§Ù„Ù…Ø³Ø§Ø± Ø§Ù„Ø­Ø§Ù„ÙŠ Ù„Ù„Ø§Ø´ØªØ±Ø§Ùƒ VIP ÙƒÙ…Ø§ Ù‡Ùˆ: Ø®Ø²Ù‘Ù† Ø³ÙŠØ§Ù‚ Ø§Ù„Ø·Ù„Ø¨ Ø«Ù… Ø§Ø·Ù„Ø¨ Ù…Ø¹Ø±Ù‘Ù Ø§Ù„ØªØ·Ø¨ÙŠÙ‚
+    # Ø§Ù„Ù…Ø³Ø§Ø± Ø§Ù„ØØ§Ù„ÙŠ Ù„Ù„Ø§Ø´ØªØ±Ø§Ùƒ VIP ÙƒÙ…Ø§ Ù‡Ùˆ: Ø®Ø²Ù‘Ù† Ø³ÙŠØ§Ù‚ Ø§Ù„Ø·Ù„Ø¨ Ø«Ù… Ø§Ø·Ù„Ø¨ Ù…Ø¹Ø±Ù‘Ù Ø§Ù„ØªØ·Ø¨ÙŠÙ‚
     await state.clear()
     await state.set_state(BuyStates.wait_app)
     await state.update_data(item_id=item_id, cost=cost, hours=int(it.get("hours", 0)))
 
     tip = t(
         lang, "market.vip.ask_app",
-        "Ø§Ø°Ù‡Ø¨ Ø¥Ù„Ù‰ ØªØ·Ø¨ÙŠÙ‚ Ù…Ø­Ø±Ùƒ Ø§Ù„Ø«Ø¹Ø¨Ø§Ù†ØŒ ÙÙŠ Ø£Ø¹Ù„Ù‰ Ø§Ù„ÙˆØ§Ø¬Ù‡Ø© (Ø§Ù„Ø²Ø§ÙˆÙŠØ© Ø§Ù„ÙŠØ³Ø±Ù‰) Ø³ØªØ¬Ø¯ <b>Ù…Ø¹Ø±Ù‘Ù Ø§Ù„ØªØ·Ø¨ÙŠÙ‚</b> Ø§Ù„Ø®Ø§Øµ Ø¨Ùƒ. Ø§Ù†Ø³Ø®Ù‡ ÙˆØ£Ø±Ø³Ù„Ù‡ Ù‡Ù†Ø§."
+        "Ø§Ø°Ù‡Ø¨ Ø¥Ù„Ù‰ ØªØ·Ø¨ÙŠÙ‚ Ù…ØØ±Ùƒ Ø§Ù„Ø«Ø¹Ø¨Ø§Ù†ØŒ ÙÙŠ Ø£Ø¹Ù„Ù‰ Ø§Ù„ÙˆØ§Ø¬Ù‡Ø© (Ø§Ù„Ø²Ø§ÙˆÙŠØ© Ø§Ù„ÙŠØ³Ø±Ù‰) Ø³ØªØ¬Ø¯ <b>Ù…Ø¹Ø±Ù‘Ù Ø§Ù„ØªØ·Ø¨ÙŠÙ‚</b> Ø§Ù„Ø®Ø§Øµ Ø¨Ùƒ. Ø§Ù†Ø³Ø®Ù‡ ÙˆØ£Ø±Ø³Ù„Ù‡ Ù‡Ù†Ø§."
     )
     try:
         await cb.message.edit_text(tip, disable_web_page_preview=True)
@@ -326,7 +326,7 @@ async def buy_get_app(msg: Message, state: FSMContext):
     app_id = _normalize_app_id(txt)
     if not app_id:
         return await msg.reply(
-            t(lang, "market.vip.invalid_app", "ØµÙŠØºØ© Ø§Ù„Ù…Ø¹Ø±Ù‘Ù ØºÙŠØ± ØµØ­ÙŠØ­Ø©. Ø§ÙƒØªØ¨ @username Ø£Ùˆ Ø§Ø³Ù…Ù‹Ø§ Ø¨Ø¯ÙˆÙ† @."),
+            t(lang, "market.vip.invalid_app", "ØµÙŠØºØ© Ø§Ù„Ù…Ø¹Ø±Ù‘Ù ØºÙŠØ± ØµØÙŠØØ©. Ø§ÙƒØªØ¨ @username Ø£Ùˆ Ø§Ø³Ù…Ù‹Ø§ Ø¨Ø¯ÙˆÙ† @."),
             reply_markup=_cancel_rk(lang)
         )
 
@@ -334,8 +334,8 @@ async def buy_get_app(msg: Message, state: FSMContext):
     await state.set_state(BuyStates.wait_details)
 
     ask = t(lang, "market.vip.ask_details",
-            "Ø£Ø±Ø³Ù„ ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ Ø§Ù„Ù…Ø·Ù„ÙˆØ¨Ø© (Ù…Ø«Ø§Ù„: Ø§Ù„Ù„Ø¹Ø¨Ø©/Ø§Ù„ÙˆØ¶Ø¹ØŒ Ù…Ù„Ø§Ø­Ø¸Ø§Øª Ø¥Ø¶Ø§ÙÙŠØ©).")
-    tip = t(lang, "market.vip.details_tip", "ÙŠÙ…ÙƒÙ†Ùƒ ÙƒØªØ§Ø¨Ø© Ø£ÙŠ ØªÙØ§ØµÙŠÙ„ ØªØ³Ø§Ø¹Ø¯Ù†Ø§ Ø¹Ù„Ù‰ Ø§Ù„ØªÙØ¹ÙŠÙ„ Ø¨Ø´ÙƒÙ„ ØµØ­ÙŠØ­.")
+            "Ø£Ø±Ø³Ù„ ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ Ø§Ù„Ù…Ø·Ù„ÙˆØ¨Ø© (Ù…Ø«Ø§Ù„: Ø§Ù„Ù„Ø¹Ø¨Ø©/Ø§Ù„ÙˆØ¶Ø¹ØŒ Ù…Ù„Ø§ØØ¸Ø§Øª Ø¥Ø¶Ø§ÙÙŠØ©).")
+    tip = t(lang, "market.vip.details_tip", "ÙŠÙ…ÙƒÙ†Ùƒ ÙƒØªØ§Ø¨Ø© Ø£ÙŠ ØªÙØ§ØµÙŠÙ„ ØªØ³Ø§Ø¹Ø¯Ù†Ø§ Ø¹Ù„Ù‰ Ø§Ù„ØªÙØ¹ÙŠÙ„ Ø¨Ø´ÙƒÙ„ ØµØÙŠØ.")
     await msg.answer(ask)
     await msg.answer(tip, reply_markup=_cancel_rk(lang))
 
@@ -381,7 +381,7 @@ async def buy_get_details(msg: Message, state: FSMContext):
     await notify_user_vip_submitted(msg.bot, uid, oid, hours, cost)
     await notify_admins_new_vip_order(msg.bot, oid, uid, hours, app_id, txt, cost)
 
-    # Ø±Ø³Ø§Ù„Ø© Ø¥Ø¶Ø§ÙÙŠØ© Ù„Ù„Ø£Ø¯Ù…Ù† ØªØªØ¶Ù…Ù† Username Ø¨Ø´ÙƒÙ„ ÙˆØ§Ø¶Ø­
+    # Ø±Ø³Ø§Ù„Ø© Ø¥Ø¶Ø§ÙÙŠØ© Ù„Ù„Ø£Ø¯Ù…Ù† ØªØªØ¶Ù…Ù† Username Ø¨Ø´ÙƒÙ„ ÙˆØ§Ø¶Ø
     extra = f"â„¹ï¸ VIP order #{oid}\nâ€¢ User: <code>{uid}</code>{(' â€” @' + tg_username) if tg_username else ''}\nâ€¢ AppID: <code>{app_id}</code>"
     for aid in ADMIN_IDS:
         try:
@@ -403,11 +403,11 @@ async def redeem_get_game(msg: Message, state: FSMContext):
         return await msg.answer(t(lang, "market.redeem.cancelled_refund", "ØªÙ… Ø§Ù„Ø¥Ù„ØºØ§Ø¡ ÙˆØ§Ø³ØªÙØ±Ø¬Ø¹Øª Ù†Ù‚Ø§Ø·Ùƒ."),
                                 reply_markup=ReplyKeyboardRemove())
 
-    # Ø¥Ù„Ø²Ø§Ù… ÙƒØªØ§Ø¨Ø© Ù„Ø¹Ø¨Ø© ÙˆØ§Ø¶Ø­Ø©
+    # Ø¥Ù„Ø²Ø§Ù… ÙƒØªØ§Ø¨Ø© Ù„Ø¹Ø¨Ø© ÙˆØ§Ø¶ØØ©
     game = txt
     if len(game) < 2:
         return await msg.reply(
-            t(lang, "market.redeem.invalid_game", "Ù…Ù† ÙØ¶Ù„Ùƒ Ø§ÙƒØªØ¨ Ø§Ø³Ù… Ø§Ù„Ù„Ø¹Ø¨Ø© Ø¨Ø´ÙƒÙ„ ÙˆØ§Ø¶Ø­."),
+            t(lang, "market.redeem.invalid_game", "Ù…Ù† ÙØ¶Ù„Ùƒ Ø§ÙƒØªØ¨ Ø§Ø³Ù… Ø§Ù„Ù„Ø¹Ø¨Ø© Ø¨Ø´ÙƒÙ„ ÙˆØ§Ø¶Ø."),
             reply_markup=_cancel_rk(lang)
         )
 
@@ -415,7 +415,7 @@ async def redeem_get_game(msg: Message, state: FSMContext):
     await state.set_state(RedeemStates.wait_details)
 
     ask = t(lang, "market.redeem.ask_details",
-            "Ø£Ø±Ø³Ù„ ØªÙØ§ØµÙŠÙ„ Ø¥Ø¶Ø§ÙÙŠØ© (Ù…Ø«Ø§Ù„: Ø§Ù„Ù†Ø¸Ø§Ù…/Ø§Ù„Ø³ÙŠØ±ÙØ±/Ù…Ù„Ø§Ø­Ø¸Ø§Øª ØªÙ‡Ù… Ø§Ù„ØªÙ†ÙÙŠØ°).")
+            "Ø£Ø±Ø³Ù„ ØªÙØ§ØµÙŠÙ„ Ø¥Ø¶Ø§ÙÙŠØ© (Ù…Ø«Ø§Ù„: Ø§Ù„Ù†Ø¸Ø§Ù…/Ø§Ù„Ø³ÙŠØ±ÙØ±/Ù…Ù„Ø§ØØ¸Ø§Øª ØªÙ‡Ù… Ø§Ù„ØªÙ†ÙÙŠØ°).")
     tip = t(lang, "market.redeem.details_tip", "ØªÙØ§ØµÙŠÙ„ Ø£ÙƒØ«Ø± ØªØ³Ø§Ø¹Ø¯ Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© Ø¹Ù„Ù‰ ØªÙ†ÙÙŠØ° Ø§Ù„Ø§Ø³ØªØ¨Ø¯Ø§Ù„.")
     await msg.answer(ask)
     await msg.answer(tip, reply_markup=_cancel_rk(lang))
@@ -455,7 +455,7 @@ async def redeem_get_details(msg: Message, state: FSMContext):
         reply_markup=ReplyKeyboardRemove()
     )
 
-    # Ø¥Ø´Ø¹Ø§Ø± Ø§Ù„Ø£Ø¯Ù…Ù† â€” ÙŠØªØ¶Ù…Ù† Ù†ÙˆØ¹ Ø§Ù„Ù„Ø¹Ø¨Ø© ØµØ±Ø§Ø­Ø©Ù‹
+    # Ø¥Ø´Ø¹Ø§Ø± Ø§Ù„Ø£Ø¯Ù…Ù† â€” ÙŠØªØ¶Ù…Ù† Ù†ÙˆØ¹ Ø§Ù„Ù„Ø¹Ø¨Ø© ØµØ±Ø§ØØ©Ù‹
     admin_text = (
         f"ðŸ†• Ø·Ù„Ø¨ Ø§Ø³ØªØ¨Ø¯Ø§Ù„ Ù†Ù‚Ø§Ø· #{oid}\n"
         f"â€¢ User: <code>{uid}</code>{(' â€” @' + tg_username) if tg_username else ''}\n"
@@ -471,7 +471,7 @@ async def redeem_get_details(msg: Message, state: FSMContext):
 
 # ======== (Ø£Ø¯Ù…Ù†) Ù‚Ø¨ÙˆÙ„/Ø±ÙØ¶ Ø·Ù„Ø¨ VIP ========
 async def _grant_vip_hours_bridge(bot, uid: int, hours: int, reason: str = "rewards_approved") -> bool:
-    """Ø¬Ø³Ø± Ø§Ø®ØªÙŠØ§Ø±ÙŠ Ù„ØªÙØ¹ÙŠÙ„ VIP Ø¥Ù† ØªÙˆÙØ±Øª ÙˆØ­Ø¯Ø© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ù…Ù†Ø§Ø³Ø¨Ø©."""
+    """Ø¬Ø³Ø± Ø§Ø®ØªÙŠØ§Ø±ÙŠ Ù„ØªÙØ¹ÙŠÙ„ VIP Ø¥Ù† ØªÙˆÙØ±Øª ÙˆØØ¯Ø© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ù…Ù†Ø§Ø³Ø¨Ø©."""
     try:
         from admin.vip_manager import grant_vip_hours
         ok = await grant_vip_hours(bot, uid, hours, reason=reason)  # ÙŠØ¬Ø¨ Ø£Ù† ØªØ±Ø¬Ø¹ True/False

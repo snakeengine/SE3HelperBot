@@ -19,7 +19,7 @@ from utils.alerts_broadcast import ACTIVE_FILE  # Ø¨Ø¬Ø§Ù†Ø¨ Ø¨Ù�
 
 from lang import t, get_user_lang
 import json, time
-# Ø§Ù„Ù†Ø¸Ø§Ù… Ø§Ù„Ø¬Ø¯ÙŠØ¯: ØªØ®Ø²ÙŠÙ†/Ø¨Ø«/Ø¥Ø­ØµØ§Ø¡Ø§Øª
+# Ø§Ù„Ù†Ø¸Ø§Ù… Ø§Ù„Ø¬Ø¯ÙŠØ¯: ØªØ®Ø²ÙŠÙ†/Ø¨Ø«/Ø¥ØØµØ§Ø¡Ø§Øª
 from utils.alerts_broadcast import _load_json, _save_json, STATS_FILE, broadcast
 # Ø§Ù„Ù†Ø¸Ø§Ù… Ø§Ù„Ø¬Ø¯ÙŠØ¯: Ø§Ù„Ø¬Ø¯ÙˆÙ„Ø©
 from utils.alerts_scheduler import enqueue_job, list_jobs, cancel_job, cancel_all_jobs
@@ -68,10 +68,10 @@ def _load_draft() -> dict:
     d.setdefault("await", "")
     d.setdefault("ttl", 0)
 
-    # Ù…ÙØ§ØªÙŠØ­ Ø§Ø®ØªÙŠØ§Ø±ÙŠØ© Ù„Ù„Ù†Ø¸Ø§Ù… Ø§Ù„Ø°ÙƒÙŠ
+    # Ù…ÙØ§ØªÙŠØ Ø§Ø®ØªÙŠØ§Ø±ÙŠØ© Ù„Ù„Ù†Ø¸Ø§Ù… Ø§Ù„Ø°ÙƒÙŠ
     d.setdefault("ping_ttl", 0)            # Ù…Ø¯Ø© Ø¸Ù‡ÙˆØ± Ø§Ù„Ù€ ping (Ø«ÙˆØ§Ù†Ù)
     d.setdefault("active_for", 7*24*3600)  # Ù…Ø¯Ø© Ø¨Ù‚Ø§Ø¡ Ø§Ù„ØªÙ†Ø¨ÙŠÙ‡ ÙÙŠ Ø§Ù„ØµÙ†Ø¯ÙˆÙ‚
-    d.setdefault("dedupe_key", "")         # Ù…ÙØªØ§Ø­ Ù…Ù†Ø¹ Ø§Ù„ØªÙƒØ±Ø§Ø±
+    d.setdefault("dedupe_key", "")         # Ù…ÙØªØ§Ø Ù…Ù†Ø¹ Ø§Ù„ØªÙƒØ±Ø§Ø±
     return d
 
 def _save_draft(d: dict) -> None:
@@ -107,8 +107,8 @@ def _menu_kb(lang: str) -> InlineKeyboardMarkup:
     kb.button(text=t(lang, "alerts.menu.lang") or "ðŸŒ ÙˆØ¶Ø¹ Ø§Ù„Ù„ØºØ©", callback_data="al:lang")
     kb.button(text=t(lang, "alerts.menu.active") or "ðŸ“¥ Ø§Ù„Ø¥Ø´Ø¹Ø§Ø±Ø§Øª Ø§Ù„Ù†Ø´Ø·Ø©", callback_data="al:active")  # <â€” Ù‡Ø°Ø§ Ø§Ù„Ø³Ø·Ø±
     kb.button(text=t(lang, "alerts.menu.settings") or "âš™ï¸ Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª", callback_data="al:cfg")
-    kb.button(text=t(lang, "alerts.menu.delete") or "ðŸ—‘ï¸ Ø­Ø°Ù Ø§Ù„Ù…Ø³ÙˆØ¯Ø©", callback_data="al:del")
-    kb.button(text=t(lang, "alerts.menu.stats") or "ðŸ“Š Ø¥Ø­ØµØ§Ø¦ÙŠØ§Øª", callback_data="al:stats")
+    kb.button(text=t(lang, "alerts.menu.delete") or "ðŸ—‘ï¸ ØØ°Ù Ø§Ù„Ù…Ø³ÙˆØ¯Ø©", callback_data="al:del")
+    kb.button(text=t(lang, "alerts.menu.stats") or "ðŸ“Š Ø¥ØØµØ§Ø¦ÙŠØ§Øª", callback_data="al:stats")
     kb.adjust(2,2,2,2,2,2)
     return kb.as_markup()
 
@@ -133,7 +133,7 @@ async def al_active(cb: CallbackQuery):
     items = _active_load()
     now = int(time.time())
 
-    # ØªÙ†Ø¸ÙŠÙ Ø§Ù„Ù…Ù†ØªÙ‡ÙŠØ© (expires < now) Ø«Ù… Ø­ÙØ¸
+    # ØªÙ†Ø¸ÙŠÙ Ø§Ù„Ù…Ù†ØªÙ‡ÙŠØ© (expires < now) Ø«Ù… ØÙØ¸
     live = []
     for a in items:
         exp = int(a.get("expires") or 0)
@@ -147,7 +147,7 @@ async def al_active(cb: CallbackQuery):
     if not items:
         kb = InlineKeyboardBuilder()
         kb.button(text=t(lang, "alerts.back") or "Ø±Ø¬ÙˆØ¹", callback_data="al:back")
-        await _safe_edit_text(cb, t(lang, "alerts.active.empty") or "Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø¥Ø´Ø¹Ø§Ø±Ø§Øª â€” 0\nØ§Ø®ØªØ± Ù…Ø¹Ø§ÙŠÙ†Ø© Ø£Ùˆ Ø­Ø°Ù Ù„Ø¥Ø´Ø¹Ø§Ø± Ù…Ø­Ø¯Ø¯.", kb)
+        await _safe_edit_text(cb, t(lang, "alerts.active.empty") or "Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø¥Ø´Ø¹Ø§Ø±Ø§Øª â€” 0\nØ§Ø®ØªØ± Ù…Ø¹Ø§ÙŠÙ†Ø© Ø£Ùˆ ØØ°Ù Ù„Ø¥Ø´Ø¹Ø§Ø± Ù…ØØ¯Ø¯.", kb)
         return await cb.answer()
 
     # Ø¹Ø±Ø¶ Ù…Ø®ØªØµØ± Ù…Ø¹ Ø£Ø²Ø±Ø§Ø± Ù„ÙƒÙ„ Ø¹Ù†ØµØ±
@@ -161,7 +161,7 @@ async def al_active(cb: CallbackQuery):
         lines.append(f"â€¢ {aid}  ({kind})  {when}")
         kb.button(text="ðŸ‘€", callback_data=f"al:a:prev:{aid}")
         kb.button(text="ðŸ—‘ï¸", callback_data=f"al:a:del:{aid}")
-    kb.button(text=t(lang, "alerts.active.clear_all") or "ðŸ§¹ Ø­Ø°Ù Ø§Ù„ÙƒÙ„", callback_data="al:a:clear")
+    kb.button(text=t(lang, "alerts.active.clear_all") or "ðŸ§¹ ØØ°Ù Ø§Ù„ÙƒÙ„", callback_data="al:a:clear")
     kb.button(text=t(lang, "alerts.back") or "Ø±Ø¬ÙˆØ¹", callback_data="al:back")
     kb.adjust(2,1,1)
 
@@ -178,7 +178,7 @@ async def al_active_prev(cb: CallbackQuery):
     if not it:
         await cb.answer("ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯/Ù…Ù†ØªÙ‡ÙŠ", show_alert=True)
         return await al_active(cb)
-    # Ø§Ø¹Ø±Ø¶ Ù†Øµ Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©/Ø§Ù„Ø¥Ù†Ø¬Ù„ÙŠØ²ÙŠØ© Ø§Ù„Ù…ØªØ§Ø­Ø©
+    # Ø§Ø¹Ø±Ø¶ Ù†Øµ Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©/Ø§Ù„Ø¥Ù†Ø¬Ù„ÙŠØ²ÙŠØ© Ø§Ù„Ù…ØªØ§ØØ©
     body = it.get("text_ar") or it.get("text_en") or "-"
     await cb.message.answer(f"ðŸ”” {aid}\n\n{body}")
     await cb.answer()
@@ -191,7 +191,7 @@ async def al_active_del(cb: CallbackQuery):
     items = _active_load()
     new = [x for x in items if str(x.get("id")) != aid]
     _active_save(new)
-    await cb.answer("ØªÙ… Ø§Ù„Ø­Ø°Ù âœ…", show_alert=True)
+    await cb.answer("ØªÙ… Ø§Ù„ØØ°Ù âœ…", show_alert=True)
     await al_active(cb)
 
 @router.callback_query(F.data == "al:a:clear")
@@ -199,22 +199,22 @@ async def al_active_clear(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
         return await cb.answer("no", show_alert=True)
     _active_save([])
-    await cb.answer("ØªÙ… Ø­Ø°Ù Ø§Ù„ÙƒÙ„ âœ…", show_alert=True)
+    await cb.answer("ØªÙ… ØØ°Ù Ø§Ù„ÙƒÙ„ âœ…", show_alert=True)
     await al_active(cb)
 
 
-# ====================== ÙØªØ­ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© ======================
+# ====================== ÙØªØ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© ======================
 @router.message(Command("push_update", "push_preview", "push_schedule", "push_stats", "push"))
 async def open_menu(msg: Message):
     if not _is_admin(msg.from_user.id):
         return
     lang = _L(msg.from_user.id)
     await msg.reply(
-        t(lang, "alerts.menu.title") or "Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø¥Ø´Ø¹Ø§Ø±Ø§Øª ðŸ””\nØªØ­ÙƒÙ… ÙƒØ§Ù…Ù„: ØªØ¹Ø¯ÙŠÙ„/Ù…Ø¹Ø§ÙŠÙ†Ø©/Ø¥Ø±Ø³Ø§Ù„/Ø¬Ø¯ÙˆÙ„Ø©/Ø¥Ù„ØºØ§Ø¡/Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª.",
+        t(lang, "alerts.menu.title") or "Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø¥Ø´Ø¹Ø§Ø±Ø§Øª ðŸ””\nØªØÙƒÙ… ÙƒØ§Ù…Ù„: ØªØ¹Ø¯ÙŠÙ„/Ù…Ø¹Ø§ÙŠÙ†Ø©/Ø¥Ø±Ø³Ø§Ù„/Ø¬Ø¯ÙˆÙ„Ø©/Ø¥Ù„ØºØ§Ø¡/Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª.",
         reply_markup=_menu_kb(lang),
     )
 
-# ====================== ØªØ­Ø±ÙŠØ± Ø§Ù„Ù†Øµ ======================
+# ====================== ØªØØ±ÙŠØ± Ø§Ù„Ù†Øµ ======================
 def _make_token() -> str:
     return f"AL-{int(time.time())}-{secrets.token_hex(3)}"
 
@@ -256,7 +256,7 @@ async def capture_text_en(msg: Message, state: FSMContext):
     await state.set_state(AlStates.wait_ar)
     await state.update_data(tok=tok2, ts=int(time.time()))
 
-    await msg.reply("ØªÙ… Ø§Ù„Ø­ÙØ¸ [EN] â€” Ø£Ø±Ø³Ù„ Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© Ø§Ù„Ø¢Ù†\n[token:{}]".format(tok2),
+    await msg.reply("ØªÙ… Ø§Ù„ØÙØ¸ [EN] â€” Ø£Ø±Ø³Ù„ Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© Ø§Ù„Ø¢Ù†\n[token:{}]".format(tok2),
                     reply_markup=ForceReply(selective=True))
 
 @router.message(AlStates.wait_ar, F.from_user.func(lambda u: u.id in ADMIN_IDS))
@@ -277,7 +277,7 @@ async def capture_text_ar(msg: Message, state: FSMContext):
     _save_draft(d)
 
     await state.clear()
-    await msg.reply("ØªÙ… Ø§Ù„Ø­ÙØ¸ [AR] âœ…")
+    await msg.reply("ØªÙ… Ø§Ù„ØÙØ¸ [AR] âœ…")
 
 # ====================== Ù…Ø¹Ø§ÙŠÙ†Ø© ======================
 @router.callback_query(F.data == "al:prev")
@@ -304,7 +304,7 @@ async def al_send(cb: CallbackQuery, state: FSMContext):
     await state.set_state(AlStates.wait_ttl)
     d["await"] = ""
     _save_draft(d)
-    await _safe_edit_text(cb, t(lang, "alerts.ask_ttl") or "Ø£Ø¯Ø®Ù„ Ù…Ø¯Ø© Ø¨Ù‚Ø§Ø¡ Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ø¨Ø§Ù„Ø«ÙˆØ§Ù†ÙŠ (0 ÙŠØ¹Ù†ÙŠ Ù„Ø§ Ø­Ø°Ù)ØŒ Ù…Ø«Ø§Ù„: 60")
+    await _safe_edit_text(cb, t(lang, "alerts.ask_ttl") or "Ø£Ø¯Ø®Ù„ Ù…Ø¯Ø© Ø¨Ù‚Ø§Ø¡ Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ø¨Ø§Ù„Ø«ÙˆØ§Ù†ÙŠ (0 ÙŠØ¹Ù†ÙŠ Ù„Ø§ ØØ°Ù)ØŒ Ù…Ø«Ø§Ù„: 60")
     await cb.answer()
 
 @router.message(AlStates.wait_ttl, F.text.regexp(r"^\d{1,5}$") & F.from_user.func(lambda u: u.id in ADMIN_IDS))
@@ -312,15 +312,15 @@ async def handle_ttl_send_now(msg: Message, state: FSMContext):
     lang = _L(msg.from_user.id)
     ttl = int((msg.text or "0").strip())
     if ttl < 0 or ttl > 86400:
-        return await msg.reply(t(lang, "alerts.invalid_seconds") or "Ù‚ÙŠÙ…Ø© ØºÙŠØ± ØµØ§Ù„Ø­Ø©. Ø§Ø®ØªØ± Ø¨ÙŠÙ† 0 Ùˆ 86400.")
+        return await msg.reply(t(lang, "alerts.invalid_seconds") or "Ù‚ÙŠÙ…Ø© ØºÙŠØ± ØµØ§Ù„ØØ©. Ø§Ø®ØªØ± Ø¨ÙŠÙ† 0 Ùˆ 86400.")
 
     d = _load_draft()
 
-    # Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„Ù„ØºØ© Ø­Ø³Ø¨ ÙˆØ¶Ø¹ Ø§Ù„Ù…Ø³ÙˆØ¯Ø©
+    # Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„Ù„ØºØ© ØØ³Ø¨ ÙˆØ¶Ø¹ Ø§Ù„Ù…Ø³ÙˆØ¯Ø©
     en = d.get("en") if d.get("lang_mode") in ("auto", "en") else None
     ar = d.get("ar") if d.get("lang_mode") in ("auto", "ar") else None
 
-    # Ù…ÙØ§ØªÙŠØ­ Ø°ÙƒÙŠØ©
+    # Ù…ÙØ§ØªÙŠØ Ø°ÙƒÙŠØ©
     kind       = str(d.get("kind") or "app_update")
     ping_ttl   = int(d.get("ping_ttl") or ttl)                 # Ù…Ø¯Ø© Ø§Ù„Ù€ ping
     active_for = int(d.get("active_for") or (7*24*3600))       # Ù…Ø¯Ø© Ø¨Ù‚Ø§Ø¡Ù‡ ÙÙŠ Ø§Ù„ØµÙ†Ø¯ÙˆÙ‚
@@ -377,7 +377,7 @@ async def handle_schedule(msg: Message):
         dt = datetime.datetime.strptime(msg.text.strip(), "%Y-%m-%d %H:%M")
         ts = int(dt.timestamp())
     except Exception:
-        return await msg.reply(t(lang, "alerts.invalid_time") or "ØµÙŠØºØ© Ø§Ù„ÙˆÙ‚Øª ØºÙŠØ± ØµØ­ÙŠØ­Ø©.")
+        return await msg.reply(t(lang, "alerts.invalid_time") or "ØµÙŠØºØ© Ø§Ù„ÙˆÙ‚Øª ØºÙŠØ± ØµØÙŠØØ©.")
     en = d.get("en") if d.get("lang_mode") in ("auto", "en") else None
     ar = d.get("ar") if d.get("lang_mode") in ("auto", "ar") else None
     enqueue_job(ts, d.get("kind", "app_update"), en, ar)
@@ -462,7 +462,7 @@ async def al_kind(cb: CallbackQuery, state: FSMContext):
     await state.clear()
     lang = _L(cb.from_user.id); d = _load_draft()
     kb = InlineKeyboardBuilder()
-    kb.button(text=t(lang, "alerts.type.app_update") or "ØªØ­Ø¯ÙŠØ« Ø§Ù„ØªØ·Ø¨ÙŠÙ‚", callback_data="al:k:app_update")
+    kb.button(text=t(lang, "alerts.type.app_update") or "ØªØØ¯ÙŠØ« Ø§Ù„ØªØ·Ø¨ÙŠÙ‚", callback_data="al:k:app_update")
     kb.button(text=t(lang, "alerts.type.maintenance") or "ØµÙŠØ§Ù†Ø©", callback_data="al:k:maintenance")
     kb.button(text=t(lang, "alerts.back") or "Ø±Ø¬ÙˆØ¹", callback_data="al:back")
     kb.adjust(2,1)
@@ -484,7 +484,7 @@ async def al_lang(cb: CallbackQuery, state: FSMContext):
     await state.clear()
     lang = _L(cb.from_user.id); d = _load_draft()
     kb = InlineKeyboardBuilder()
-    kb.button(text=t(lang, "alerts.lang.auto") or "Ø­Ø³Ø¨ Ù„ØºØ© ÙƒÙ„ Ù…Ø³ØªØ®Ø¯Ù…", callback_data="al:l:auto")
+    kb.button(text=t(lang, "alerts.lang.auto") or "ØØ³Ø¨ Ù„ØºØ© ÙƒÙ„ Ù…Ø³ØªØ®Ø¯Ù…", callback_data="al:l:auto")
     kb.button(text=t(lang, "alerts.lang.en")   or "Ø¥Ø¬Ø¨Ø§Ø± Ø¥Ù†Ø¬Ù„ÙŠØ²ÙŠ",   callback_data="al:l:en")
     kb.button(text=t(lang, "alerts.lang.ar")   or "Ø¥Ø¬Ø¨Ø§Ø± Ø¹Ø±Ø¨ÙŠ",      callback_data="al:l:ar")
     kb.button(text=t(lang, "alerts.back") or "Ø±Ø¬ÙˆØ¹", callback_data="al:back")
@@ -532,8 +532,8 @@ async def al_cfg(cb: CallbackQuery, state: FSMContext):
     kb.button(text=("ðŸ”• Quiet: OFF" if not cfg.get("quiet_enabled") else "ðŸ”” Quiet: ON"),
               callback_data="al:cfg:qtoggle")
     kb.button(text=t(lang, "alerts.settings.quiet_hours") or "Ø³Ø§Ø¹Ø§Øª Ø§Ù„Ù‡Ø¯ÙˆØ¡", callback_data="al:cfg:quiet")
-    kb.button(text=t(lang, "alerts.settings.rate_limit") or "ØªØ­Ø¯ÙŠØ¯ Ø§Ù„Ø³Ø±Ø¹Ø©", callback_data="al:cfg:rate")
-    kb.button(text=t(lang, "alerts.settings.max_per_week") or "Ø§Ù„Ø­Ø¯/Ø£Ø³Ø¨ÙˆØ¹", callback_data="al:cfg:maxw")
+    kb.button(text=t(lang, "alerts.settings.rate_limit") or "ØªØØ¯ÙŠØ¯ Ø§Ù„Ø³Ø±Ø¹Ø©", callback_data="al:cfg:rate")
+    kb.button(text=t(lang, "alerts.settings.max_per_week") or "Ø§Ù„ØØ¯/Ø£Ø³Ø¨ÙˆØ¹", callback_data="al:cfg:maxw")
     kb.button(text=t(lang, "alerts.settings.active_days") or "Ù†Ø´ÙØ· Ø®Ù„Ø§Ù„ X ÙŠÙˆÙ…", callback_data="al:cfg:actd")
     kb.button(text=t(lang, "alerts.back") or "Ø±Ø¬ÙˆØ¹", callback_data="al:back")
     kb.adjust(2,2,2,1)
@@ -566,14 +566,14 @@ async def al_cfg_quiet_set(msg: Message, state: FSMContext):
     if val.lower() in {"off", "none", ""}:
         set_config({"quiet_enabled": False})
         await state.clear()
-        return await msg.reply(t(lang, "alerts.settings.saved") or "ØªÙ… Ø§Ù„Ø­ÙØ¸ âœ…")
-    # ØªØ­Ù‚Ù‚ Ø¨Ø³ÙŠØ· Ù„Ù„ØµÙŠØºØ©
+        return await msg.reply(t(lang, "alerts.settings.saved") or "ØªÙ… Ø§Ù„ØÙØ¸ âœ…")
+    # ØªØÙ‚Ù‚ Ø¨Ø³ÙŠØ· Ù„Ù„ØµÙŠØºØ©
     import re
     if not re.fullmatch(r"\d{2}:\d{2}-\d{2}:\d{2}", val):
-        return await msg.reply("ØµÙŠØºØ© ØºÙŠØ± ØµØ­ÙŠØ­Ø©. Ù…Ø«Ø§Ù„: 22:00-08:00 Ø£Ùˆ off")
+        return await msg.reply("ØµÙŠØºØ© ØºÙŠØ± ØµØÙŠØØ©. Ù…Ø«Ø§Ù„: 22:00-08:00 Ø£Ùˆ off")
     set_config({"quiet_enabled": True, "quiet_hours": val})
     await state.clear()
-    await msg.reply(t(lang, "alerts.settings.saved") or "ØªÙ… Ø§Ù„Ø­ÙØ¸ âœ…")
+    await msg.reply(t(lang, "alerts.settings.saved") or "ØªÙ… Ø§Ù„ØÙØ¸ âœ…")
 
 
 @router.callback_query(F.data == "al:cfg:toggle")
@@ -598,7 +598,7 @@ async def al_cfg_rate_set(msg: Message, state: FSMContext):
     lang = _L(msg.from_user.id)
     set_config({"rate_limit": int(msg.text)})
     await state.clear()
-    await msg.reply(t(lang, "alerts.settings.saved") or "ØªÙ… Ø§Ù„Ø­ÙØ¸ âœ…")
+    await msg.reply(t(lang, "alerts.settings.saved") or "ØªÙ… Ø§Ù„ØÙØ¸ âœ…")
 
 @router.callback_query(F.data == "al:cfg:quiet")
 async def al_cfg_quiet(cb: CallbackQuery, state: FSMContext):
@@ -614,7 +614,7 @@ async def al_cfg_quiet_set(msg: Message, state: FSMContext):
     lang = _L(msg.from_user.id)
     set_config({"quiet_hours": msg.text.strip()})
     await state.clear()
-    await msg.reply(t(lang, "alerts.settings.saved") or "ØªÙ… Ø§Ù„Ø­ÙØ¸ âœ…")
+    await msg.reply(t(lang, "alerts.settings.saved") or "ØªÙ… Ø§Ù„ØÙØ¸ âœ…")
 
 @router.callback_query(F.data == "al:cfg:maxw")
 async def al_cfg_maxw(cb: CallbackQuery, state: FSMContext):
@@ -622,7 +622,7 @@ async def al_cfg_maxw(cb: CallbackQuery, state: FSMContext):
         return await cb.answer("no", show_alert=True)
     await state.set_state(AlStates.wait_maxw)
     lang = _L(cb.from_user.id)
-    await _safe_edit_text(cb, t(lang, "alerts.settings.ask_max_per_week") or "Ø£Ø±Ø³Ù„ Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ù‚ØµÙ‰ ÙÙŠ Ø§Ù„Ø£Ø³Ø¨ÙˆØ¹:")
+    await _safe_edit_text(cb, t(lang, "alerts.settings.ask_max_per_week") or "Ø£Ø±Ø³Ù„ Ø§Ù„ØØ¯ Ø§Ù„Ø£Ù‚ØµÙ‰ ÙÙŠ Ø§Ù„Ø£Ø³Ø¨ÙˆØ¹:")
     await cb.answer()
 
 @router.message(AlStates.wait_maxw, F.text.regexp(r"^\d{1,3}$") & F.from_user.func(lambda u: u.id in ADMIN_IDS))
@@ -630,7 +630,7 @@ async def al_cfg_maxw_set(msg: Message, state: FSMContext):
     lang = _L(msg.from_user.id)
     set_config({"max_per_week": int(msg.text)})
     await state.clear()
-    await msg.reply(t(lang, "alerts.settings.saved") or "ØªÙ… Ø§Ù„Ø­ÙØ¸ âœ…")
+    await msg.reply(t(lang, "alerts.settings.saved") or "ØªÙ… Ø§Ù„ØÙØ¸ âœ…")
 
 @router.callback_query(F.data == "al:cfg:actd")
 async def al_cfg_actd(cb: CallbackQuery, state: FSMContext):
@@ -646,9 +646,9 @@ async def al_cfg_actd_set(msg: Message, state: FSMContext):
     lang = _L(msg.from_user.id)
     set_config({"active_days": int(msg.text)})
     await state.clear()
-    await msg.reply(t(lang, "alerts.settings.saved") or "ØªÙ… Ø§Ù„Ø­ÙØ¸ âœ…")
+    await msg.reply(t(lang, "alerts.settings.saved") or "ØªÙ… Ø§Ù„ØÙØ¸ âœ…")
 
-# ====================== Ø§Ù„Ø¥Ø­ØµØ§Ø¦ÙŠØ§Øª / Ø­Ø°Ù / Ø±Ø¬ÙˆØ¹ ======================
+# ====================== Ø§Ù„Ø¥ØØµØ§Ø¦ÙŠØ§Øª / ØØ°Ù / Ø±Ø¬ÙˆØ¹ ======================
 @router.callback_query(F.data == "al:stats")
 async def al_stats(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
@@ -657,7 +657,7 @@ async def al_stats(cb: CallbackQuery):
     stats = _load_json(STATS_FILE) or {}
     wk = max(stats.keys()) if stats else "-"
     body = stats.get(wk, {}) if wk != "-" else {}
-    txt = [t(lang, "alerts.stats.header") or "Ø¥Ø­ØµØ§Ø¦ÙŠØ§Øª Ù‡Ø°Ø§ Ø§Ù„Ø£Ø³Ø¨ÙˆØ¹:"]
+    txt = [t(lang, "alerts.stats.header") or "Ø¥ØØµØ§Ø¦ÙŠØ§Øª Ù‡Ø°Ø§ Ø§Ù„Ø£Ø³Ø¨ÙˆØ¹:"]
     if wk != "-":
         txt.append(f"Week {wk}: app_update={body.get('app_update',0)}, maintenance={body.get('maintenance',0)}")
     else:
@@ -681,7 +681,7 @@ async def al_back(cb: CallbackQuery, state: FSMContext):
         return await cb.answer("no", show_alert=True)
     await state.clear()
     lang = _L(cb.from_user.id)
-    # Ø±Ø¬ÙˆØ¹ Ù†Ø¸ÙŠÙ: Ø±Ø³Ø§Ù„Ø© ÙˆØ§Ø­Ø¯Ø© Ù…Ø¹ Ø§Ù„ÙƒÙŠØ¨ÙˆØ±Ø¯
+    # Ø±Ø¬ÙˆØ¹ Ù†Ø¸ÙŠÙ: Ø±Ø³Ø§Ù„Ø© ÙˆØ§ØØ¯Ø© Ù…Ø¹ Ø§Ù„ÙƒÙŠØ¨ÙˆØ±Ø¯
     await _safe_edit_text(cb, t(lang, "alerts.menu.title") or "Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø¥Ø´Ø¹Ø§Ø±Ø§Øª ðŸ””", None)
     await cb.message.edit_text(
         t(lang, "alerts.menu.title") or "Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø¥Ø´Ø¹Ø§Ø±Ø§Øª ðŸ””",

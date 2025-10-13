@@ -4,7 +4,7 @@ from typing import Callable, Awaitable, Any
 from aiogram.types import Message, CallbackQuery
 import os
 
-# Ù…ØµØ¯Ø± Ø§Ù„Ø­Ù‚ÙŠÙ‚Ø© Ù„Ø¹Ø¶ÙˆÙŠØ© VIP
+# Ù…ØµØ¯Ø± Ø§Ù„ØÙ‚ÙŠÙ‚Ø© Ù„Ø¹Ø¶ÙˆÙŠØ© VIP
 try:
     from utils.vip_store import is_vip
 except Exception:
@@ -30,7 +30,7 @@ def has_vip_or_admin(user_id: int) -> bool:
 def vip_required(reply_func: Callable[[Any, str], Awaitable[Any]] | None = None, key: str = "vip.required"):
     """
     Ø¯ÙŠÙƒÙˆØ±ÙŠØªØ± Ù„Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø¹Ù„Ù‰ Ø§Ù„Ù‡Ø§Ù†Ø¯Ù„Ø±Ø²:
-    - Ø¥Ù† Ù„Ù… ÙŠÙƒÙ† VIP/Ø£Ø¯Ù…Ù† â†’ ÙŠØ±Ø³Ù„ Ø±Ø³Ø§Ù„Ø© Ø±ÙØ¶ Ø¨Ø§Ø³ØªØ®Ø¯Ø§Ù… Ù…ÙØªØ§Ø­ ØªØ±Ø¬Ù…Ø©.
+    - Ø¥Ù† Ù„Ù… ÙŠÙƒÙ† VIP/Ø£Ø¯Ù…Ù† â†’ ÙŠØ±Ø³Ù„ Ø±Ø³Ø§Ù„Ø© Ø±ÙØ¶ Ø¨Ø§Ø³ØªØ®Ø¯Ø§Ù… Ù…ÙØªØ§Ø ØªØ±Ø¬Ù…Ø©.
     - ÙŠØ¹Ù…Ù„ Ù„ÙƒÙ„ Ù…Ù† Message Ùˆ CallbackQuery.
     """
     async def _default_reply(evt, text: str):
@@ -62,7 +62,7 @@ def vip_required(reply_func: Callable[[Any, str], Awaitable[Any]] | None = None,
                     if not has_vip_or_admin(user_id):
                         return await send(evt, t(lang, key))
             except Exception:
-                # Ù„Ùˆ ÙØ´Ù„ Ø£ÙŠ Ø´ÙŠØ¡ØŒ Ù†ÙƒØªÙÙŠ Ø¨Ø§Ù„ØªØ­Ù‚Ù‚ Ø§Ù„Ù…Ø¨Ø§Ø´Ø±
+                # Ù„Ùˆ ÙØ´Ù„ Ø£ÙŠ Ø´ÙŠØ¡ØŒ Ù†ÙƒØªÙÙŠ Ø¨Ø§Ù„ØªØÙ‚Ù‚ Ø§Ù„Ù…Ø¨Ø§Ø´Ø±
                 if not has_vip_or_admin(user_id or 0):
                     return await send(evt, "This feature is for VIP members.")
             return await func(evt, *args, **kwargs)

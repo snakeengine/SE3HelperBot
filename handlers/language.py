@@ -28,15 +28,15 @@ SHOW_MENU_ON_LANG_CHANGE = (os.getenv("SHOW_MENU_ON_LANG_CHANGE") or "0").strip(
     "0", "false", "no", "off", ""
 }
 
-# ===== ØªØ­Ù…ÙŠÙ„ Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø£Ø¯Ù…Ù† Ù…Ù† .env =====
+# ===== ØªØÙ…ÙŠÙ„ Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø£Ø¯Ù…Ù† Ù…Ù† .env =====
 _admin_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
 ADMIN_IDS = get_admin_ids()
 if not ADMIN_IDS:
     ADMIN_IDS = get_admin_ids()
 
-# ===== ØªØ±Ø¬Ù…Ø© Ø¢Ù…Ù†Ø© Ù…Ø¹ fallback Ù…Ø­Ù„ÙŠ =====
+# ===== ØªØ±Ø¬Ù…Ø© Ø¢Ù…Ù†Ø© Ù…Ø¹ fallback Ù…ØÙ„ÙŠ =====
 def _tt(lang: str, key: str, fb: str) -> str:
-    """Ø¥Ø°Ø§ ÙƒØ§Ù†Øª Ø§Ù„ØªØ±Ø¬Ù…Ø© Ù…ÙÙ‚ÙˆØ¯Ø©/ÙØ§Ø±ØºØ©/ØªØ±Ø¬Ø¹ Ù†ÙØ³ Ø§Ù„Ù…ÙØªØ§Ø­ -> Ø§Ø³ØªØ®Ø¯Ù… fb."""
+    """Ø¥Ø°Ø§ ÙƒØ§Ù†Øª Ø§Ù„ØªØ±Ø¬Ù…Ø© Ù…ÙÙ‚ÙˆØ¯Ø©/ÙØ§Ø±ØºØ©/ØªØ±Ø¬Ø¹ Ù†ÙØ³ Ø§Ù„Ù…ÙØªØ§Ø -> Ø§Ø³ØªØ®Ø¯Ù… fb."""
     try:
         v = t(lang, key)
         if isinstance(v, str):
@@ -50,7 +50,7 @@ def _tt(lang: str, key: str, fb: str) -> str:
 def _loc(lang: str, ar: str, en: str) -> str:
     return ar if lang == "ar" else en
 
-# ===== Ø£ÙˆØ§Ù…Ø± Ø§Ù„Ø¨ÙˆØª Ø­Ø³Ø¨ Ø§Ù„Ù„ØºØ© (Ù…Ø¹ fallbacks) =====
+# ===== Ø£ÙˆØ§Ù…Ø± Ø§Ù„Ø¨ÙˆØª ØØ³Ø¨ Ø§Ù„Ù„ØºØ© (Ù…Ø¹ fallbacks) =====
 def _public_commands(lang: str) -> List[BotCommand]:
     lang = lang if lang in SUPPORTED_LOCALES else DEFAULT_LOCALE
     pairs: List[Tuple[str, str]] = [
@@ -68,7 +68,7 @@ def _public_commands(lang: str) -> List[BotCommand]:
 
 def _admin_extra_commands(lang: str) -> List[BotCommand]:
     lang = lang if lang in SUPPORTED_LOCALES else DEFAULT_LOCALE
-    desc = _tt(lang, "cmd_admin_center", _loc(lang, "Ù„ÙˆØ­Ø© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©", "Admin center"))
+    desc = _tt(lang, "cmd_admin_center", _loc(lang, "Ù„ÙˆØØ© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©", "Admin center"))
     return [BotCommand(command="admin", description=desc)] if desc.strip() else []
 
 async def update_user_commands(bot, chat_id: int, lang: str) -> None:
@@ -78,7 +78,7 @@ async def update_user_commands(bot, chat_id: int, lang: str) -> None:
     if is_admin:
         cmds += _admin_extra_commands(lang)
 
-    # Ø§Ù…Ø³Ø­ Ø£ÙˆØ§Ù…Ø± Ù‡Ø°Ù‡ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø© Ø«Ù… Ø§Ø¶Ø¨Ø· Ø§Ù„Ø¬Ø¯ÙŠØ¯Ø©
+    # Ø§Ù…Ø³Ø Ø£ÙˆØ§Ù…Ø± Ù‡Ø°Ù‡ Ø§Ù„Ù…ØØ§Ø¯Ø«Ø© Ø«Ù… Ø§Ø¶Ø¨Ø· Ø§Ù„Ø¬Ø¯ÙŠØ¯Ø©
     try:
         await bot.delete_my_commands(scope=BotCommandScopeChat(chat_id=chat_id))
     except Exception:
@@ -91,7 +91,7 @@ async def update_user_commands(bot, chat_id: int, lang: str) -> None:
         import logging
         logging.getLogger(__name__).warning(f"set_my_commands failed: {e}")
 
-# ===== Ù„ÙˆØ­Ø§Øª Ø§Ù„Ù…ÙØ§ØªÙŠØ­ =====
+# ===== Ù„ÙˆØØ§Øª Ø§Ù„Ù…ÙØ§ØªÙŠØ =====
 def language_keyboard(display_lang: str, selected_lang: str) -> InlineKeyboardMarkup:
     display_lang = display_lang if display_lang in SUPPORTED_LOCALES else DEFAULT_LOCALE
     selected_lang = selected_lang if selected_lang in SUPPORTED_LOCALES else DEFAULT_LOCALE

@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 DATA_DIR = Path("data"); DATA_DIR.mkdir(parents=True, exist_ok=True)
 STORE_FILE = DATA_DIR / "promoters.json"   # Ù†ÙØ³ Ø§Ù„Ù…Ù„Ù Ø§Ù„Ø°ÙŠ ÙŠØ³ØªØ®Ø¯Ù…Ù‡ handlers/promoter.py
 
-# ===== ØµÙ„Ø§Ø­ÙŠØ§Øª Ø§Ù„Ø£Ø¯Ù…Ù† =====
+# ===== ØµÙ„Ø§ØÙŠØ§Øª Ø§Ù„Ø£Ø¯Ù…Ù† =====
 _admin_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
 ADMIN_IDS = get_admin_ids()
 if not ADMIN_IDS:
@@ -31,7 +31,7 @@ if not ADMIN_IDS:
 def is_admin(uid: int) -> bool:
     return uid in ADMIN_IDS
 
-# Ù„ØºØ© Ø§ÙØªØ±Ø§Ø¶ÙŠØ© EN Ù„ØªÙØ§Ø¯ÙŠ Ø¸Ù‡ÙˆØ± Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© Ù„Ù…Ù† Ù„Ù… ØªÙØ­ÙØ¸ Ù„ØºØªÙ‡
+# Ù„ØºØ© Ø§ÙØªØ±Ø§Ø¶ÙŠØ© EN Ù„ØªÙØ§Ø¯ÙŠ Ø¸Ù‡ÙˆØ± Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© Ù„Ù…Ù† Ù„Ù… ØªÙØÙØ¸ Ù„ØºØªÙ‡
 def L(uid: int) -> str:
     return get_user_lang(uid) or "en"
 
@@ -47,11 +47,11 @@ def _safe_t(lang: str, key: str) -> str | None:
 
 def _tf(lang: str, key: str, *fallbacks: str) -> str:
     """
-    ÙŠØ­Ø§ÙˆÙ„:
+    ÙŠØØ§ÙˆÙ„:
       1) Ø§Ù„ØªØ±Ø¬Ù…Ø© Ø¨Ù€ lang Ø«Ù… en Ø«Ù… ar Ù…Ù† Ù…Ù„Ù Ø§Ù„Ù„ØºØ§Øª.
       2) Ø¥Ù† Ù„Ù… ØªÙˆØ¬Ø¯ØŒ ÙŠØ³ØªØ®Ø¯Ù… Ø§Ù„Ø¨Ø¯Ø§Ø¦Ù„ Ø§Ù„Ù…Ù…Ø±Ø±Ø©:
-         - Ø¥Ù† Ù…Ø±Ù‘ Ø²ÙˆØ¬ (ar, en) Ø³ÙŠØ®ØªØ§Ø± Ø§Ù„Ù…Ù†Ø§Ø³Ø¨ Ø­Ø³Ø¨ Ø§Ù„Ù„ØºØ©.
-         - Ø¥Ù† Ù…Ø±Ù‘ Ù†Øµ ÙˆØ§Ø­Ø¯ ÙØ³ÙŠÙØ³ØªØ®Ø¯Ù… Ù„Ù„Ø¬Ù…ÙŠØ¹.
+         - Ø¥Ù† Ù…Ø±Ù‘ Ø²ÙˆØ¬ (ar, en) Ø³ÙŠØ®ØªØ§Ø± Ø§Ù„Ù…Ù†Ø§Ø³Ø¨ ØØ³Ø¨ Ø§Ù„Ù„ØºØ©.
+         - Ø¥Ù† Ù…Ø±Ù‘ Ù†Øµ ÙˆØ§ØØ¯ ÙØ³ÙŠÙØ³ØªØ®Ø¯Ù… Ù„Ù„Ø¬Ù…ÙŠØ¹.
     """
     txt = _safe_t(lang, key) or _safe_t("en", key) or _safe_t("ar", key)
     if txt:
@@ -138,7 +138,7 @@ def _load() -> Dict[str, Any]:
 def _save(d: Dict[str, Any]) -> None:
     STORE_FILE.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
 
-# ===== Ø¥Ø­ØµØ§Ø¡Ø§Øª Ø³Ø±ÙŠØ¹Ø© =====
+# ===== Ø¥ØØµØ§Ø¡Ø§Øª Ø³Ø±ÙŠØ¹Ø© =====
 def _stats(d: Dict[str, Any]) -> Dict[str, int]:
     s = {"pending":0,"approved":0,"rejected":0,"on_hold":0,"more_info":0,"total":0,"banned":0}
     now = _now()
@@ -150,7 +150,7 @@ def _stats(d: Dict[str, Any]) -> Dict[str, int]:
             s["banned"] += 1
     return s
 
-# ===== Ù„ÙˆØ­Ø© Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ© =====
+# ===== Ù„ÙˆØØ© Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ© =====
 def _panel_text(lang: str) -> str:
     d = _load()
     s = _stats(d)
@@ -162,9 +162,9 @@ def _panel_text(lang: str) -> str:
         f"â€¢ {_tf(lang,'promadm.stats.rejected','Ø§Ù„Ù…Ø±ÙÙˆØ¶ÙˆÙ†','Rejected')}: <b>{s['rejected']}</b>\n"
         f"â€¢ {_tf(lang,'promadm.stats.hold','Ù…Ø¹Ù„Ù‘Ù‚','On hold')}: <b>{s['on_hold']}</b>\n"
         f"â€¢ {_tf(lang,'promadm.stats.more','Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø¥Ø¶Ø§ÙÙŠØ©','More info')}: <b>{s['more_info']}</b>\n"
-        f"â€¢ {_tf(lang,'promadm.stats.banned','Ù…Ø­Ø¸ÙˆØ±ÙˆÙ† (Ù†Ø´Ø·)','Banned (active)')}: <b>{s['banned']}</b>\n"
+        f"â€¢ {_tf(lang,'promadm.stats.banned','Ù…ØØ¸ÙˆØ±ÙˆÙ† (Ù†Ø´Ø·)','Banned (active)')}: <b>{s['banned']}</b>\n"
         f"â€¢ {_tf(lang,'promadm.stats.total','Ø§Ù„Ø¥Ø¬Ù…Ø§Ù„ÙŠ','Total')}: <b>{s['total']}</b>\n\n"
-        f"âš™ï¸ {_tf(lang,'promadm.daily_limit','Ø§Ù„Ø­Ø¯ Ø§Ù„ÙŠÙˆÙ…ÙŠ Ù„Ù„Ø·Ù„Ø¨Ø§Øª','Daily application limit')}: <code>{dl}</code>\n"
+        f"âš™ï¸ {_tf(lang,'promadm.daily_limit','Ø§Ù„ØØ¯ Ø§Ù„ÙŠÙˆÙ…ÙŠ Ù„Ù„Ø·Ù„Ø¨Ø§Øª','Daily application limit')}: <code>{dl}</code>\n"
     )
 
 def _panel_kb(lang: str) -> InlineKeyboardMarkup:
@@ -174,12 +174,12 @@ def _panel_kb(lang: str) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="ðŸ“¦ " + _tf(lang,"promadm.btn.list","Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬ÙŠÙ†","Promoters list"), callback_data="promadm:list:approved:1")],
         [
             InlineKeyboardButton(text="âŒ " + _tf(lang,"promadm.btn.cancel","Ø¥Ù„ØºØ§Ø¡ Ù…Ø±ÙˆÙ‘Ø¬","Cancel promoter"), callback_data="promadm:cancel"),
-            InlineKeyboardButton(text="â›” " + _tf(lang,"promadm.btn.block","Ø­Ø¸Ø± Ù…Ø±ÙˆÙ‘Ø¬","Block promoter"),  callback_data="promadm:block"),
+            InlineKeyboardButton(text="â›” " + _tf(lang,"promadm.btn.block","ØØ¸Ø± Ù…Ø±ÙˆÙ‘Ø¬","Block promoter"),  callback_data="promadm:block"),
         ],
-        [InlineKeyboardButton(text="â™»ï¸ " + _tf(lang,"promadm.btn.unblock","Ø¥Ø²Ø§Ù„Ø© Ø§Ù„Ø­Ø¸Ø±","Unblock"), callback_data="promadm:unblock")],
+        [InlineKeyboardButton(text="â™»ï¸ " + _tf(lang,"promadm.btn.unblock","Ø¥Ø²Ø§Ù„Ø© Ø§Ù„ØØ¸Ø±","Unblock"), callback_data="promadm:unblock")],
         [InlineKeyboardButton(text="ðŸ§Š " + _tf(lang,"promadm.btn.clear_cd_id","Ø¥Ù„ØºØ§Ø¡ Ø§Ù„ØªØ¨Ø±ÙŠØ¯ (Ù†Ø´Ø·)","Clear cooldown (active)"), callback_data="promadm:cdlist:1")],
         [InlineKeyboardButton(text="âš™ï¸ " + _tf(lang,"promadm.btn.settings","Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª","Settings"), callback_data="promadm:settings")],
-        [InlineKeyboardButton(text="ðŸ”„ " + _tf(lang,"promadm.btn.refresh","ØªØ­Ø¯ÙŠØ«","Refresh"), callback_data="promadm:refresh")],
+        [InlineKeyboardButton(text="ðŸ”„ " + _tf(lang,"promadm.btn.refresh","ØªØØ¯ÙŠØ«","Refresh"), callback_data="promadm:refresh")],
         [InlineKeyboardButton(text="â¬…ï¸ " + _tf(lang,"promadm.btn.back","Ø±Ø¬ÙˆØ¹","Back"), callback_data="ah:menu")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=kb)
@@ -191,7 +191,7 @@ async def _safe_edit(msg: Message, text: str, kb: InlineKeyboardMarkup):
         if "message is not modified" not in str(e).lower():
             raise
 
-# ===== ÙØªØ­/ØªØ­Ø¯ÙŠØ« Ø§Ù„Ù„ÙˆØ­Ø© =====
+# ===== ÙØªØ/ØªØØ¯ÙŠØ« Ø§Ù„Ù„ÙˆØØ© =====
 @router.callback_query(F.data == "promadm:open")
 async def open_panel(cb: CallbackQuery):
     lang = L(cb.from_user.id)
@@ -208,7 +208,7 @@ async def refresh_panel(cb: CallbackQuery):
     await _safe_edit(cb.message, _panel_text(lang), _panel_kb(lang))
     await cb.answer("âœ…")
 
-# ===== ØªØ±Ù‚ÙŠÙ… ØµÙØ­Ø§Øª =====
+# ===== ØªØ±Ù‚ÙŠÙ… ØµÙØØ§Øª =====
 PAGE_SIZE = 10
 
 def _slice(ids: List[str], page: int) -> Tuple[List[str], int, int]:
@@ -226,7 +226,7 @@ def _cooldown_ids(d: Dict[str, Any]) -> List[str]:
     for uid, u in d.get("users", {}).items():
         if int(u.get("cooldown_until", 0) or 0) > now:
             ids.append(uid)
-    ids.sort(key=lambda x: d["users"][x].get("cooldown_until", 0), reverse=True)  # Ø§Ù„Ø£Ø­Ø¯Ø« Ø£ÙˆÙ„Ø§Ù‹
+    ids.sort(key=lambda x: d["users"][x].get("cooldown_until", 0), reverse=True)  # Ø§Ù„Ø£ØØ¯Ø« Ø£ÙˆÙ„Ø§Ù‹
     return ids
 
 def _fmt_left_h(sec: int) -> str:
@@ -292,7 +292,7 @@ def _user_view_text(lang: str, uid: str) -> str:
     if not u:
         return _tf(lang,"promadm.user_not_found","ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯.","Not found.")
 
-    # --- ØªØ·Ø¨ÙŠØ¹ Ø§Ù„Ø­Ù‚ÙˆÙ„ ---
+    # --- ØªØ·Ø¨ÙŠØ¹ Ø§Ù„ØÙ‚ÙˆÙ„ ---
     tg_raw = u.get("telegram", {})
     if isinstance(tg_raw, dict):
         tg = tg_raw
@@ -327,9 +327,9 @@ def _user_view_text(lang: str, uid: str) -> str:
     tg_real  = tg.get("real") or "-"
     tg_match = "âœ…" if tg.get("match") else "â—ï¸"
 
-    ban_line = _tf(lang,"promadm.not_banned","ØºÙŠØ± Ù…Ø­Ø¸ÙˆØ±","Not banned")
+    ban_line = _tf(lang,"promadm.not_banned","ØºÙŠØ± Ù…ØØ¸ÙˆØ±","Not banned")
     if banned_left > 0:
-        ban_line = _tf(lang,"promadm.banned_left","Ù…Ø­Ø¸ÙˆØ± - ØªØ¨Ù‚Ù‘Ù‰","Banned - left") + f": <code>{banned_left//3600}h</code>"
+        ban_line = _tf(lang,"promadm.banned_left","Ù…ØØ¸ÙˆØ± - ØªØ¨Ù‚Ù‘Ù‰","Banned - left") + f": <code>{banned_left//3600}h</code>"
 
     cd_line = _tf(lang,"promadm.no_cooldown","Ù„Ø§ ÙŠÙˆØ¬Ø¯ ØªØ¨Ø±ÙŠØ¯","No cooldown")
     if cooldown_left > 0:
@@ -339,13 +339,13 @@ def _user_view_text(lang: str, uid: str) -> str:
 
     return (
         f"ðŸªª <b>{_tf(lang,'promadm.user_card','Ø¨Ø·Ø§Ù‚Ø© Ø·Ù„Ø¨','Request card')}</b>\n"
-        f"ID: <code>{uid}</code> â€” <a href='tg://user?id={uid}'>{_tf(lang,'promadm.open_chat','ÙØªØ­ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø©','Open chat')}</a>\n"
-        f"{_tf(lang,'promadm.state','Ø§Ù„Ø­Ø§Ù„Ø©','Status')}: <b>{u.get('status','-')}</b>\n"
+        f"ID: <code>{uid}</code> â€” <a href='tg://user?id={uid}'>{_tf(lang,'promadm.open_chat','ÙØªØ Ø§Ù„Ù…ØØ§Ø¯Ø«Ø©','Open chat')}</a>\n"
+        f"{_tf(lang,'promadm.state','Ø§Ù„ØØ§Ù„Ø©','Status')}: <b>{u.get('status','-')}</b>\n"
         f"{_tf(lang,'promadm.name','Ø§Ù„Ø§Ø³Ù…','Name')}: <code>{u.get('name','-')}</code>\n"
         f"{_tf(lang,'promadm.links','Ø§Ù„Ø±ÙˆØ§Ø¨Ø·','Links')}:\n{links_str}\n"
         f"{_tf(lang,'promadm.tg.real_label','ØªÙŠÙ„ÙŠØ¬Ø±Ø§Ù…','Telegram')}: <code>{tg_real}</code> "
         f"({_tf(lang,'promadm.tg.declared_label','Ø§Ù„Ù…Ø¹Ù„Ù†','declared')}: <code>{tg_decl}</code>) {tg_match}\n"
-        f"{_tf(lang,'promadm.ban','Ø§Ù„Ø­Ø¸Ø±','Ban')}: {ban_line}\n"
+        f"{_tf(lang,'promadm.ban','Ø§Ù„ØØ¸Ø±','Ban')}: {ban_line}\n"
         f"{_tf(lang,'promadm.cooldown','Ø§Ù„ØªØ¨Ø±ÙŠØ¯','Cooldown')}: {cd_line}\n"
     )
 
@@ -360,13 +360,13 @@ def _user_actions_kb(lang: str, uid: str) -> InlineKeyboardMarkup:
             InlineKeyboardButton(text=_tf(lang,"prom.adm.hold","â¸ï¸ ØªØ¹Ù„ÙŠÙ‚","â¸ï¸ Put on hold"), callback_data=f"prom:adm:hold:{uid}"),
         ],
         [
-            InlineKeyboardButton(text=_tf(lang,"prom.adm.ban","ðŸš« Ø­Ø¸Ø±","ðŸš« Ban"), callback_data=f"prom:adm:ban:{uid}"),
-            InlineKeyboardButton(text=_tf(lang,"prom.adm.unban","â™»ï¸ Ø¥Ø²Ø§Ù„Ø© Ø§Ù„Ø­Ø¸Ø±","â™»ï¸ Unban"), callback_data=f"prom:adm:unban:{uid}"),
+            InlineKeyboardButton(text=_tf(lang,"prom.adm.ban","ðŸš« ØØ¸Ø±","ðŸš« Ban"), callback_data=f"prom:adm:ban:{uid}"),
+            InlineKeyboardButton(text=_tf(lang,"prom.adm.unban","â™»ï¸ Ø¥Ø²Ø§Ù„Ø© Ø§Ù„ØØ¸Ø±","â™»ï¸ Unban"), callback_data=f"prom:adm:unban:{uid}"),
         ],
         [
             InlineKeyboardButton(text=_tf(lang,"prom.adm.clear_cd","ðŸ§Š Ø¥Ù„ØºØ§Ø¡ Ø§Ù„ØªØ¨Ø±ÙŠØ¯","ðŸ§Š Clear cooldown"), callback_data=f"promadm:cdclear:{uid}")
         ],
-        [InlineKeyboardButton(text=_tf(lang,"prom.adm.delete","ðŸ—‘ Ø­Ø°Ù Ø§Ù„Ø·Ù„Ø¨","ðŸ—‘ Delete request"), callback_data=f"prom:adm:delete:{uid}")],
+        [InlineKeyboardButton(text=_tf(lang,"prom.adm.delete","ðŸ—‘ ØØ°Ù Ø§Ù„Ø·Ù„Ø¨","ðŸ—‘ Delete request"), callback_data=f"prom:adm:delete:{uid}")],
         [InlineKeyboardButton(text="â¬…ï¸ " + _tf(lang,"promadm.btn.back","Ø±Ø¬ÙˆØ¹","Back"), callback_data="promadm:open")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=rows)
@@ -381,7 +381,7 @@ async def view_user(cb: CallbackQuery):
                             parse_mode="HTML", disable_web_page_preview=True)
     await cb.answer()
 
-# ===== Ø§Ù„Ù‚ÙˆØ§Ø¦Ù… (Ø§Ù„Ù…ÙˆØ§ÙÙ‚ Ø¹Ù„ÙŠÙ‡Ù… / Ø§Ù„Ù…Ø­Ø¸ÙˆØ±ÙˆÙ† / â€¦) =====
+# ===== Ø§Ù„Ù‚ÙˆØ§Ø¦Ù… (Ø§Ù„Ù…ÙˆØ§ÙÙ‚ Ø¹Ù„ÙŠÙ‡Ù… / Ø§Ù„Ù…ØØ¸ÙˆØ±ÙˆÙ† / â€¦) =====
 def _filter_ids(d: Dict[str,Any], flt: str) -> List[str]:
     now = _now()
     users = d.get("users", {})
@@ -427,14 +427,14 @@ async def show_list(cb: CallbackQuery):
         return await cb.answer()
     title = {
         "approved": _tf(lang,"promadm.list.approved","Ø§Ù„Ù…ÙˆØ§ÙÙ‚ Ø¹Ù„ÙŠÙ‡Ù…","Approved"),
-        "banned":   _tf(lang,"promadm.list.banned","Ù…Ø­Ø¸ÙˆØ±ÙˆÙ† (Ù†Ø´Ø·)","Banned (active)"),
+        "banned":   _tf(lang,"promadm.list.banned","Ù…ØØ¸ÙˆØ±ÙˆÙ† (Ù†Ø´Ø·)","Banned (active)"),
         "hold":     _tf(lang,"promadm.list.hold","Ù…Ø¹Ù„Ù‘Ù‚ÙˆÙ†","On hold"),
-        "more":     _tf(lang,"promadm.list.more","Ø¨Ø­Ø§Ø¬Ø© Ù…Ø¹Ù„ÙˆÙ…Ø§Øª","Need more info"),
+        "more":     _tf(lang,"promadm.list.more","Ø¨ØØ§Ø¬Ø© Ù…Ø¹Ù„ÙˆÙ…Ø§Øª","Need more info"),
     }.get(flt, "List")
     await cb.message.answer("ðŸ“¦ <b>"+title+"</b>", reply_markup=_list_kb(lang, flt, page, pages, ids), parse_mode="HTML")
     await cb.answer()
 
-# ===== Ø¨Ø­Ø« Ùˆ Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª ÙˆØ¹Ù…Ù„ÙŠØ§Øª Ù…Ø¨Ø§Ø´Ø±Ø© =====
+# ===== Ø¨ØØ« Ùˆ Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª ÙˆØ¹Ù…Ù„ÙŠØ§Øª Ù…Ø¨Ø§Ø´Ø±Ø© =====
 class PAStates(StatesGroup):
     waiting_uid       = State()
     waiting_daily     = State()
@@ -443,7 +443,7 @@ class PAStates(StatesGroup):
     waiting_unblock   = State()
     waiting_cdclear   = State()   # Ù„Ø¥Ù„ØºØ§Ø¡ Ø§Ù„ØªØ¨Ø±ÙŠØ¯ Ø¨Ø§Ù„Ù€ ID
 
-# --- Ø¨Ø­Ø« ID
+# --- Ø¨ØØ« ID
 @router.callback_query(F.data == "promadm:search")
 async def search_start(cb: CallbackQuery, state: FSMContext):
     lang = L(cb.from_user.id)
@@ -471,11 +471,11 @@ def _settings_text(lang: str) -> str:
     d = _load()
     dl = int(d.get("settings", {}).get("daily_limit", 5))
     return f"âš™ï¸ <b>{_tf(lang,'promadm.settings','Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬ÙŠÙ†','Promoters settings')}</b>\n\n" \
-           f"â€¢ {_tf(lang,'promadm.daily_limit','Ø§Ù„Ø­Ø¯ Ø§Ù„ÙŠÙˆÙ…ÙŠ Ù„Ù„Ø·Ù„Ø¨Ø§Øª','Daily application limit')}: <code>{dl}</code>\n"
+           f"â€¢ {_tf(lang,'promadm.daily_limit','Ø§Ù„ØØ¯ Ø§Ù„ÙŠÙˆÙ…ÙŠ Ù„Ù„Ø·Ù„Ø¨Ø§Øª','Daily application limit')}: <code>{dl}</code>\n"
 
 def _settings_kb(lang: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=_tf(lang,"promadm.set_daily","ØªØºÙŠÙŠØ± Ø§Ù„Ø­Ø¯ Ø§Ù„ÙŠÙˆÙ…ÙŠ","Change daily limit"), callback_data="promadm:set_daily")],
+        [InlineKeyboardButton(text=_tf(lang,"promadm.set_daily","ØªØºÙŠÙŠØ± Ø§Ù„ØØ¯ Ø§Ù„ÙŠÙˆÙ…ÙŠ","Change daily limit"), callback_data="promadm:set_daily")],
         [InlineKeyboardButton(text="â¬…ï¸ " + _tf(lang,"promadm.btn.back","Ø±Ø¬ÙˆØ¹","Back"), callback_data="promadm:open")],
     ])
 
@@ -493,7 +493,7 @@ async def set_daily_start(cb: CallbackQuery, state: FSMContext):
     if not is_admin(cb.from_user.id):
         return await cb.answer(_tf(lang, "common.admins_only", "Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø¯Ø§Ø© Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·.","Admins only."), show_alert=True)
     await state.set_state(PAStates.waiting_daily)
-    await cb.message.answer(_tf(lang,"promadm.ask_daily","Ø£Ø±Ø³Ù„ Ø±Ù‚Ù… Ø§Ù„Ø­Ø¯ Ø§Ù„ÙŠÙˆÙ…ÙŠ (1-20):","Send the daily limit (1-20):"))
+    await cb.message.answer(_tf(lang,"promadm.ask_daily","Ø£Ø±Ø³Ù„ Ø±Ù‚Ù… Ø§Ù„ØØ¯ Ø§Ù„ÙŠÙˆÙ…ÙŠ (1-20):","Send the daily limit (1-20):"))
     await cb.answer()
 
 @router.message(PAStates.waiting_daily)
@@ -505,14 +505,14 @@ async def set_daily_save(m: Message, state: FSMContext):
         n = int((m.text or "").strip())
         if n < 1 or n > 20: raise ValueError
     except Exception:
-        return await m.reply(_tf(lang,"promadm.err_number","Ø±Ù‚Ù… ØºÙŠØ± ØµØ§Ù„Ø­.","Invalid number."))
+        return await m.reply(_tf(lang,"promadm.err_number","Ø±Ù‚Ù… ØºÙŠØ± ØµØ§Ù„Ø.","Invalid number."))
     d = _load()
     d.setdefault("settings", {})["daily_limit"] = n
     _save(d)
     await state.clear()
-    await m.reply(_tf(lang,"promadm.saved","ØªÙ… Ø§Ù„Ø­ÙØ¸ âœ…","Saved âœ…"))
+    await m.reply(_tf(lang,"promadm.saved","ØªÙ… Ø§Ù„ØÙØ¸ âœ…","Saved âœ…"))
 
-# --- Ø¥Ù„ØºØ§Ø¡ Ù…Ø±ÙˆÙ‘Ø¬ (Ø¥Ø²Ø§Ù„Ø© Ø§Ù„Ø­Ø§Ù„Ø©)
+# --- Ø¥Ù„ØºØ§Ø¡ Ù…Ø±ÙˆÙ‘Ø¬ (Ø¥Ø²Ø§Ù„Ø© Ø§Ù„ØØ§Ù„Ø©)
 @router.callback_query(F.data == "promadm:cancel")
 async def cancel_start(cb: CallbackQuery, state: FSMContext):
     lang = L(cb.from_user.id)
@@ -541,7 +541,7 @@ async def cancel_save(m: Message, state: FSMContext):
     await _try_notify(m.bot, uid, _tf(user_lang, "prom.user.cancelled", "ØªÙ… Ø¥Ù„ØºØ§Ø¡ ØµÙØ© Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬ Ø¹Ù†Ùƒ.","Your promoter status has been removed."))
     await m.reply(_tf(lang_admin,"promadm.user.cancelled","ØªÙ… Ø¥Ù„ØºØ§Ø¡ ØµÙØ© Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬ âœ…","Promoter cancelled âœ…"))
 
-# --- Ø­Ø¸Ø± Ù…Ø±ÙˆÙ‘Ø¬
+# --- ØØ¸Ø± Ù…Ø±ÙˆÙ‘Ø¬
 def _ban_kb(uid: str, lang: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
@@ -558,7 +558,7 @@ async def block_start(cb: CallbackQuery, state: FSMContext):
     if not is_admin(cb.from_user.id):
         return await cb.answer(_tf(lang, "common.admins_only", "Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø¯Ø§Ø© Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·.","Admins only."), show_alert=True)
     await state.set_state(PAStates.waiting_block_uid)
-    await cb.message.answer(_tf(lang,"promadm.ask_uid_block","Ø£Ø±Ø³Ù„ ID Ù„Ø­Ø¸Ø± Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…:","Send the user ID to block:"))
+    await cb.message.answer(_tf(lang,"promadm.ask_uid_block","Ø£Ø±Ø³Ù„ ID Ù„ØØ¸Ø± Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…:","Send the user ID to block:"))
     await cb.answer()
 
 @router.message(PAStates.waiting_block_uid)
@@ -571,7 +571,7 @@ async def block_pick_duration(m: Message, state: FSMContext):
     if uid not in d.get("users", {}):
         return await m.reply(_tf(lang,"promadm.user_not_found","ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯.","Not found."))
     await state.clear()
-    await m.reply(_tf(lang,"promadm.pick_block","Ø§Ø®ØªØ± Ù…Ø¯Ø© Ø§Ù„Ø­Ø¸Ø±:","Pick block duration:"), reply_markup=_ban_kb(uid, lang))
+    await m.reply(_tf(lang,"promadm.pick_block","Ø§Ø®ØªØ± Ù…Ø¯Ø© Ø§Ù„ØØ¸Ø±:","Pick block duration:"), reply_markup=_ban_kb(uid, lang))
 
 @router.callback_query(F.data.startswith("promadm:ban:"))
 async def block_apply(cb: CallbackQuery):
@@ -587,17 +587,17 @@ async def block_apply(cb: CallbackQuery):
     _save(d)
     # Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø¨Ù„ØºØªÙ‡
     user_lang = L(int(uid))
-    await _try_notify(cb.bot, uid, _tf(user_lang, "prom.user.banned", "ØªÙ… Ø­Ø¸Ø±Ùƒ Ù…Ø¤Ù‚ØªÙ‹Ø§. Ø§Ù„Ù…Ø¯Ø©: ","You have been temporarily banned. Duration: ") + _human_dur(sec, user_lang))
-    await cb.answer(_tf(lang_admin,"promadm.user.banned","ØªÙ… Ø§Ù„Ø­Ø¸Ø± âœ…","Banned âœ…"), show_alert=True)
+    await _try_notify(cb.bot, uid, _tf(user_lang, "prom.user.banned", "ØªÙ… ØØ¸Ø±Ùƒ Ù…Ø¤Ù‚ØªÙ‹Ø§. Ø§Ù„Ù…Ø¯Ø©: ","You have been temporarily banned. Duration: ") + _human_dur(sec, user_lang))
+    await cb.answer(_tf(lang_admin,"promadm.user.banned","ØªÙ… Ø§Ù„ØØ¸Ø± âœ…","Banned âœ…"), show_alert=True)
 
-# --- Ø¥Ø²Ø§Ù„Ø© Ø§Ù„Ø­Ø¸Ø±
+# --- Ø¥Ø²Ø§Ù„Ø© Ø§Ù„ØØ¸Ø±
 @router.callback_query(F.data == "promadm:unblock")
 async def unblock_start(cb: CallbackQuery, state: FSMContext):
     lang = L(cb.from_user.id)
     if not is_admin(cb.from_user.id):
         return await cb.answer(_tf(lang, "common.admins_only", "Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø¯Ø§Ø© Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·.","Admins only."), show_alert=True)
     await state.set_state(PAStates.waiting_unblock)
-    await cb.message.answer(_tf(lang,"promadm.ask_uid_unblock","Ø£Ø±Ø³Ù„ ID Ù„Ø¥Ø²Ø§Ù„Ø© Ø§Ù„Ø­Ø¸Ø±:","Send the user ID to unban:"))
+    await cb.message.answer(_tf(lang,"promadm.ask_uid_unblock","Ø£Ø±Ø³Ù„ ID Ù„Ø¥Ø²Ø§Ù„Ø© Ø§Ù„ØØ¸Ø±:","Send the user ID to unban:"))
     await cb.answer()
 
 @router.message(PAStates.waiting_unblock)
@@ -613,8 +613,8 @@ async def unblock_save(m: Message, state: FSMContext):
     _save(d)
     await state.clear()
     user_lang = L(int(uid))
-    await _try_notify(m.bot, uid, _tf(user_lang, "prom.user.unbanned", "ØªÙ…Øª Ø¥Ø²Ø§Ù„Ø© Ø§Ù„Ø­Ø¸Ø± Ø¹Ù†Ùƒ âœ…","You have been unbanned âœ…"))
-    await m.reply(_tf(lang_admin,"promadm.user.unblocked","ØªÙ…Øª Ø¥Ø²Ø§Ù„Ø© Ø§Ù„Ø­Ø¸Ø± âœ…","Unbanned âœ…"))
+    await _try_notify(m.bot, uid, _tf(user_lang, "prom.user.unbanned", "ØªÙ…Øª Ø¥Ø²Ø§Ù„Ø© Ø§Ù„ØØ¸Ø± Ø¹Ù†Ùƒ âœ…","You have been unbanned âœ…"))
+    await m.reply(_tf(lang_admin,"promadm.user.unblocked","ØªÙ…Øª Ø¥Ø²Ø§Ù„Ø© Ø§Ù„ØØ¸Ø± âœ…","Unbanned âœ…"))
 
 # --- Ø¥Ù„ØºØ§Ø¡ Ø§Ù„ØªØ¨Ø±ÙŠØ¯ Ù…Ù† Ø¨Ø·Ø§Ù‚Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…
 @router.callback_query(F.data.startswith("promadm:cdclear:"))
@@ -636,12 +636,12 @@ async def clear_cooldown_inline(cb: CallbackQuery):
     await _try_notify(cb.bot, uid, _tf(user_lang, "prom.user.cd_cleared", "ØªÙ… Ø±ÙØ¹ Ø§Ù„ØªØ¨Ø±ÙŠØ¯ Ø¹Ù†ÙƒØŒ ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… Ø§Ù„Ø¢Ù† âœ…","Cooldown cleared, you can apply now âœ…"))
     await cb.answer(_tf(lang_admin, "promadm.cooldown_cleared", "ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø§Ù„ØªØ¨Ø±ÙŠØ¯ âœ…","Cooldown cleared âœ…"), show_alert=True)
 
-# ===== Ù„ÙˆØ­Ø© ØªØ­ÙƒÙ… Ø³Ø±ÙŠØ¹Ø© Ø¨Ø¹Ø¯ Ø¥Ø¯Ø®Ø§Ù„ ID ÙÙŠ Ø²Ø± (Ø¥Ù„ØºØ§Ø¡ Ø§Ù„ØªØ¨Ø±ÙŠØ¯ ID) =====
+# ===== Ù„ÙˆØØ© ØªØÙƒÙ… Ø³Ø±ÙŠØ¹Ø© Ø¨Ø¹Ø¯ Ø¥Ø¯Ø®Ø§Ù„ ID ÙÙŠ Ø²Ø± (Ø¥Ù„ØºØ§Ø¡ Ø§Ù„ØªØ¨Ø±ÙŠØ¯ ID) =====
 def _quick_actions_kb(lang: str, uid: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="ðŸ§Š " + _tf(lang,"promadm.q.clear","Ø¥Ù„ØºØ§Ø¡ Ø§Ù„ØªØ¨Ø±ÙŠØ¯","Clear cooldown"), callback_data=f"promadm:q:clear:{uid}"),
-            InlineKeyboardButton(text="â™»ï¸ " + _tf(lang,"promadm.q.unblock","Ø¥Ø²Ø§Ù„Ø© Ø§Ù„Ø­Ø¸Ø±","Unblock"),  callback_data=f"promadm:q:unblock:{uid}"),
+            InlineKeyboardButton(text="â™»ï¸ " + _tf(lang,"promadm.q.unblock","Ø¥Ø²Ø§Ù„Ø© Ø§Ù„ØØ¸Ø±","Unblock"),  callback_data=f"promadm:q:unblock:{uid}"),
         ],
         [
             InlineKeyboardButton(text="â›” 1d",  callback_data=f"promadm:q:ban:{uid}:86400"),
@@ -687,7 +687,7 @@ async def show_cooldown_list(cb: CallbackQuery):
     d = _load()
     ids_all = _cooldown_ids(d)
     if not ids_all:
-        await cb.message.answer(_tf(lang, "promadm.cdlist.empty", "Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ù…Ø³ØªØ®Ø¯Ù…ÙˆÙ† Ø­Ø§Ù„ÙŠÙ‹Ø§ ØªØ­Øª Ø§Ù„ØªØ¨Ø±ÙŠØ¯.","No users under cooldown now."))
+        await cb.message.answer(_tf(lang, "promadm.cdlist.empty", "Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ù…Ø³ØªØ®Ø¯Ù…ÙˆÙ† ØØ§Ù„ÙŠÙ‹Ø§ ØªØØª Ø§Ù„ØªØ¨Ø±ÙŠØ¯.","No users under cooldown now."))
         return await cb.answer()
 
     ids, page, pages = _slice(ids_all, page)
@@ -713,7 +713,7 @@ async def open_quick_for_user(cb: CallbackQuery):
     )
     await cb.answer()
 
-# ØªÙ†ÙÙŠØ° Ø£ÙˆØ§Ù…Ø± Ø§Ù„Ù„ÙˆØ­Ø© Ø§Ù„Ø³Ø±ÙŠØ¹Ø©
+# ØªÙ†ÙÙŠØ° Ø£ÙˆØ§Ù…Ø± Ø§Ù„Ù„ÙˆØØ© Ø§Ù„Ø³Ø±ÙŠØ¹Ø©
 @router.callback_query(F.data.startswith("promadm:q:"))
 async def quick_ops(cb: CallbackQuery):
     lang_admin = L(cb.from_user.id)
@@ -739,15 +739,15 @@ async def quick_ops(cb: CallbackQuery):
     if op == "unblock":
         d["users"][uid]["banned_until"] = 0
         _save(d)
-        await _try_notify(cb.bot, uid, _tf(user_lang, "prom.user.unbanned", "ØªÙ…Øª Ø¥Ø²Ø§Ù„Ø© Ø§Ù„Ø­Ø¸Ø± Ø¹Ù†Ùƒ âœ…","You have been unbanned âœ…"))
-        return await cb.answer(_tf(lang_admin,"promadm.user.unblocked","ØªÙ…Øª Ø¥Ø²Ø§Ù„Ø© Ø§Ù„Ø­Ø¸Ø± âœ…","Unbanned âœ…"), show_alert=True)
+        await _try_notify(cb.bot, uid, _tf(user_lang, "prom.user.unbanned", "ØªÙ…Øª Ø¥Ø²Ø§Ù„Ø© Ø§Ù„ØØ¸Ø± Ø¹Ù†Ùƒ âœ…","You have been unbanned âœ…"))
+        return await cb.answer(_tf(lang_admin,"promadm.user.unblocked","ØªÙ…Øª Ø¥Ø²Ø§Ù„Ø© Ø§Ù„ØØ¸Ø± âœ…","Unbanned âœ…"), show_alert=True)
 
     if op == "ban":
         sec = int(parts[4])
         d["users"][uid]["banned_until"] = _now() + sec
         _save(d)
-        await _try_notify(cb.bot, uid, _tf(user_lang, "prom.user.banned", "ØªÙ… Ø­Ø¸Ø±Ùƒ Ù…Ø¤Ù‚ØªÙ‹Ø§. Ø§Ù„Ù…Ø¯Ø©: ","You have been temporarily banned. Duration: ") + _human_dur(sec, user_lang))
-        return await cb.answer(_tf(lang_admin,"promadm.user.banned","ØªÙ… Ø§Ù„Ø­Ø¸Ø± âœ…","Banned âœ…"), show_alert=True)
+        await _try_notify(cb.bot, uid, _tf(user_lang, "prom.user.banned", "ØªÙ… ØØ¸Ø±Ùƒ Ù…Ø¤Ù‚ØªÙ‹Ø§. Ø§Ù„Ù…Ø¯Ø©: ","You have been temporarily banned. Duration: ") + _human_dur(sec, user_lang))
+        return await cb.answer(_tf(lang_admin,"promadm.user.banned","ØªÙ… Ø§Ù„ØØ¸Ø± âœ…","Banned âœ…"), show_alert=True)
 
     if op == "cancel":
         d["users"][uid]["status"] = "deleted"
@@ -756,5 +756,5 @@ async def quick_ops(cb: CallbackQuery):
         await _try_notify(cb.bot, uid, _tf(user_lang, "prom.user.cancelled", "ØªÙ… Ø¥Ù„ØºØ§Ø¡ ØµÙØ© Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬ Ø¹Ù†Ùƒ.","Your promoter status has been removed."))
         return await cb.answer(_tf(lang_admin,"promadm.user.cancelled","ØªÙ… Ø¥Ù„ØºØ§Ø¡ ØµÙØ© Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬ âœ…","Promoter cancelled âœ…"), show_alert=True)
 
-    await cb.answer(_tf(lang_admin, "common.ok", "Ø­Ø³Ù†Ù‹Ø§","OK"))
+    await cb.answer(_tf(lang_admin, "common.ok", "ØØ³Ù†Ù‹Ø§","OK"))
 

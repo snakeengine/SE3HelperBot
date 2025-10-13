@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 _admin_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
 ADMIN_IDS = get_admin_ids()
 
-# Ù…ÙØ§ØªÙŠØ­ ØªØ¹Ø·ÙŠÙ„ Ø¥Ø´Ø¹Ø§Ø±Ø§Øª Ø§Ù„Ø£Ø¯Ù…Ù† Ù…Ù† .env
+# Ù…ÙØ§ØªÙŠØ ØªØ¹Ø·ÙŠÙ„ Ø¥Ø´Ø¹Ø§Ø±Ø§Øª Ø§Ù„Ø£Ø¯Ù…Ù† Ù…Ù† .env
 NOTIFY_ADMINS = (os.getenv("REWARDS_NOTIFY_ADMINS", "1").strip() not in {"0", "false", "no", "off", ""})
 NOTIFY_VIP_ORDERS = (os.getenv("REWARDS_NOTIFY_VIP_ORDERS", "1").strip() not in {"0", "false", "no", "off", ""})
 
@@ -39,11 +39,11 @@ APP_ALIASES = {
 }
 
 def _detect_app_from_text(text: str | None) -> Optional[str]:
-    """ÙŠØ­Ø§ÙˆÙ„ Ø§Ø³ØªØ®Ø±Ø§Ø¬ Ø§Ù„Ù„Ø¹Ø¨Ø© Ù…Ù† Ù†Øµ Ø­Ø± Ø¨Ø§Ù„Ø¹Ø±Ø¨ÙŠ/Ø§Ù„Ø¥Ù†Ø¬Ù„ÙŠØ²ÙŠ."""
+    """ÙŠØØ§ÙˆÙ„ Ø§Ø³ØªØ®Ø±Ø§Ø¬ Ø§Ù„Ù„Ø¹Ø¨Ø© Ù…Ù† Ù†Øµ ØØ± Ø¨Ø§Ù„Ø¹Ø±Ø¨ÙŠ/Ø§Ù„Ø¥Ù†Ø¬Ù„ÙŠØ²ÙŠ."""
     if not text:
         return None
     s = str(text).lower()
-    # Ù†Ø¹Ø·ÙŠ Ø£ÙˆÙ„ÙˆÙŠØ© Ù„Ù„ÙƒØ§Ø±ÙˆÙ… Ø¥Ø°Ø§ Ø°ÙƒØ±Øª ØµØ±Ø§Ø­Ø©ØŒ Ø«Ù… Ø§Ù„Ø¨Ù„ÙŠØ§Ø±Ø¯
+    # Ù†Ø¹Ø·ÙŠ Ø£ÙˆÙ„ÙˆÙŠØ© Ù„Ù„ÙƒØ§Ø±ÙˆÙ… Ø¥Ø°Ø§ Ø°ÙƒØ±Øª ØµØ±Ø§ØØ©ØŒ Ø«Ù… Ø§Ù„Ø¨Ù„ÙŠØ§Ø±Ø¯
     for key in APP_ALIASES[APP_CAR]:
         if key in s:
             return APP_CAR
@@ -76,7 +76,7 @@ async def _safe_send(bot, chat_id: int, text: str, **kwargs) -> bool:
 
 # ------------------------------ Helpers ------------------------------
 def _fb(lang: str, ar_text: str, en_text: str) -> str:
-    """Ø§Ø®ØªÙŠØ§Ø± fallback Ø¨Ø­Ø³Ø¨ Ø§Ù„Ù„ØºØ©."""
+    """Ø§Ø®ØªÙŠØ§Ø± fallback Ø¨ØØ³Ø¨ Ø§Ù„Ù„ØºØ©."""
     return ar_text if str(lang).startswith("ar") else en_text
 
 def _fmt_hours(hours: int, lang: str) -> str:
@@ -97,9 +97,9 @@ def _fmt_hours(hours: int, lang: str) -> str:
 
 def _from_order(obj: Any) -> dict:
     """
-    ÙŠÙÙƒÙ‘ Ù…Ø­ØªÙˆÙ‰ Ø·Ù„Ø¨ VIP Ø³ÙˆØ§Ø¡ ÙƒØ§Ù† dict Ø£Ùˆ object Ø¨Ø³ÙŠØ·.
-    ÙŠØ¯Ø¹Ù… Ù…ÙØ§ØªÙŠØ­ Ø´Ø§Ø¦Ø¹Ø©: id/oid/order_id, uid/user_id, hours, app/app_id, details, cost/price.
-    ÙƒÙ…Ø§ Ù†Ø­Ø§ÙˆÙ„ Ø§ÙƒØªØ´Ø§Ù Ø§Ù„Ù„Ø¹Ø¨Ø© Ù…Ù† details Ø¥Ù† Ù„Ù… ØªÙƒÙ† app_id ÙˆØ§Ø¶Ø­Ø© (8bp/car).
+    ÙŠÙÙƒÙ‘ Ù…ØØªÙˆÙ‰ Ø·Ù„Ø¨ VIP Ø³ÙˆØ§Ø¡ ÙƒØ§Ù† dict Ø£Ùˆ object Ø¨Ø³ÙŠØ·.
+    ÙŠØ¯Ø¹Ù… Ù…ÙØ§ØªÙŠØ Ø´Ø§Ø¦Ø¹Ø©: id/oid/order_id, uid/user_id, hours, app/app_id, details, cost/price.
+    ÙƒÙ…Ø§ Ù†ØØ§ÙˆÙ„ Ø§ÙƒØªØ´Ø§Ù Ø§Ù„Ù„Ø¹Ø¨Ø© Ù…Ù† details Ø¥Ù† Ù„Ù… ØªÙƒÙ† app_id ÙˆØ§Ø¶ØØ© (8bp/car).
     """
     if isinstance(obj, dict):
         get = obj.get
@@ -152,7 +152,7 @@ async def notify_user_points(
             .format(delta=delta)
     else:
         text = t(lang, "rwdadm.user_notice.delta",
-                 _fb(lang, "ØªÙ… ØªØ¹Ø¯ÙŠÙ„ Ø±ØµÙŠØ¯Ùƒ: {delta:+} â€¢ Ø§Ù„Ø±ØµÙŠØ¯ Ø§Ù„Ø­Ø§Ù„ÙŠ: {balance}",
+                 _fb(lang, "ØªÙ… ØªØ¹Ø¯ÙŠÙ„ Ø±ØµÙŠØ¯Ùƒ: {delta:+} â€¢ Ø§Ù„Ø±ØµÙŠØ¯ Ø§Ù„ØØ§Ù„ÙŠ: {balance}",
                              "Your balance changed: {delta:+} â€¢ New balance: {balance}")) \
             .format(delta=delta, balance=new_balance)
 
@@ -194,7 +194,7 @@ async def notify_user_set_points(
 async def notify_user_ban(bot, uid: int, *args, actor_id: Optional[int] = None) -> None:
     lang = _L(uid)
     text = t(lang, "rwdadm.user_notice.ban",
-             _fb(lang, "ðŸš« ØªÙ… Ø­Ø¸Ø±Ùƒ Ù…Ù† Ù†Ø¸Ø§Ù… Ø§Ù„Ø¬ÙˆØ§Ø¦Ø².", "ðŸš« You have been banned from rewards."))
+             _fb(lang, "ðŸš« ØªÙ… ØØ¸Ø±Ùƒ Ù…Ù† Ù†Ø¸Ø§Ù… Ø§Ù„Ø¬ÙˆØ§Ø¦Ø².", "ðŸš« You have been banned from rewards."))
     await _safe_send(bot, uid, text)
     if actor_id:
         await _safe_send(bot, actor_id, f"âœ… banned uid=<code>{uid}</code>")
@@ -202,7 +202,7 @@ async def notify_user_ban(bot, uid: int, *args, actor_id: Optional[int] = None) 
 async def notify_user_unban(bot, uid: int, *args, actor_id: Optional[int] = None) -> None:
     lang = _L(uid)
     text = t(lang, "rwdadm.user_notice.unban",
-             _fb(lang, "âœ… ØªÙ… ÙÙƒ Ø­Ø¸Ø±Ùƒ Ù…Ù† Ù†Ø¸Ø§Ù… Ø§Ù„Ø¬ÙˆØ§Ø¦Ø².", "âœ… Your rewards ban has been lifted."))
+             _fb(lang, "âœ… ØªÙ… ÙÙƒ ØØ¸Ø±Ùƒ Ù…Ù† Ù†Ø¸Ø§Ù… Ø§Ù„Ø¬ÙˆØ§Ø¦Ø².", "âœ… Your rewards ban has been lifted."))
     await _safe_send(bot, uid, text)
     if actor_id:
         await _safe_send(bot, actor_id, f"âœ… unbanned uid=<code>{uid}</code>")
@@ -210,7 +210,7 @@ async def notify_user_unban(bot, uid: int, *args, actor_id: Optional[int] = None
 async def notify_user_warns_reset(bot, uid: int, *, actor_id: Optional[int] = None) -> None:
     lang = _L(uid)
     text = t(lang, "rwdadm.user_notice.warns_reset",
-             _fb(lang, "ØªÙ… ØªØµÙÙŠØ± Ø§Ù„ØªØ­Ø°ÙŠØ±Ø§Øª Ø¹Ù„Ù‰ Ø­Ø³Ø§Ø¨Ùƒ.", "Your warnings have been reset."))
+             _fb(lang, "ØªÙ… ØªØµÙÙŠØ± Ø§Ù„ØªØØ°ÙŠØ±Ø§Øª Ø¹Ù„Ù‰ ØØ³Ø§Ø¨Ùƒ.", "Your warnings have been reset."))
     await _safe_send(bot, uid, text)
     if actor_id:
         await _safe_send(bot, actor_id, f"âœ… warns reset | uid=<code>{uid}</code>")
@@ -218,7 +218,7 @@ async def notify_user_warns_reset(bot, uid: int, *, actor_id: Optional[int] = No
 async def notify_user_reset_account(bot, uid: int, *, actor_id: Optional[int] = None) -> None:
     lang = _L(uid)
     text = t(lang, "rwdadm.user_notice.reset",
-             _fb(lang, "ØªÙ…Øª Ø¥Ø¹Ø§Ø¯Ø© Ø¶Ø¨Ø· Ø­Ø³Ø§Ø¨ Ø§Ù„Ø¬ÙˆØ§Ø¦Ø² Ø§Ù„Ø®Ø§Øµ Ø¨Ùƒ.", "Your rewards account has been reset."))
+             _fb(lang, "ØªÙ…Øª Ø¥Ø¹Ø§Ø¯Ø© Ø¶Ø¨Ø· ØØ³Ø§Ø¨ Ø§Ù„Ø¬ÙˆØ§Ø¦Ø² Ø§Ù„Ø®Ø§Øµ Ø¨Ùƒ.", "Your rewards account has been reset."))
     await _safe_send(bot, uid, text)
     if actor_id:
         await _safe_send(bot, actor_id, f"âœ… rewards reset | uid=<code>{uid}</code>")
@@ -240,19 +240,19 @@ async def notify_user_vip_submitted(
     ÙŠØ¯Ø¹Ù…:
       - notify_user_vip_submitted(bot, uid, oid, hours, cost, app_id=?, details=?)
       - notify_user_vip_submitted(bot, order_dict)
-    Ø³ÙŠÙÙƒØªØ´Ù Ù†ÙˆØ¹ Ø§Ù„Ù„Ø¹Ø¨Ø© ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‹Ø§ Ù…Ù† details Ø¹Ù†Ø¯ Ø§Ù„Ø­Ø§Ø¬Ø©.
+    Ø³ÙŠÙÙƒØªØ´Ù Ù†ÙˆØ¹ Ø§Ù„Ù„Ø¹Ø¨Ø© ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‹Ø§ Ù…Ù† details Ø¹Ù†Ø¯ Ø§Ù„ØØ§Ø¬Ø©.
     """
     if isinstance(order_or_uid, (dict,)):
         o = _from_order(order_or_uid)
         uid = o["uid"]
         oid = o["oid"]
         hours = o["hours"]
-        # Ù†Ø¹Ø·ÙŠ Ø£ÙˆÙ„ÙˆÙŠØ© Ù„Ù…Ø§ ÙŠØ£ØªÙŠÙ†Ø§ ØµØ±Ø§Ø­Ø© Ø«Ù… Ø§Ù„Ø°ÙŠ Ø§ÙƒØªØ´ÙÙ†Ø§Ù‡
+        # Ù†Ø¹Ø·ÙŠ Ø£ÙˆÙ„ÙˆÙŠØ© Ù„Ù…Ø§ ÙŠØ£ØªÙŠÙ†Ø§ ØµØ±Ø§ØØ© Ø«Ù… Ø§Ù„Ø°ÙŠ Ø§ÙƒØªØ´ÙÙ†Ø§Ù‡
         app_id = (app_id or o["app_id"] or "").lower()
         details = details or o["details"]
     else:
         uid = int(order_or_uid)
-        # Ù…Ø­Ø§ÙˆÙ„Ø© ÙƒØ´Ù Ù…Ù† details Ø§Ù„ÙˆØ§Ø±Ø¯Ø© (Ù„Ùˆ Ù…Ø±Ø±Øª Ù‡Ø°Ù‡ Ø§Ù„Ø¯Ø§Ù„Ø© ÙŠØ¯ÙˆÙŠÙ‹Ø§)
+        # Ù…ØØ§ÙˆÙ„Ø© ÙƒØ´Ù Ù…Ù† details Ø§Ù„ÙˆØ§Ø±Ø¯Ø© (Ù„Ùˆ Ù…Ø±Ø±Øª Ù‡Ø°Ù‡ Ø§Ù„Ø¯Ø§Ù„Ø© ÙŠØ¯ÙˆÙŠÙ‹Ø§)
         app_id = (app_id or _detect_app_from_text(details)).lower() if (app_id or details) else ""
 
     lang = _L(uid)
@@ -266,7 +266,7 @@ async def notify_user_vip_submitted(
         ),
     ).format(oid=oid, hours=_fmt_hours(int(hours or 0), lang))
 
-    # Ø³Ø·Ø± ØªÙˆØ¶ÙŠØ­ÙŠ Ø¨Ø§Ù„Ù„Ø¹Ø¨Ø© Ø¥Ù† Ø£Ù…ÙƒÙ†
+    # Ø³Ø·Ø± ØªÙˆØ¶ÙŠØÙŠ Ø¨Ø§Ù„Ù„Ø¹Ø¨Ø© Ø¥Ù† Ø£Ù…ÙƒÙ†
     if app_id in APP_SET:
         txt += ("\nØ§Ù„Ù„Ø¹Ø¨Ø©: " if lang.startswith("ar") else "\nGame: ") + _app_human(app_id, lang)
 
@@ -286,7 +286,7 @@ async def notify_admins_new_vip_order(
     ÙŠØ¯Ø¹Ù…:
       - notify_admins_new_vip_order(bot, order_dict)
       - notify_admins_new_vip_order(bot, oid, uid, hours, app_id=?, details=?, cost=?)
-    Ø³ÙŠØªÙ… ØªØµØ­ÙŠØ­ app_id ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‹Ø§ Ù…Ù† Ø§Ù„ØªÙØ§ØµÙŠÙ„ Ø¥Ù† ÙƒØ§Ù† ØºÙŠØ± ØµØ§Ù„Ø­.
+    Ø³ÙŠØªÙ… ØªØµØÙŠØ app_id ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‹Ø§ Ù…Ù† Ø§Ù„ØªÙØ§ØµÙŠÙ„ Ø¥Ù† ÙƒØ§Ù† ØºÙŠØ± ØµØ§Ù„Ø.
     """
     if not (NOTIFY_ADMINS and NOTIFY_VIP_ORDERS):
         return
@@ -302,7 +302,7 @@ async def notify_admins_new_vip_order(
         cost = o["cost"] if cost is None else cost
     else:
         oid = order_or_oid
-        # ØªØµØ­ÙŠØ­ app_id Ù…Ù† details Ø¥Ù† Ù„Ù… ØªÙƒÙ† ØµØ§Ù„Ø­Ø©
+        # ØªØµØÙŠØ app_id Ù…Ù† details Ø¥Ù† Ù„Ù… ØªÙƒÙ† ØµØ§Ù„ØØ©
         if app_id not in APP_SET:
             app_id = _detect_app_from_text(details or "") or ""
 

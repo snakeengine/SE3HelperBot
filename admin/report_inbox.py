@@ -17,7 +17,7 @@ from lang import t, get_user_lang
 router = Router(name="report_inbox")
 
 DATA_DIR       = Path("data"); DATA_DIR.mkdir(parents=True, exist_ok=True)
-THREADS_FILE   = DATA_DIR / "support_threads.json"    # Ù…ÙˆØ­Ù‘Ø¯ Ù…Ø¹ report.py
+THREADS_FILE   = DATA_DIR / "support_threads.json"    # Ù…ÙˆØÙ‘Ø¯ Ù…Ø¹ report.py
 BLOCKLIST_FILE = DATA_DIR / "report_blocklist.json"   # Ù†ÙØ³ Ø¨Ù„ÙˆÙƒ Ù„ÙŠØ³Øª Ø§Ù„ØªÙ‚Ø±ÙŠØ±
 SETTINGS_FILE  = DATA_DIR / "report_settings.json"    # Ù„Ù…Ø¹Ø±ÙØ© cooldown_days
 STATE_FILE     = DATA_DIR / "report_users.json"       # {"last": {uid: iso}}
@@ -132,7 +132,7 @@ def _kb_list(lang: str) -> InlineKeyboardMarkup:
             mark = "ðŸŸ¢" if status == "open" else "âšªï¸"
             kb.button(text=f"{mark} {name}", callback_data=f"rin:chat:{uid}")
     kb.adjust(1)
-    kb.button(text="ðŸ”„ " + (t(lang, "rin.refresh") or "ØªØ­Ø¯ÙŠØ«"), callback_data="rin:open")
+    kb.button(text="ðŸ”„ " + (t(lang, "rin.refresh") or "ØªØØ¯ÙŠØ«"), callback_data="rin:open")
     kb.button(text="â¬…ï¸ " + (t(lang, "rin.back") or "Ø±Ø¬ÙˆØ¹"), callback_data="ah:menu")
     kb.adjust(1)
     return kb.as_markup()
@@ -141,37 +141,37 @@ def _chat_text(lang: str, th: dict) -> str:
     uid = th.get("user_id")
     name = th.get("user_name") or f"#{uid}"
     status = th.get("status", "open")
-    st_txt = (t(lang, "rin.st_open") or "Ù…ÙØªÙˆØ­") if status == "open" else (t(lang, "rin.st_closed") or "Ù…ØºÙ„Ù‚")
+    st_txt = (t(lang, "rin.st_open") or "Ù…ÙØªÙˆØ") if status == "open" else (t(lang, "rin.st_closed") or "Ù…ØºÙ„Ù‚")
     last = th.get("last_text") or "-"
     upd = th.get("updated_at") or "-"
     return (
         f"ðŸ‘¤ <b>{name}</b> (<code>{uid}</code>)\n"
-        f"{t(lang, 'rin.status') or 'Ø§Ù„Ø­Ø§Ù„Ø©'}: <b>{st_txt}</b>\n"
+        f"{t(lang, 'rin.status') or 'Ø§Ù„ØØ§Ù„Ø©'}: <b>{st_txt}</b>\n"
         f"{t(lang, 'rin.last') or 'Ø¢Ø®Ø± Ø±Ø³Ø§Ù„Ø©'}: <i>{last}</i>\n"
-        f"{t(lang, 'rin.updated') or 'Ø¢Ø®Ø± ØªØ­Ø¯ÙŠØ«'}: <code>{upd}</code>"
+        f"{t(lang, 'rin.updated') or 'Ø¢Ø®Ø± ØªØØ¯ÙŠØ«'}: <code>{upd}</code>"
     )
 
 def _kb_chat(lang: str, th: dict) -> InlineKeyboardMarkup:
     uid = th.get("user_id")
     kb = InlineKeyboardBuilder()
 
-    # Ø±Ø¯Ù‘ / Ø¥ØºÙ„Ø§Ù‚ / Ø¥Ø¹Ø§Ø¯Ø© ÙØªØ­
+    # Ø±Ø¯Ù‘ / Ø¥ØºÙ„Ø§Ù‚ / Ø¥Ø¹Ø§Ø¯Ø© ÙØªØ
     kb.row(InlineKeyboardButton(text="ðŸ’¬ " + (t(lang, "rin.reply") or "Ø±Ø¯Ù‘"),
                                 callback_data=f"rin:reply:{uid}"))
     if th.get("status", "open") == "open":
-        kb.row(InlineKeyboardButton(text="ðŸ”’ " + (t(lang, "rin.close") or "Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø©"),
+        kb.row(InlineKeyboardButton(text="ðŸ”’ " + (t(lang, "rin.close") or "Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ù…ØØ§Ø¯Ø«Ø©"),
                                     callback_data=f"rin:close:{uid}"))
     else:
         kb.row(InlineKeyboardButton(text="â™»ï¸ " + (t(lang, "rin.reopen") or "إعادة فتح"),
                                     callback_data=f"rin:reopen:{uid}"))
 
-    # Ø£Ø²Ø±Ø§Ø± Ø§Ù„Ø­Ø¸Ø± Ø§Ù„Ù†ØµÙ‘ÙŠØ© Ø§Ù„ÙˆØ§Ø¶Ø­Ø©
+    # Ø£Ø²Ø±Ø§Ø± Ø§Ù„ØØ¸Ø± Ø§Ù„Ù†ØµÙ‘ÙŠØ© Ø§Ù„ÙˆØ§Ø¶ØØ©
     def ban_txt(h):
         if h < 24:
             return "ðŸš« " + (t(lang, "rpadm.ban_hour") or "حظر: {n} س").format(n=h)
         d = h // 24
         if str(lang).startswith("ar"):
-            return f"ðŸš« Ø­Ø¸Ø±: {d} " + ("ÙŠÙˆÙ…" if d == 1 else "Ø£ÙŠØ§Ù…")
+            return f"ðŸš« ØØ¸Ø±: {d} " + ("ÙŠÙˆÙ…" if d == 1 else "Ø£ÙŠØ§Ù…")
         return "ðŸš« " + (t(lang, "rpadm.ban_days") or "Ban: {n} d").format(n=d)
 
     kb.row(
@@ -183,13 +183,13 @@ def _kb_chat(lang: str, th: dict) -> InlineKeyboardMarkup:
         InlineKeyboardButton(text=ban_txt(24*30),    callback_data=f"rin:ban:{uid}:{24*30}"),
     )
     kb.row(
-        InlineKeyboardButton(text="ðŸš« " + (t(lang, "rpadm.ban_perm") or "Ø­Ø¸Ø± Ø¯Ø§Ø¦Ù… âˆž"),
+        InlineKeyboardButton(text="ðŸš« " + (t(lang, "rpadm.ban_perm") or "ØØ¸Ø± Ø¯Ø§Ø¦Ù… âˆž"),
                              callback_data=f"rin:ban:{uid}:perm"),
-        InlineKeyboardButton(text="âœ… " + (t(lang, "rpadm.unban") or "Ø±ÙØ¹ Ø§Ù„Ø­Ø¸Ø±"),
+        InlineKeyboardButton(text="âœ… " + (t(lang, "rpadm.unban") or "Ø±ÙØ¹ Ø§Ù„ØØ¸Ø±"),
                              callback_data=f"rin:unban:{uid}"),
     )
 
-    # Ø£Ø¯ÙˆØ§Øª Ù…Ø³Ø§Ø¹Ø¯Ø© (Ù„Ø§Ø­Ø¸ ØªÙˆØ­ÙŠØ¯ Ø§Ù„Ù€ callbacks Ø¥Ù„Ù‰ rin: )
+    # Ø£Ø¯ÙˆØ§Øª Ù…Ø³Ø§Ø¹Ø¯Ø© (Ù„Ø§ØØ¸ ØªÙˆØÙŠØ¯ Ø§Ù„Ù€ callbacks Ø¥Ù„Ù‰ rin: )
     kb.row(
         InlineKeyboardButton(text="â„¹ï¸ " + (t(lang, "rpadm.btn_info") or "Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…"),
                              callback_data=f"rin:info:{uid}"),
@@ -205,7 +205,7 @@ def _kb_chat(lang: str, th: dict) -> InlineKeyboardMarkup:
 class RinStates(StatesGroup):
     waiting_reply = State()
 
-# ===== ÙØªØ­ Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„ÙˆØ§Ø±Ø¯ =====
+# ===== ÙØªØ Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„ÙˆØ§Ø±Ø¯ =====
 @router.callback_query(F.data == "rin:open")
 async def rin_open(cb: CallbackQuery):
     lang = L(cb.from_user.id)
@@ -213,7 +213,7 @@ async def rin_open(cb: CallbackQuery):
         return await cb.answer(t(lang, "admins_only") or "Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø¯Ø§Ø© Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·.", show_alert=True)
     await _safe_edit(cb.message, _title(lang), _kb_list(lang)); await cb.answer()
 
-# ===== ÙØªØ­ Ù…Ø­Ø§Ø¯Ø«Ø© =====
+# ===== ÙØªØ Ù…ØØ§Ø¯Ø«Ø© =====
 @router.callback_query(F.data.startswith("rin:chat:"))
 async def rin_chat(cb: CallbackQuery):
     lang = L(cb.from_user.id)
@@ -221,7 +221,7 @@ async def rin_chat(cb: CallbackQuery):
         return await cb.answer(t(lang, "admins_only") or "Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø¯Ø§Ø© Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·.", show_alert=True)
     uid = int(cb.data.split(":")[-1])
     d = _load(); th = d["threads"].get(str(uid))
-    if not th: return await cb.answer(t(lang, "rin.thread_missing") or "Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø© ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯Ø©", show_alert=True)
+    if not th: return await cb.answer(t(lang, "rin.thread_missing") or "Ø§Ù„Ù…ØØ§Ø¯Ø«Ø© ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯Ø©", show_alert=True)
     await _safe_edit(cb.message, _chat_text(lang, th), _kb_chat(lang, th)); await cb.answer()
 
 # ===== Ø¨Ø¯Ø¡ Ø§Ù„Ø±Ø¯ =====
@@ -240,7 +240,7 @@ async def rin_reply_send(m: Message, state: FSMContext):
     if not is_admin(m.from_user.id):
         return await m.reply(t(lang, "admins_only") or "Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø¯Ø§Ø© Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·.")
     st = await state.get_data(); uid = st.get("reply_to")
-    if not uid: return await m.reply(t(lang, "rin.thread_missing") or "Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ø­Ø§Ø¯Ø«Ø© Ù…Ø­Ø¯Ø¯Ø©.")
+    if not uid: return await m.reply(t(lang, "rin.thread_missing") or "Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…ØØ§Ø¯Ø«Ø© Ù…ØØ¯Ø¯Ø©.")
     try:
         await m.copy_to(chat_id=uid)
         d = _load(); th = d["threads"].setdefault(str(uid), {"user_id": uid, "user_name": "", "status": "open"})
@@ -253,7 +253,7 @@ async def rin_reply_send(m: Message, state: FSMContext):
     finally:
         await state.clear()
 
-# ===== Ø¥ØºÙ„Ø§Ù‚ / Ø¥Ø¹Ø§Ø¯Ø© ÙØªØ­ =====
+# ===== Ø¥ØºÙ„Ø§Ù‚ / Ø¥Ø¹Ø§Ø¯Ø© ÙØªØ =====
 @router.callback_query(F.data.startswith("rin:close:"))
 async def rin_close(cb: CallbackQuery):
     lang = L(cb.from_user.id)
@@ -261,14 +261,14 @@ async def rin_close(cb: CallbackQuery):
         return await cb.answer(t(lang, "admins_only") or "Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø¯Ø§Ø© Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·.", show_alert=True)
     uid = int(cb.data.split(":")[-1])
     d = _load(); th = d["threads"].get(str(uid))
-    if not th: return await cb.answer(t(lang, "rin.thread_missing") or "Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø© ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯Ø©", show_alert=True)
+    if not th: return await cb.answer(t(lang, "rin.thread_missing") or "Ø§Ù„Ù…ØØ§Ø¯Ø«Ø© ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯Ø©", show_alert=True)
     th["status"] = "closed"; th["updated_at"] = _now_iso(); _save(d)
 
     # Ø¥Ø´Ø¹Ø§Ø± Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…
     u_lang = get_user_lang(uid) or "ar"
     try:
         await cb.bot.send_message(uid, t(u_lang, "notify.chat_closed") or
-                                  "ðŸ”’ ØªÙ… Ø¥ØºÙ„Ø§Ù‚ Ù…Ø­Ø§Ø¯Ø«Ø© Ø§Ù„Ø¯Ø¹Ù… Ø§Ù„Ø­Ø§Ù„ÙŠØ©. ÙŠÙ…ÙƒÙ†Ùƒ ÙØªØ­ Ø¨Ù„Ø§Øº Ø¬Ø¯ÙŠØ¯ Ø¹Ø¨Ø± /report Ø¹Ù†Ø¯ Ø§Ù„Ø­Ø§Ø¬Ø©.")
+                                  "ðŸ”’ ØªÙ… Ø¥ØºÙ„Ø§Ù‚ Ù…ØØ§Ø¯Ø«Ø© Ø§Ù„Ø¯Ø¹Ù… Ø§Ù„ØØ§Ù„ÙŠØ©. ÙŠÙ…ÙƒÙ†Ùƒ ÙØªØ Ø¨Ù„Ø§Øº Ø¬Ø¯ÙŠØ¯ Ø¹Ø¨Ø± /report Ø¹Ù†Ø¯ Ø§Ù„ØØ§Ø¬Ø©.")
     except Exception:
         pass
 
@@ -281,19 +281,19 @@ async def rin_reopen(cb: CallbackQuery):
         return await cb.answer(t(lang, "admins_only") or "Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø¯Ø§Ø© Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·.", show_alert=True)
     uid = int(cb.data.split(":")[-1])
     d = _load(); th = d["threads"].get(str(uid))
-    if not th: return await cb.answer(t(lang, "rin.thread_missing") or "Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø© ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯Ø©", show_alert=True)
+    if not th: return await cb.answer(t(lang, "rin.thread_missing") or "Ø§Ù„Ù…ØØ§Ø¯Ø«Ø© ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯Ø©", show_alert=True)
     th["status"] = "open"; th["updated_at"] = _now_iso(); _save(d)
 
     u_lang = get_user_lang(uid) or "ar"
     try:
         await cb.bot.send_message(uid, t(u_lang, "notify.chat_reopened") or
-                                  "â™»ï¸ ØªÙ… Ø¥Ø¹Ø§Ø¯Ø© ÙØªØ­ Ù…Ø­Ø§Ø¯Ø«Ø© Ø§Ù„Ø¯Ø¹Ù…. ØªÙØ¶Ù„ Ø¨Ø¥Ø±Ø³Ø§Ù„ Ø±Ø³Ø§Ù„ØªÙƒ.")
+                                  "â™»ï¸ ØªÙ… Ø¥Ø¹Ø§Ø¯Ø© ÙØªØ Ù…ØØ§Ø¯Ø«Ø© Ø§Ù„Ø¯Ø¹Ù…. ØªÙØ¶Ù„ Ø¨Ø¥Ø±Ø³Ø§Ù„ Ø±Ø³Ø§Ù„ØªÙƒ.")
     except Exception:
         pass
 
     await _safe_edit(cb.message, _chat_text(lang, th), _kb_chat(lang, th)); await cb.answer("âœ…")
 
-# ===== Ø­Ø¸Ø±/Ø±ÙØ¹ Ø­Ø¸Ø± Ù…Ù† Ø¯Ø§Ø®Ù„ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø© =====
+# ===== ØØ¸Ø±/Ø±ÙØ¹ ØØ¸Ø± Ù…Ù† Ø¯Ø§Ø®Ù„ Ø§Ù„Ù…ØØ§Ø¯Ø«Ø© =====
 @router.callback_query(F.data.startswith("rin:ban:"))
 async def rin_ban(cb: CallbackQuery):
     lang = L(cb.from_user.id)
@@ -305,11 +305,11 @@ async def rin_ban(cb: CallbackQuery):
     u_lang = get_user_lang(uid) or "ar"
 
     if dur_s == "perm":
-        _ban(uid, None); msg_a = f"ðŸš« ØªÙ… Ø­Ø¸Ø± {uid} Ø¯Ø§Ø¦Ù…Ù‹Ø§."
+        _ban(uid, None); msg_a = f"ðŸš« ØªÙ… ØØ¸Ø± {uid} Ø¯Ø§Ø¦Ù…Ù‹Ø§."
         msg_u = t(u_lang, "notify.banned_perm") or "â›” ØªÙ… ØªÙ‚ÙŠÙŠØ¯ Ù…ÙŠØ²Ø© Ø§Ù„Ø¨Ù„Ø§ØºØ§Øª Ù„Ø¯ÙŠÙƒ Ø¨Ø´ÙƒÙ„ Ø¯Ø§Ø¦Ù…. Ø¥Ù† ÙƒØ§Ù† Ø°Ù„Ùƒ Ø®Ø·Ø£Ù‹ØŒ ØªÙˆØ§ØµÙ„ Ù…Ø¹ Ø§Ù„Ø¯Ø¹Ù…."
     else:
         hours = max(1, int(dur_s)); _ban(uid, hours)
-        msg_a = f"ðŸš« ØªÙ… Ø­Ø¸Ø± {uid} Ù„Ù…Ø¯Ø© {hours} Ø³Ø§Ø¹Ø©."
+        msg_a = f"ðŸš« ØªÙ… ØØ¸Ø± {uid} Ù„Ù…Ø¯Ø© {hours} Ø³Ø§Ø¹Ø©."
         msg_u = (t(u_lang, "notify.banned_temp") or "â›” ØªÙ… ØªÙ‚ÙŠÙŠØ¯ Ù…ÙŠØ²Ø© Ø§Ù„Ø¨Ù„Ø§ØºØ§Øª Ù„Ø¯ÙŠÙƒ Ù„Ù…Ø¯Ø© {time}.") \
                  .format(time=_human_hours_label(hours, u_lang))
 
@@ -330,9 +330,9 @@ async def rin_unban(cb: CallbackQuery):
                                   "âœ… ØªÙ… Ø±ÙØ¹ Ø§Ù„ØªÙ‚ÙŠÙŠØ¯ Ø¹Ù† Ù…ÙŠØ²Ø© Ø§Ù„Ø¨Ù„Ø§ØºØ§Øª Ù„Ø¯ÙŠÙƒ. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ø³ØªØ®Ø¯Ø§Ù… /report Ø§Ù„Ø¢Ù†.")
     except Exception:
         pass
-    await cb.answer(f"âœ… ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø§Ù„Ø­Ø¸Ø± Ø¹Ù† {uid}.", show_alert=True)
+    await cb.answer(f"âœ… ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø§Ù„ØØ¸Ø± Ø¹Ù† {uid}.", show_alert=True)
 
-# ===== Ù…Ø¹Ù„ÙˆÙ…Ø§Øª + Ù…Ø³Ø­ Ø§Ù„ØªØ¨Ø±ÙŠØ¯ =====
+# ===== Ù…Ø¹Ù„ÙˆÙ…Ø§Øª + Ù…Ø³Ø Ø§Ù„ØªØ¨Ø±ÙŠØ¯ =====
 @router.callback_query(F.data.startswith("rin:info:"))
 async def rin_info(cb: CallbackQuery):
     lang = L(cb.from_user.id)
@@ -392,7 +392,7 @@ async def rin_clearcd(cb: CallbackQuery):
     if not is_admin(cb.from_user.id):
         return await cb.answer(t(lang, "admins_only") or "Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø¯Ø§Ø© Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·.", show_alert=True)
     uid = int(cb.data.split(":")[-1]); _clear_cd(uid)
-    await cb.answer("ðŸ§½ ØªÙ… Ù…Ø³Ø­ Ø§Ù„ØªØ¨Ø±ÙŠØ¯ Ù„Ù‡Ø°Ø§ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù….", show_alert=True)
+    await cb.answer("ðŸ§½ ØªÙ… Ù…Ø³Ø Ø§Ù„ØªØ¨Ø±ÙŠØ¯ Ù„Ù‡Ø°Ø§ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù….", show_alert=True)
 
 @router.callback_query(F.data == "rin:nop")
 async def rin_nop(cb: CallbackQuery):

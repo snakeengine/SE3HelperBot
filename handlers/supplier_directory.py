@@ -19,7 +19,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.enums import ParseMode
 
 from lang import t, get_user_lang
-from handlers.live_chat import LiveChat  # Ù„Ù…Ù†Ø¹ Ø§Ù„ØªØ¶Ø§Ø±Ø¨ Ù…Ø¹ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„Ø­ÙŠØ©
+from handlers.live_chat import LiveChat  # Ù„Ù…Ù†Ø¹ Ø§Ù„ØªØ¶Ø§Ø±Ø¨ Ù…Ø¹ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„ØÙŠØ©
 
 ALLOW_SELF_RATE = (os.getenv("ALLOW_SELF_RATE", "0") == "1")
 
@@ -258,7 +258,7 @@ def _rebuild_public_directory():
     with open(PUB_FILE, "w", encoding="utf-8") as f:
         json.dump(items, f, ensure_ascii=False, indent=2)
 
-# ================= Ø­Ø§Ù„Ø§Øª Ø§Ù„ØªØ¹Ø¯ÙŠÙ„ =================
+# ================= ØØ§Ù„Ø§Øª Ø§Ù„ØªØ¹Ø¯ÙŠÙ„ =================
 class PubStates(StatesGroup):
     name = State()
     country = State()
@@ -318,18 +318,18 @@ def _card(lang: str, d: dict) -> str:
     lines.append("")
 
     st_map = {
-        "draft": _L(lang,"spub_status_draft","Status: draft (not submitted)","Ø§Ù„Ø­Ø§Ù„Ø©: Ù…Ø³ÙˆØ¯Ø© (ØºÙŠØ± Ù…ÙØ±Ø³Ù„Ø©)"),
-        "pending": _L(lang,"spub_status_pending","Status: pending review","Ø§Ù„Ø­Ø§Ù„Ø©: Ù‚ÙŠØ¯ Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©"),
-        "approved": _L(lang,"spub_status_approved","Status: published âœ…","Ø§Ù„Ø­Ø§Ù„Ø©: Ù…Ù†Ø´ÙˆØ± âœ…"),
-        "hidden": _L(lang,"spub_status_hidden","Status: hidden","Ø§Ù„Ø­Ø§Ù„Ø©: Ù…Ø®ÙÙŠ"),
+        "draft": _L(lang,"spub_status_draft","Status: draft (not submitted)","Ø§Ù„ØØ§Ù„Ø©: Ù…Ø³ÙˆØ¯Ø© (ØºÙŠØ± Ù…ÙØ±Ø³Ù„Ø©)"),
+        "pending": _L(lang,"spub_status_pending","Status: pending review","Ø§Ù„ØØ§Ù„Ø©: Ù‚ÙŠØ¯ Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©"),
+        "approved": _L(lang,"spub_status_approved","Status: published âœ…","Ø§Ù„ØØ§Ù„Ø©: Ù…Ù†Ø´ÙˆØ± âœ…"),
+        "hidden": _L(lang,"spub_status_hidden","Status: hidden","Ø§Ù„ØØ§Ù„Ø©: Ù…Ø®ÙÙŠ"),
     }
     lines.append(st_map.get(d.get("status","draft"), ""))
 
     if _is_banned(d.get("user_id")):
-        lines.append("ðŸš« " + _L(lang, "spub_status_banned", "User is banned from publishing.", "Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ù…Ø­Ø¸ÙˆØ± Ù…Ù† Ø§Ù„Ù†Ø´Ø±."))
+        lines.append("ðŸš« " + _L(lang, "spub_status_banned", "User is banned from publishing.", "Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ù…ØØ¸ÙˆØ± Ù…Ù† Ø§Ù„Ù†Ø´Ø±."))
     return "\n".join(lines)
 
-# Ø£Ù…Ø± Ù…Ø¨Ø§Ø´Ø± Ù„ÙØªØ­ Ù„ÙˆØ­Ø© Ø§Ù„Ù…ÙˆØ±Ø¯
+# Ø£Ù…Ø± Ù…Ø¨Ø§Ø´Ø± Ù„ÙØªØ Ù„ÙˆØØ© Ø§Ù„Ù…ÙˆØ±Ø¯
 @router.message(Command("supplier_public"))
 async def supplier_public_cmd(msg: Message, state: FSMContext):
     lang = get_user_lang(msg.from_user.id) or "en"
@@ -347,7 +347,7 @@ async def supplier_public_cmd(msg: Message, state: FSMContext):
         disable_web_page_preview=True
     )
 
-# ÙØªØ­ Ù„ÙˆØ­Ø© Ø§Ù„Ù…ÙˆØ±Ø¯ Ù…Ù† Ø²Ø± Ø§Ù„ÙˆØ§Ø¬Ù‡Ø©
+# ÙØªØ Ù„ÙˆØØ© Ø§Ù„Ù…ÙˆØ±Ø¯ Ù…Ù† Ø²Ø± Ø§Ù„ÙˆØ§Ø¬Ù‡Ø©
 @router.callback_query(F.data == "supplier_public")
 async def supplier_public_cb(cb: CallbackQuery, state: FSMContext):
     lang = get_user_lang(cb.from_user.id) or "en"
@@ -374,7 +374,7 @@ async def supplier_public_cb(cb: CallbackQuery, state: FSMContext):
         )
     await cb.answer()
 
-# ØªØ­Ø±ÙŠØ± Ø§Ù„Ø­Ù‚ÙˆÙ„
+# ØªØØ±ÙŠØ± Ø§Ù„ØÙ‚ÙˆÙ„
 @router.callback_query(F.data.regexp(r"^spub:edit:(name|country|languages|contact|whatsapp|channel|bio)$"))
 async def spub_edit(cb: CallbackQuery, state: FSMContext):
     lang = get_user_lang(cb.from_user.id) or "en"
@@ -404,10 +404,10 @@ async def spub_save_field(msg: Message, state: FSMContext):
     value = (msg.text or "").strip()
 
     d = _load_pub(msg.from_user.id)
-    # Ø­Ù…Ø§ÙŠØ© Ø¨Ø³ÙŠØ·Ø© Ù„Ùˆ ØµØ§Ø± field = None Ù„Ø³Ø¨Ø¨ Ù…Ø§
+    # ØÙ…Ø§ÙŠØ© Ø¨Ø³ÙŠØ·Ø© Ù„Ùˆ ØµØ§Ø± field = None Ù„Ø³Ø¨Ø¨ Ù…Ø§
     if not field:
         await state.clear()
-        return await msg.answer(_L(lang, "spub_err_try_again", "Something went wrong. Try again.", "Ø­Ø¯Ø« Ø®Ø·Ø£. Ø­Ø§ÙˆÙ„ Ù…Ø±Ø© Ø£Ø®Ø±Ù‰."))
+        return await msg.answer(_L(lang, "spub_err_try_again", "Something went wrong. Try again.", "ØØ¯Ø« Ø®Ø·Ø£. ØØ§ÙˆÙ„ Ù…Ø±Ø© Ø£Ø®Ø±Ù‰."))
 
     d[field] = value
     _save_pub(msg.from_user.id, d)
@@ -416,7 +416,7 @@ async def spub_save_field(msg: Message, state: FSMContext):
         _rebuild_public_directory()
 
     await state.clear()
-    await msg.answer(_L(lang, "spub_saved", "Saved âœ…", "ØªÙ… Ø§Ù„Ø­ÙØ¸ âœ…"))
+    await msg.answer(_L(lang, "spub_saved", "Saved âœ…", "ØªÙ… Ø§Ù„ØÙØ¸ âœ…"))
     await msg.answer(
         _card(lang, d),
         reply_markup=_kb_supplier(lang, d.get("status","draft"), d.get("visible", False)),
@@ -430,7 +430,7 @@ async def spub_submit(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
 
     if _is_banned(cb.from_user.id):
-        return await cb.answer(_L(lang, "spub_banned", "You are banned from publishing.", "Ø£Ù†Øª Ù…Ø­Ø¸ÙˆØ± Ù…Ù† Ø§Ù„Ù†Ø´Ø±."), show_alert=True)
+        return await cb.answer(_L(lang, "spub_banned", "You are banned from publishing.", "Ø£Ù†Øª Ù…ØØ¸ÙˆØ± Ù…Ù† Ø§Ù„Ù†Ø´Ø±."), show_alert=True)
 
     d = _load_pub(cb.from_user.id)
     required_ok = all([(d.get("name") or "").strip(), (d.get("country") or "").strip(), (d.get("contact") or "").strip()])
@@ -453,9 +453,9 @@ async def spub_submit(cb: CallbackQuery):
         InlineKeyboardButton(text=_L(lang,"spub_adm_approve","Approve & publish âœ…","Ø§Ø¹ØªÙ…Ø§Ø¯ ÙˆÙ†Ø´Ø± âœ…"), callback_data=f"spubadm:approve:{cb.from_user.id}"),
         InlineKeyboardButton(text=_L(lang,"spub_adm_hide","Hide â›”","Ø¥Ø®ÙØ§Ø¡ â›”"), callback_data=f"spubadm:hide:{cb.from_user.id}"),
     ],[
-        InlineKeyboardButton(text=_L(lang,"spub_adm_delete","Delete ðŸ—‘ï¸","Ø­Ø°Ù ðŸ—‘ï¸"), callback_data=f"spubadm:delete:{cb.from_user.id}"),
-        InlineKeyboardButton(text=_L(lang,"spub_adm_ban","Ban ðŸš«","Ø­Ø¸Ø± ðŸš«"), callback_data=f"spubadm:ban:{cb.from_user.id}"),
-        InlineKeyboardButton(text=_L(lang,"spub_adm_unban","Unban âœ…","Ø¥Ù„ØºØ§Ø¡ Ø§Ù„Ø­Ø¸Ø± âœ…"), callback_data=f"spubadm:unban:{cb.from_user.id}"),
+        InlineKeyboardButton(text=_L(lang,"spub_adm_delete","Delete ðŸ—‘ï¸","ØØ°Ù ðŸ—‘ï¸"), callback_data=f"spubadm:delete:{cb.from_user.id}"),
+        InlineKeyboardButton(text=_L(lang,"spub_adm_ban","Ban ðŸš«","ØØ¸Ø± ðŸš«"), callback_data=f"spubadm:ban:{cb.from_user.id}"),
+        InlineKeyboardButton(text=_L(lang,"spub_adm_unban","Unban âœ…","Ø¥Ù„ØºØ§Ø¡ Ø§Ù„ØØ¸Ø± âœ…"), callback_data=f"spubadm:unban:{cb.from_user.id}"),
     ],[
         InlineKeyboardButton(text=_L(lang,"spub_adm_demote","Demote supplier â¬‡ï¸","Ø¥Ù„ØºØ§Ø¡ Ù…ÙˆØ±Ø¯ â¬‡ï¸"), callback_data=f"spubadm:demote:{cb.from_user.id}"),
     ]])
@@ -508,7 +508,7 @@ def _btn_text_with_country(it: dict, lang: str) -> str:
     rating = it.get("rating") or {}
     avg = float(rating.get("avg") or 0.0)
     cnt = int(rating.get("count") or 0)
-    star = f" â­{avg:.1f}" if cnt > 0 else " â­â€”"
+    star = f" â{avg:.1f}" if cnt > 0 else " ââ€”"
     return (f"â€¢ {name}{star}  â€”  ðŸŒ {country}" if country else f"â€¢ {name}{star}")
 
 def _kb_public_list(lang: str, page: int, total_pages: int, items: list[dict]) -> InlineKeyboardMarkup:
@@ -553,7 +553,7 @@ def _profile_text(lang: str, it: dict, viewer_id: Optional[int] = None) -> str:
         by = (_load_ratings(int(it.get("user_id"))).get("by") or {})
         my = by.get(str(viewer_id))
         if my:
-            lines.append(_L(lang, "rating.yours", "Your rating:", "ØªÙ‚ÙŠÙŠÙ…Ùƒ:") + f" {my.get('stars')} â­")
+            lines.append(_L(lang, "rating.yours", "Your rating:", "ØªÙ‚ÙŠÙŠÙ…Ùƒ:") + f" {my.get('stars')} â")
 
     lines.append("")
     lines.append(_L(lang, "td_profile_hint",
@@ -568,15 +568,15 @@ def _kb_profile(lang: str, it: dict, page: int, viewer_id: int) -> InlineKeyboar
     uid = int(it.get("user_id", 0))
     if viewer_id != uid:
         rows.append([
-            InlineKeyboardButton(text="â­1", callback_data=f"td:rate:{uid}:1:{page}"),
-            InlineKeyboardButton(text="â­2", callback_data=f"td:rate:{uid}:2:{page}"),
-            InlineKeyboardButton(text="â­3", callback_data=f"td:rate:{uid}:3:{page}"),
-            InlineKeyboardButton(text="â­4", callback_data=f"td:rate:{uid}:4:{page}"),
-            InlineKeyboardButton(text="â­5", callback_data=f"td:rate:{uid}:5:{page}"),
+            InlineKeyboardButton(text="â1", callback_data=f"td:rate:{uid}:1:{page}"),
+            InlineKeyboardButton(text="â2", callback_data=f"td:rate:{uid}:2:{page}"),
+            InlineKeyboardButton(text="â3", callback_data=f"td:rate:{uid}:3:{page}"),
+            InlineKeyboardButton(text="â4", callback_data=f"td:rate:{uid}:4:{page}"),
+            InlineKeyboardButton(text="â5", callback_data=f"td:rate:{uid}:5:{page}"),
         ])
         by = (_load_ratings(uid).get("by") or {})
         if str(viewer_id) in by:
-            rows.append([InlineKeyboardButton(text=_L(lang, "rating.remove", "Remove my rating", "Ø­Ø°Ù ØªÙ‚ÙŠÙŠÙ…ÙŠ"),
+            rows.append([InlineKeyboardButton(text=_L(lang, "rating.remove", "Remove my rating", "ØØ°Ù ØªÙ‚ÙŠÙŠÙ…ÙŠ"),
                                               callback_data=f"td:rate_del:{uid}:{page}")])
 
     # Ø£Ø²Ø±Ø§Ø± Ø§Ù„ØªÙˆØ§ØµÙ„
@@ -614,7 +614,7 @@ async def _render_public_list(target, lang: str, page: int):
 
     header = f"ðŸ“‡ <b>{_L(lang,'td_title','Trusted suppliers','Ø§Ù„Ù…ÙˆØ±Ø¯ÙˆÙ† Ø§Ù„Ù…ÙˆØ«ÙˆÙ‚ÙˆÙ†')}</b>\n"
     if not items:
-        header += "\n" + _L(lang,"td_empty","No suppliers published yet.","Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ù…ÙˆØ±Ø¯ÙˆÙ† Ù…Ù†Ø´ÙˆØ±ÙˆÙ† Ø­Ø§Ù„ÙŠØ§Ù‹.")
+        header += "\n" + _L(lang,"td_empty","No suppliers published yet.","Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ù…ÙˆØ±Ø¯ÙˆÙ† Ù…Ù†Ø´ÙˆØ±ÙˆÙ† ØØ§Ù„ÙŠØ§Ù‹.")
         text = header
     else:
         header += _L(lang,"td_pick_supplier","Choose a supplier from the buttons below to view their profile.","Ø§Ø®ØªØ± Ù…ÙˆØ±Ù‘Ø¯Ù‹Ø§ Ù…Ù† Ø§Ù„Ø£Ø²Ø±Ø§Ø± Ø¨Ø§Ù„Ø£Ø³ÙÙ„ Ù„Ø¹Ø±Ø¶ Ù…Ù„ÙÙ‡.")
@@ -630,9 +630,9 @@ async def _render_public_list(target, lang: str, page: int):
 @router.callback_query(F.data == "td:home")
 async def td_home_cb(cb: CallbackQuery):
     """
-    Ø±Ø¬ÙˆØ¹ Ù„Ù„Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ© Ù…Ø¹ Ø§Ø­ØªØ±Ø§Ù… Ù„ØºØ© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… + Fallback Ø¢Ù…Ù†.
+    Ø±Ø¬ÙˆØ¹ Ù„Ù„Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ© Ù…Ø¹ Ø§ØØªØ±Ø§Ù… Ù„ØºØ© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… + Fallback Ø¢Ù…Ù†.
     """
-    # Ø§Ø­ØµÙ„ Ù„ØºØ© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…
+    # Ø§ØØµÙ„ Ù„ØºØ© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…
     try:
         from lang import get_user_lang as _get_user_lang, t as _t
     except Exception:
@@ -645,13 +645,13 @@ async def td_home_cb(cb: CallbackQuery):
     def L(ar: str, en: str) -> str:
         return ar if is_ar else en
 
-    # Ø­Ø§ÙˆÙ„ Ø­Ø°Ù Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ø­Ø§Ù„ÙŠØ© (Ù„Ùˆ Ù‚Ø§Ø¨Ù„Ø© Ù„Ù„Ø­Ø°Ù)
+    # ØØ§ÙˆÙ„ ØØ°Ù Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ø§Ù„ØØ§Ù„ÙŠØ© (Ù„Ùˆ Ù‚Ø§Ø¨Ù„Ø© Ù„Ù„ØØ°Ù)
     try:
         await cb.message.delete()
     except Exception:
         pass
 
-    # Ø¬Ø±Ù‘Ø¨ Ù…Ø±Ø´Ù‘Ø­Ø§Øª/Ù‡Ø§Ù†Ø¯Ù„Ø±Ø² Ø¨ÙŠØªÙƒ Ø§Ù„Ù…Ø®ØªÙ„ÙØ© Ù„Ø§Ø³ØªØ¯Ø¹Ø§Ø¡ Ø§Ù„ÙˆØ§Ø¬Ù‡Ø©
+    # Ø¬Ø±Ù‘Ø¨ Ù…Ø±Ø´Ù‘ØØ§Øª/Ù‡Ø§Ù†Ø¯Ù„Ø±Ø² Ø¨ÙŠØªÙƒ Ø§Ù„Ù…Ø®ØªÙ„ÙØ© Ù„Ø§Ø³ØªØ¯Ø¹Ø§Ø¡ Ø§Ù„ÙˆØ§Ø¬Ù‡Ø©
     from importlib import import_module
     candidates = [
         ("handlers.start", "cmd_start"),
@@ -672,7 +672,7 @@ async def td_home_cb(cb: CallbackQuery):
             if not callable(fn):
                 continue
 
-            # Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø© 1: Ø§Ù„Ø§Ø³ØªØ¯Ø¹Ø§Ø¡ Ø§Ù„ØªÙ‚Ù„ÙŠØ¯ÙŠ
+            # Ø§Ù„Ù…ØØ§ÙˆÙ„Ø© 1: Ø§Ù„Ø§Ø³ØªØ¯Ø¹Ø§Ø¡ Ø§Ù„ØªÙ‚Ù„ÙŠØ¯ÙŠ
             try:
                 await fn(cb.message)
                 await cb.answer(L("ØªÙ… âœ”ï¸", "Done âœ”ï¸"))
@@ -680,7 +680,7 @@ async def td_home_cb(cb: CallbackQuery):
             except TypeError:
                 pass
 
-            # Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø© 2: Ø¨Ø¹Ø¶ Ø§Ù„Ù…Ø´Ø§Ø±ÙŠØ¹ ØªÙ‚Ø¨Ù„ lang Ø£Ùˆ locale
+            # Ø§Ù„Ù…ØØ§ÙˆÙ„Ø© 2: Ø¨Ø¹Ø¶ Ø§Ù„Ù…Ø´Ø§Ø±ÙŠØ¹ ØªÙ‚Ø¨Ù„ lang Ø£Ùˆ locale
             try:
                 await fn(cb.message, lang=lang)
                 await cb.answer(L("ØªÙ… âœ”ï¸", "Done âœ”ï¸"))
@@ -707,7 +707,7 @@ async def td_home_cb(cb: CallbackQuery):
 
     await cb.answer(L("ØªÙ… âœ”ï¸", "Done âœ”ï¸"))
 
-# Ø²Ø± Ø§Ù„ÙˆØ§Ø¬Ù‡Ø© Ù„ÙØªØ­ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø¹Ø§Ù…Ø©
+# Ø²Ø± Ø§Ù„ÙˆØ§Ø¬Ù‡Ø© Ù„ÙØªØ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø¹Ø§Ù…Ø©
 @router.callback_query(F.data == "trusted_suppliers")
 async def open_trusted_suppliers(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
@@ -749,7 +749,7 @@ async def td_view_cb(cb: CallbackQuery):
         await cb.message.answer(text, reply_markup=kb, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
     await cb.answer()
 
-# ===== ØªÙ‚ÙŠÙŠÙ…: Ø¥Ø¶Ø§ÙØ©/Ø­Ø°Ù =====
+# ===== ØªÙ‚ÙŠÙŠÙ…: Ø¥Ø¶Ø§ÙØ©/ØØ°Ù =====
 @router.callback_query(F.data.regexp(r"^td:rate:\d+:(1|2|3|4|5)(:\d+)?$"))
 async def td_rate_set(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
@@ -774,7 +774,7 @@ async def td_rate_set(cb: CallbackQuery):
         await td_view_cb(CallbackQuery.model_construct(data=f"td:view:{uid}:{page}", from_user=cb.from_user, message=cb.message))
     except Exception:
         pass
-    await cb.answer(_L(lang, "rating.saved", "Rating saved âœ…", "ØªÙ… Ø­ÙØ¸ Ø§Ù„ØªÙ‚ÙŠÙŠÙ… âœ…"))
+    await cb.answer(_L(lang, "rating.saved", "Rating saved âœ…", "ØªÙ… ØÙØ¸ Ø§Ù„ØªÙ‚ÙŠÙŠÙ… âœ…"))
 
 @router.callback_query(F.data.regexp(r"^td:rate_del:\d+(:\d+)?$"))
 async def td_rate_del(cb: CallbackQuery):
@@ -793,7 +793,7 @@ async def td_rate_del(cb: CallbackQuery):
             await td_view_cb(CallbackQuery.model_construct(data=f"td:view:{uid}:{page}", from_user=cb.from_user, message=cb.message))
         except Exception:
             pass
-        return await cb.answer(_L(lang, "rating.removed", "Your rating was removed.", "ØªÙ… Ø­Ø°Ù ØªÙ‚ÙŠÙŠÙ…Ùƒ."))
+        return await cb.answer(_L(lang, "rating.removed", "Your rating was removed.", "ØªÙ… ØØ°Ù ØªÙ‚ÙŠÙŠÙ…Ùƒ."))
     await cb.answer("OK")
 
 # ================= Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø£Ø¯Ù…Ù† =================
@@ -892,9 +892,9 @@ async def sd_view_cb(cb: CallbackQuery):
         InlineKeyboardButton(text=_L(lang,"spub_adm_approve","Approve & publish âœ…","Ø§Ø¹ØªÙ…Ø§Ø¯ ÙˆÙ†Ø´Ø± âœ…"), callback_data=f"spubadm:approve:{uid}"),
         InlineKeyboardButton(text=_L(lang,"spub_adm_hide","Hide â›”","Ø¥Ø®ÙØ§Ø¡ â›”"), callback_data=f"spubadm:hide:{uid}"),
     ],[
-        InlineKeyboardButton(text=_L(lang,"spub_adm_delete","Delete ðŸ—‘ï¸","Ø­Ø°Ù ðŸ—‘ï¸"), callback_data=f"spubadm:delete:{uid}"),
-        InlineKeyboardButton(text=_L(lang,"spub_adm_ban","Ban ðŸš«","Ø­Ø¸Ø± ðŸš«"), callback_data=f"spubadm:ban:{uid}"),
-        InlineKeyboardButton(text=_L(lang,"spub_adm_unban","Unban âœ…","Ø¥Ù„ØºØ§Ø¡ Ø§Ù„Ø­Ø¸Ø± âœ…"), callback_data=f"spubadm:unban:{uid}"),
+        InlineKeyboardButton(text=_L(lang,"spub_adm_delete","Delete ðŸ—‘ï¸","ØØ°Ù ðŸ—‘ï¸"), callback_data=f"spubadm:delete:{uid}"),
+        InlineKeyboardButton(text=_L(lang,"spub_adm_ban","Ban ðŸš«","ØØ¸Ø± ðŸš«"), callback_data=f"spubadm:ban:{uid}"),
+        InlineKeyboardButton(text=_L(lang,"spub_adm_unban","Unban âœ…","Ø¥Ù„ØºØ§Ø¡ Ø§Ù„ØØ¸Ø± âœ…"), callback_data=f"spubadm:unban:{uid}"),
     ],[
         InlineKeyboardButton(text=_L(lang,"spub_adm_demote","Demote supplier â¬‡ï¸","Ø¥Ù„ØºØ§Ø¡ Ù…ÙˆØ±Ø¯ â¬‡ï¸"), callback_data=f"spubadm:demote:{uid}"),
     ],[
@@ -924,9 +924,9 @@ async def spub_admin_actions(cb: CallbackQuery):
         except: pass
     elif action == "delete":
         _delete_pub(uid); changed = True
-        try: await cb.message.bot.send_message(uid, _L(lang,"sd_user_deleted","Your public card was removed.","ØªÙ… Ø­Ø°Ù Ø¨Ø·Ø§Ù‚ØªÙƒ Ø§Ù„Ø¹Ø§Ù…Ø©."))
+        try: await cb.message.bot.send_message(uid, _L(lang,"sd_user_deleted","Your public card was removed.","ØªÙ… ØØ°Ù Ø¨Ø·Ø§Ù‚ØªÙƒ Ø§Ù„Ø¹Ø§Ù…Ø©."))
         except: pass
-        await cb.answer(_L(lang,"sd_admin_deleted_ok","Deleted.","ØªÙ… Ø§Ù„Ø­Ø°Ù."))
+        await cb.answer(_L(lang,"sd_admin_deleted_ok","Deleted.","ØªÙ… Ø§Ù„ØØ°Ù."))
         _rebuild_public_directory()
         try: await cb.message.edit_reply_markup(reply_markup=None)
         except: pass
@@ -936,13 +936,13 @@ async def spub_admin_actions(cb: CallbackQuery):
         if _set_supplier:
             try: _set_supplier(uid, False)
             except Exception: pass
-        try: await cb.message.bot.send_message(uid, _L(lang,"sd_user_banned_notice","You were banned from publishing.","ØªÙ… Ø­Ø¸Ø±Ùƒ Ù…Ù† Ø§Ù„Ù†Ø´Ø±."))
+        try: await cb.message.bot.send_message(uid, _L(lang,"sd_user_banned_notice","You were banned from publishing.","ØªÙ… ØØ¸Ø±Ùƒ Ù…Ù† Ø§Ù„Ù†Ø´Ø±."))
         except: pass
-        await cb.answer(_L(lang,"sd_admin_banned_ok","Banned.","ØªÙ… Ø§Ù„Ø­Ø¸Ø±."))
+        await cb.answer(_L(lang,"sd_admin_banned_ok","Banned.","ØªÙ… Ø§Ù„ØØ¸Ø±."))
     elif action == "unban":
         _unban(uid)
-        await cb.answer(_L(lang,"sd_admin_unbanned_ok","Unbanned.","ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø§Ù„Ø­Ø¸Ø±."))
-        try: await cb.message.bot.send_message(uid, _L(lang,"sd_user_unbanned_notice","Your publishing ban was removed.","ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø­Ø¸Ø± Ø§Ù„Ù†Ø´Ø±."))
+        await cb.answer(_L(lang,"sd_admin_unbanned_ok","Unbanned.","ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø§Ù„ØØ¸Ø±."))
+        try: await cb.message.bot.send_message(uid, _L(lang,"sd_user_unbanned_notice","Your publishing ban was removed.","ØªÙ… Ø¥Ù„ØºØ§Ø¡ ØØ¸Ø± Ø§Ù„Ù†Ø´Ø±."))
         except: pass
     elif action == "demote":
         if _set_supplier:

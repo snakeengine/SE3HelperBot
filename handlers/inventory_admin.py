@@ -14,11 +14,11 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 
 from services import inventory as inv
-from utils.paths import BASE  # Ù…Ø³Ø§Ø± data Ø§Ù„Ù…ÙˆØ­Ù‘Ø¯
+from utils.paths import BASE  # Ù…Ø³Ø§Ø± data Ø§Ù„Ù…ÙˆØÙ‘Ø¯
 
 router = Router(name="inventory_admin")
 
-# ØµÙ„Ø§Ø­ÙŠØ§Øª
+# ØµÙ„Ø§ØÙŠØ§Øª
 _admin_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
 ADMIN_IDS = get_admin_ids() or [7360982123]
 PRODUCT = os.getenv("PRODUCT_KEY", "8bp")
@@ -27,12 +27,12 @@ def _is_admin(uid: int) -> bool:
     return uid in ADMIN_IDS
 
 # ---------------- Ø£Ø¯ÙˆØ§Øª ØªÙÙƒÙŠÙƒ Ù…ØªØ³Ø§Ù‡Ù„Ø© ----------------
-INV_MIN_LEN = int(os.getenv("INV_MIN_LEN", "4"))  # Ø¹Ø¯Ù‘Ù„ Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ø¯Ù†Ù‰ Ø¨Ø·ÙˆÙ„ Ø§Ù„Ù…ÙØªØ§Ø­ Ù…Ù† Ø§Ù„Ù…ØªØºÙŠØ±Ø§Øª Ø§Ù„Ø¨ÙŠØ¦ÙŠØ©
+INV_MIN_LEN = int(os.getenv("INV_MIN_LEN", "4"))  # Ø¹Ø¯Ù‘Ù„ Ø§Ù„ØØ¯ Ø§Ù„Ø£Ø¯Ù†Ù‰ Ø¨Ø·ÙˆÙ„ Ø§Ù„Ù…ÙØªØ§Ø Ù…Ù† Ø§Ù„Ù…ØªØºÙŠØ±Ø§Øª Ø§Ù„Ø¨ÙŠØ¦ÙŠØ©
 
 def _extract_loose(text: str, min_len: int = INV_MIN_LEN) -> List[str]:
     """
     ÙŠÙ‚Ø³Ù… Ø¹Ù„Ù‰ Ø§Ù„Ø£Ø³Ø·Ø± Ø£Ùˆ Ø§Ù„ÙÙˆØ§ØµÙ„ (, ;) ÙˆÙŠÙ‚Ø¨Ù„ Ø£ÙŠ Ù‚ÙŠÙ…Ø© Ø·ÙˆÙ„Ù‡Ø§ >= min_len.
-    ÙŠØ²ÙŠÙ„ Ø§Ù„ØªÙƒØ±Ø§Ø±Ø§Øª Ù…Ø¹ Ø§Ù„Ø­ÙØ§Ø¸ Ø¹Ù„Ù‰ Ø§Ù„ØªØ±ØªÙŠØ¨.
+    ÙŠØ²ÙŠÙ„ Ø§Ù„ØªÙƒØ±Ø§Ø±Ø§Øª Ù…Ø¹ Ø§Ù„ØÙØ§Ø¸ Ø¹Ù„Ù‰ Ø§Ù„ØªØ±ØªÙŠØ¨.
     """
     if not text:
         return []
@@ -46,8 +46,8 @@ def _extract_loose(text: str, min_len: int = INV_MIN_LEN) -> List[str]:
 
 async def _add_text_keys(product: str, days: int, text: str):
     """
-    ÙŠØ¶ÙŠÙ Ù…ÙØ§ØªÙŠØ­ Ù…Ù† Ù†Øµ. ÙŠØ³ØªØ®Ø¯Ù… inv.add_keys_from_text Ø¥Ù† ÙˆÙØ¬Ø¯ØªØŒ
-    ÙˆØ¥Ù„Ø§ ÙŠØ³ØªØ®Ø¯Ù… Ø§Ù„Ù…ÙØ­Ù„Ù‘Ù„ Ø§Ù„Ù…ØªØ³Ø§Ù‡Ù„ Ø¯Ø§Ø®Ù„ÙŠÙ‹Ø§.
+    ÙŠØ¶ÙŠÙ Ù…ÙØ§ØªÙŠØ Ù…Ù† Ù†Øµ. ÙŠØ³ØªØ®Ø¯Ù… inv.add_keys_from_text Ø¥Ù† ÙˆÙØ¬Ø¯ØªØŒ
+    ÙˆØ¥Ù„Ø§ ÙŠØ³ØªØ®Ø¯Ù… Ø§Ù„Ù…ÙØÙ„Ù‘Ù„ Ø§Ù„Ù…ØªØ³Ø§Ù‡Ù„ Ø¯Ø§Ø®Ù„ÙŠÙ‹Ø§.
     """
     fn = getattr(inv, "add_keys_from_text", None)
     if callable(fn):
@@ -56,7 +56,7 @@ async def _add_text_keys(product: str, days: int, text: str):
     lines = _extract_loose(text)
     return await inv.add_keys(product, days, lines)
 
-# =============== FSM Ù„ØªØ±ÙÙŠØ¹ Ø§Ù„Ù…ÙØ§ØªÙŠØ­ ===============
+# =============== FSM Ù„ØªØ±ÙÙŠØ¹ Ø§Ù„Ù…ÙØ§ØªÙŠØ ===============
 class InvAddStates(StatesGroup):
     waiting_lines = State()
 
@@ -68,7 +68,7 @@ async def inv_stats_cmd(m: Message):
     await m.answer(f"ðŸ§¾ Ø§Ù„Ù…Ø®Ø²ÙˆÙ†: {snap}")
 
 async def _read_document_text(doc: Document, bot) -> Optional[str]:
-    """ÙŠØ­Ø§ÙˆÙ„ ØªÙ†Ø²ÙŠÙ„ Ù…Ø³ØªÙ†Ø¯ (ÙŠÙØ¶Ù‘Ù„ .txt) ÙˆØ¥Ø±Ø¬Ø§Ø¹ Ù…Ø­ØªÙˆØ§Ù‡ ÙƒÙ†Øµ UTF-8."""
+    """ÙŠØØ§ÙˆÙ„ ØªÙ†Ø²ÙŠÙ„ Ù…Ø³ØªÙ†Ø¯ (ÙŠÙØ¶Ù‘Ù„ .txt) ÙˆØ¥Ø±Ø¬Ø§Ø¹ Ù…ØØªÙˆØ§Ù‡ ÙƒÙ†Øµ UTF-8."""
     try:
         buf = io.BytesIO()
         await bot.download(doc, buf)  # Aiogram 3
@@ -90,8 +90,8 @@ async def _read_document_text(doc: Document, bot) -> Optional[str]:
 async def inv_add_start(m: Message, state: FSMContext):
     """
     Ø§Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù…:
-      1) Ø±Ø¯ Ø¹Ù„Ù‰ Ø±Ø³Ø§Ù„Ø© ÙÙŠÙ‡Ø§ Ø§Ù„Ù…ÙØ§ØªÙŠØ­ (Ù†Øµ/ÙƒØ§Ø¨ØªØ´Ù†/Ù…Ù„Ù .txt) Ø«Ù… Ø£Ø±Ø³Ù„: /inv_add 3
-      2) Ø£Ùˆ Ø§Ø¨Ø¯Ø£ Ø¬Ù„Ø³Ø©: /inv_add 3  â† Ø£Ø±Ø³Ù„ Ø§Ù„Ù…ÙØ§ØªÙŠØ­ Ø¹Ù„Ù‰ Ø¯ÙØ¹Ø§Øª Ø«Ù… /done
+      1) Ø±Ø¯ Ø¹Ù„Ù‰ Ø±Ø³Ø§Ù„Ø© ÙÙŠÙ‡Ø§ Ø§Ù„Ù…ÙØ§ØªÙŠØ (Ù†Øµ/ÙƒØ§Ø¨ØªØ´Ù†/Ù…Ù„Ù .txt) Ø«Ù… Ø£Ø±Ø³Ù„: /inv_add 3
+      2) Ø£Ùˆ Ø§Ø¨Ø¯Ø£ Ø¬Ù„Ø³Ø©: /inv_add 3  â† Ø£Ø±Ø³Ù„ Ø§Ù„Ù…ÙØ§ØªÙŠØ Ø¹Ù„Ù‰ Ø¯ÙØ¹Ø§Øª Ø«Ù… /done
       3) ØµÙŠØºØ©: /inv_add <product> <days>
     """
     if not _is_admin(m.from_user.id):
@@ -123,7 +123,7 @@ async def inv_add_start(m: Message, state: FSMContext):
         if (doc.mime_type or "").startswith("text") or (doc.file_name or "").lower().endswith(".txt"):
             text = await _read_document_text(doc, m.bot)
             if text is None:
-                await m.answer("âš ï¸ ØªØ¹Ø°Ù‘Ø± Ù‚Ø±Ø§Ø¡Ø© Ø§Ù„Ù…Ø³ØªÙ†Ø¯. Ø£Ø±Ø³Ù„ Ø§Ù„Ù…ÙØ§ØªÙŠØ­ ÙƒÙ†Øµ Ø£Ùˆ Ù…Ù„Ù .txt.")
+                await m.answer("âš ï¸ ØªØ¹Ø°Ù‘Ø± Ù‚Ø±Ø§Ø¡Ø© Ø§Ù„Ù…Ø³ØªÙ†Ø¯. Ø£Ø±Ø³Ù„ Ø§Ù„Ù…ÙØ§ØªÙŠØ ÙƒÙ†Øµ Ø£Ùˆ Ù…Ù„Ù .txt.")
                 return
             inserted, dup = await _add_text_keys(slug, days, text)
             await m.answer(f"âœ… ØªÙ…Øª Ø§Ù„Ø¥Ø¶Ø§ÙØ© Ù…Ù† Ù…Ù„Ù: {inserted} | Ù…ÙƒØ±Ø±Ø§Øª: {dup} | ({slug} - {days}d)")
@@ -133,7 +133,7 @@ async def inv_add_start(m: Message, state: FSMContext):
     await state.set_state(InvAddStates.waiting_lines)
     await state.update_data(slug=slug, days=days, buf="")
     await m.answer(
-        f"âœï¸ Ø£Ø±Ø³Ù„ Ø§Ù„Ù…ÙØ§ØªÙŠØ­ (Ø³Ø·Ø± Ù„ÙƒÙ„ Ù…ÙØªØ§Ø­ Ø£Ùˆ Ù…ÙØµÙˆÙ„Ø© Ø¨ÙÙˆØ§ØµÙ„) Ø«Ù… Ø§ÙƒØªØ¨ /done\n"
+        f"âœï¸ Ø£Ø±Ø³Ù„ Ø§Ù„Ù…ÙØ§ØªÙŠØ (Ø³Ø·Ø± Ù„ÙƒÙ„ Ù…ÙØªØ§Ø Ø£Ùˆ Ù…ÙØµÙˆÙ„Ø© Ø¨ÙÙˆØ§ØµÙ„) Ø«Ù… Ø§ÙƒØªØ¨ /done\n"
         f"Ø§Ù„Ù…Ù†ØªØ¬: <code>{slug}</code> â€” Ø§Ù„Ù…Ø¯Ø©: <b>{days}d</b>",
         parse_mode="HTML"
     )
@@ -146,7 +146,7 @@ async def inv_add_collect(m: Message, state: FSMContext):
     buf: str = data.get("buf") or ""
     buf += "\n" + (m.text or "")
     await state.update_data(buf=buf)
-    # Ù†Ø¹Ø±Ø¶ Ø¹Ø¯Ù‘Ù‹Ø§ ØªÙ‚Ø±ÙŠØ¨ÙŠÙ‹Ø§ Ù„Ù„Ù…ÙØ§ØªÙŠØ­ Ø§Ù„Ù…ÙƒØªØ´ÙØ© Ø­ØªÙ‰ Ø§Ù„Ø¢Ù†
+    # Ù†Ø¹Ø±Ø¶ Ø¹Ø¯Ù‘Ù‹Ø§ ØªÙ‚Ø±ÙŠØ¨ÙŠÙ‹Ø§ Ù„Ù„Ù…ÙØ§ØªÙŠØ Ø§Ù„Ù…ÙƒØªØ´ÙØ© ØØªÙ‰ Ø§Ù„Ø¢Ù†
     count_now = len(_extract_loose(buf))
     await m.answer(f"ðŸ“¥ ØªÙ… Ø§Ù„Ø§Ø³ØªÙ„Ø§Ù…. Ø§Ù„Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…Ø¤Ù‚Øª: ~{count_now}")
 
@@ -165,7 +165,7 @@ async def inv_add_done(m: Message, state: FSMContext):
     buf: str = data.get("buf") or ""
 
     if not _extract_loose(buf):
-        await m.answer("Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…ÙØ§ØªÙŠØ­ ØµØ§Ù„Ø­Ø© Ù„Ø¥Ø¶Ø§ÙØªÙ‡Ø§.")
+        await m.answer("Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…ÙØ§ØªÙŠØ ØµØ§Ù„ØØ© Ù„Ø¥Ø¶Ø§ÙØªÙ‡Ø§.")
         await state.clear()
         return
 
@@ -178,7 +178,7 @@ async def inv_dump_cmd(m: Message):
     """
     /inv_dump 3 [qty]
     /inv_dump <days> <qty> <product?>
-    ÙŠØ³Ø­Ø¨ Ø§Ù„Ù…ÙØ§ØªÙŠØ­ ÙˆÙŠØ±Ø³Ù„Ù‡Ø§ ÙƒÙ…Ù„Ù Ù†ØµÙ‘ÙŠ ÙˆÙŠØ²ÙŠÙ„Ù‡Ø§ Ù…Ù† Ø§Ù„Ù…Ø®Ø²ÙˆÙ†.
+    ÙŠØ³ØØ¨ Ø§Ù„Ù…ÙØ§ØªÙŠØ ÙˆÙŠØ±Ø³Ù„Ù‡Ø§ ÙƒÙ…Ù„Ù Ù†ØµÙ‘ÙŠ ÙˆÙŠØ²ÙŠÙ„Ù‡Ø§ Ù…Ù† Ø§Ù„Ù…Ø®Ø²ÙˆÙ†.
     """
     if not _is_admin(m.from_user.id):
         return
@@ -202,7 +202,7 @@ async def inv_dump_cmd(m: Message):
 
     keys = await inv.take(days=days, qty=qty, product=prod)
     if not keys:
-        await m.answer("Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ù…ÙØ§ØªÙŠØ­ Ù„Ø³Ø­Ø¨Ù‡Ø§.")
+        await m.answer("Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ù…ÙØ§ØªÙŠØ Ù„Ø³ØØ¨Ù‡Ø§.")
         return
 
     tmp_dir = BASE / "tmp"

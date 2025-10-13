@@ -11,7 +11,7 @@ from aiogram.enums import ChatType, ChatMemberStatus
 
 router = Router(name="anti_groups")
 
-# Ù‚Ù†Ø§Ø© ÙˆØ­ÙŠØ¯Ø© Ù…Ø³Ù…ÙˆØ­ Ø¨ÙˆØ¬ÙˆØ¯ Ø§Ù„Ø¨ÙˆØª ÙÙŠÙ‡Ø§ (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)
+# Ù‚Ù†Ø§Ø© ÙˆØÙŠØ¯Ø© Ù…Ø³Ù…ÙˆØ Ø¨ÙˆØ¬ÙˆØ¯ Ø§Ù„Ø¨ÙˆØª ÙÙŠÙ‡Ø§ (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)
 _ALLOWED_CHANNEL_ID = -1001947565627
 
 # ØªÙØ¹ÙŠÙ„/ØªØ¹Ø·ÙŠÙ„ ØªÙ†Ø¨ÙŠÙ‡Ø§Øª Ø§Ù„Ø£Ø¯Ù…Ù†
@@ -51,7 +51,7 @@ def _chat_public_link(ev: ChatMemberUpdated) -> str | None:
     """
     ÙŠØ±Ø¬Ù‘Ø¹ Ø±Ø§Ø¨Ø· ÙŠÙ…ÙƒÙ† Ø§Ù„Ù†Ù‚Ø± Ø¹Ù„ÙŠÙ‡ Ø¥Ù† ØªÙˆÙØ±:
     - Ù„Ùˆ Ø§Ù„Ù‚Ø±ÙˆØ¨/Ø§Ù„Ù‚Ù†Ø§Ø© Ù„Ù‡Ø§ Ø§Ø³Ù… Ù…Ø³ØªØ®Ø¯Ù… Ø¹Ø§Ù… -> https://t.me/username
-    - Ù„Ùˆ Ø§Ù„Ø¯Ø®ÙˆÙ„ ØªÙ… Ø¹Ø¨Ø± Ø¯Ø¹ÙˆØ© -> invite_link Ù…Ù† Ø§Ù„ØªØ­Ø¯ÙŠØ« Ù†ÙØ³Ù‡
+    - Ù„Ùˆ Ø§Ù„Ø¯Ø®ÙˆÙ„ ØªÙ… Ø¹Ø¨Ø± Ø¯Ø¹ÙˆØ© -> invite_link Ù…Ù† Ø§Ù„ØªØØ¯ÙŠØ« Ù†ÙØ³Ù‡
     ÙˆØ¥Ù„Ø§ ÙŠØ±Ø¬Ù‘Ø¹ None (Ù‚Ø±ÙˆØ¨Ø§Øª Ø®Ø§ØµØ© Ø¨Ø¯ÙˆÙ† Ø±Ø§Ø¨Ø· Ø¹Ø§Ù…).
     """
     chat = ev.chat
@@ -70,7 +70,7 @@ def _chat_public_link(ev: ChatMemberUpdated) -> str | None:
 async def guard_my_chat_member(event: ChatMemberUpdated):
     """
     ÙŠÙ…Ù†Ø¹ Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ø¨ÙˆØª Ù„Ù„Ù‚Ø±ÙˆØ¨Ø§Øª/Ø§Ù„Ù‚Ù†ÙˆØ§ØªØŒ ÙˆÙŠØºØ§Ø¯Ø± ÙÙˆØ±Ù‹Ø§ ÙˆÙŠØ±Ø³Ù„ ØªÙ†Ø¨ÙŠÙ‡Ù‹Ø§.
-    ÙŠØ³ØªØ«Ù†ÙŠ Ù‚Ù†Ø§Ø© ÙˆØ§Ø­Ø¯Ø© Ù…Ø­Ø¯Ø¯Ø© Ø¨Ù€ ADMIN_CHANNEL_ID (Ø§Ø®ØªÙŠØ§Ø±ÙŠ).
+    ÙŠØ³ØªØ«Ù†ÙŠ Ù‚Ù†Ø§Ø© ÙˆØ§ØØ¯Ø© Ù…ØØ¯Ø¯Ø© Ø¨Ù€ ADMIN_CHANNEL_ID (Ø§Ø®ØªÙŠØ§Ø±ÙŠ).
     """
     chat = event.chat
     bot = event.bot
@@ -79,11 +79,11 @@ async def guard_my_chat_member(event: ChatMemberUpdated):
     if chat.type == ChatType.PRIVATE:
         return
 
-    # Ø³Ù…Ø§Ø­ Ù„Ù‚Ù†Ø§Ø© ÙˆØ§Ø­Ø¯Ø© ÙÙ‚Ø· (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)
+    # Ø³Ù…Ø§Ø Ù„Ù‚Ù†Ø§Ø© ÙˆØ§ØØ¯Ø© ÙÙ‚Ø· (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)
     if _ALLOWED_CHANNEL_ID and chat.id == _ALLOWED_CHANNEL_ID:
         return
 
-    # Ø§Ù„Ø­Ø§Ù„Ø© Ø§Ù„Ø¬Ø¯ÙŠØ¯Ø© Ù„Ù„Ø¨ÙˆØª Ø¯Ø§Ø®Ù„ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø©
+    # Ø§Ù„ØØ§Ù„Ø© Ø§Ù„Ø¬Ø¯ÙŠØ¯Ø© Ù„Ù„Ø¨ÙˆØª Ø¯Ø§Ø®Ù„ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø©
     try:
         status = event.new_chat_member.status
     except Exception:
@@ -99,7 +99,7 @@ async def guard_my_chat_member(event: ChatMemberUpdated):
         if inviter:
             name = (inviter.full_name or "Unknown").strip()
             uname = f"@{inviter.username}" if inviter.username else ""
-            # Ø°ÙƒØ± Ù‚Ø§Ø¨Ù„ Ù„Ù„Ù†Ù‚Ø± Ø­ØªÙ‰ Ø¨Ø¯ÙˆÙ† username
+            # Ø°ÙƒØ± Ù‚Ø§Ø¨Ù„ Ù„Ù„Ù†Ù‚Ø± ØØªÙ‰ Ø¨Ø¯ÙˆÙ† username
             mention = f'<a href="tg://user?id={inviter.id}">{name}</a>'
             inviter_line = f"\nðŸ‘¤ Ø¨ÙˆØ§Ø³Ø·Ø©: {mention} {uname} | ID: <code>{inviter.id}</code>"
 
@@ -124,7 +124,7 @@ async def guard_my_chat_member(event: ChatMemberUpdated):
             await _notify_admins(
                 bot,
                 (
-                    "âš ï¸ Ù…Ø­Ø§ÙˆÙ„Ø© Ù…Ù†Ø¹ Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ø¨ÙˆØª Ù„ÙƒÙ† Ø­Ø¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ Ø§Ù„Ø®Ø±ÙˆØ¬.\n"
+                    "âš ï¸ Ù…ØØ§ÙˆÙ„Ø© Ù…Ù†Ø¹ Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ø¨ÙˆØª Ù„ÙƒÙ† ØØ¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ Ø§Ù„Ø®Ø±ÙˆØ¬.\n"
                     f"ðŸ·ï¸ Ø§Ù„Ù†ÙˆØ¹: <b>{chat_kind}</b>\n"
                     f"ðŸ“› Ø§Ù„Ø¹Ù†ÙˆØ§Ù†: <b>{chat_title}</b>\n"
                     f"ðŸ†” Chat ID: <code>{chat.id}</code>"

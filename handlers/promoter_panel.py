@@ -79,9 +79,9 @@ def _since_phrase(start_ts: int, lang: str) -> str:
     return f"{lead} {days} {unit}" if lang=="ar" else f"{days} {unit} ago"
 
 def _ts_to_str(ts: Optional[int]) -> str:
-    if not ts: return "â€”"
+    if not ts: return "€”"
     try: return time.strftime("%Y-%m-%d %H:%M", time.gmtime(int(ts))) + " UTC"
-    except Exception: return "â€”"
+    except Exception: return "€”"
 
 def _is_http_url(s: str) -> bool:
     return isinstance(s, str) and (s.startswith("http://") or s.startswith("https://"))
@@ -130,25 +130,25 @@ def _merged_links(u: Dict[str, Any]) -> list[str]:
         k = s.strip()
         if not k or k in seen: continue
         seen.add(k); out.append(k)
-    return out[:10]  # Ø­Ø¯Ù‘ Ø¹Ù„ÙˆÙŠ Ù…Ù†Ø·Ù‚ÙŠ
+    return out[:10]  # ØØ¯Ù‘ Ø¹Ù„ÙˆÙŠ Ù…Ù†Ø·Ù‚ÙŠ
 
 def _add_auto_link(u: Dict[str, Any], url: str) -> None:
     if not _is_http_url(url): return
     arr = u.setdefault("auto_links", [])
     if url not in arr:
         arr.insert(0, url)
-        del arr[10:]  # Ø­Ø§ÙØ¸ Ø¹Ù„Ù‰ Ø¢Ø®Ø± 10 Ø±ÙˆØ§Ø¨Ø·
+        del arr[10:]  # ØØ§ÙØ¸ Ø¹Ù„Ù‰ Ø¢Ø®Ø± 10 Ø±ÙˆØ§Ø¨Ø·
 
 # ========= Helpers Ù„Ù„Ø¹Ø±Ø¶ =========
 def _fmt_links(links: list[str]) -> str:
-    if not links: return "â€”"
+    if not links: return "€”"
     out = []
     for x in links:
         s = (x or "").strip()
         if not s: continue
-        if s.startswith(("http://","https://","tg://")): out.append(f"â€¢ <a href=\\"{s}\\">{s}</a>")
-        else: out.append(f"â€¢ {s}")
-    return "\n".join(out) if out else "â€”"
+        if s.startswith(("http://","https://","tg://")): out.append(f"€¢ <a href=\\"{s}\">{s}</a>")
+        else: out.append(f"€¢ {s}")
+    return "\n".join(out) if out else "€”"
 
 def _fmt_links_short(links: list[str], limit: int = 2) -> str:
     items = []
@@ -156,24 +156,24 @@ def _fmt_links_short(links: list[str], limit: int = 2) -> str:
         s = (x or "").strip()
         if not s: continue
         if s.startswith(("http://","https://","tg://")):
-            text = s if len(s) <= 60 else (s[:57] + "â€¦")
-            items.append(f"<a href=\\"{s}\\">{text}</a>")
+            text = s if len(s) <= 60 else (s[:57] + "€¦")
+            items.append(f"<a href=\\"{s}\">{text}</a>")
         else:
             items.append(s)
         if len(items) >= limit: break
-    return " Â· ".join(items) if items else "â€”"
+    return " Â· ".join(items) if items else "€”"
 
-def _chip(text: str) -> str: return f"<span class=\\"tg-spoiler\\">{text}</span>"
+def _chip(text: str) -> str: return f"<span class=\\"tg-spoiler\">{text}</span>"
 
 def _tg_line(lang: str, tg: dict) -> str:
     decl = tg.get("declared") or "-"; real = tg.get("real") or "-"; match = bool(tg.get("match"))
-    mark = "âœ…" if match else "â—ï¸"
+    mark = "œ…" if match else "—ï¸"
     real_lbl = _tf(lang, "promp.tg.real_label", "Ø§Ù„Ù…Ø¹Ø±Ù‘Ù Ø§Ù„ÙØ¹Ù„ÙŠ Ø¹Ù„Ù‰ ØªÙŠÙ„ÙŠØ¬Ø±Ø§Ù…" if lang=="ar" else "Actual Telegram label")
     decl_lbl = _tf(lang, "promp.tg.declared_label", "Ø§Ù„Ù…Ø¹Ø±Ù‘Ù Ø§Ù„Ù…Ø¹Ù„Ù† Ø¹Ù„Ù‰ ØªÙŠÙ„ÙŠØ¬Ø±Ø§Ù…" if lang=="ar" else "Declared Telegram label")
     return f"{real_lbl}: <code>{real}</code> {mark}\n({decl_lbl}: <code>{decl}</code>)"
 
 def _panel_text(lang: str, u: Dict[str, Any]) -> str:
-    title = _tf(lang, "promp.title", "Ù„ÙˆØ­Ø© Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬ÙŠÙ†" if lang=="ar" else "Promoters Panel")
+    title = _tf(lang, "promp.title", "Ù„ÙˆØØ© Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬ÙŠÙ†" if lang=="ar" else "Promoters Panel")
     name_label = _tf(lang, "promp.name", "Ø§Ù„Ø§Ø³Ù…" if lang=="ar" else "Name")
     links_label = _tf(lang, "promp.links", "Ø§Ù„Ø±ÙˆØ§Ø¨Ø·" if lang=="ar" else "Links")
     app_label = _tf(lang, "promp.app_id", "Ù…Ø¹Ø±Ù‘Ù Ø§Ù„ØªØ·Ø¨ÙŠÙ‚" if lang=="ar" else "App ID")
@@ -181,17 +181,17 @@ def _panel_text(lang: str, u: Dict[str, Any]) -> str:
     exp_label = _tf(lang, "promp.sub.expires", "ÙŠÙ†ØªÙ‡ÙŠ ÙÙŠ" if lang=="ar" else "Expires at")
     sub = u.get("subscription", {}) or {}
     left = max(0, int(sub.get("expires_at", 0) or 0) - _now()); left_s = _format_duration(left, lang) if left else None
-    chip = _chip(("âœ… " + _tf(lang,"promp.sub.active","Ù†Ø´Ø·" if lang=="ar" else "Active")) + (f" â€” {(_tf(lang,'promp.sub.left','ØªØ¨Ù‚Ù‘Ù‰' if lang=='ar' else 'Left'))}: {left_s}" if left_s else "")) if (sub.get("status")=="active") else _chip("ðŸš« "+_tf(lang,"promp.sub.none","Ù„Ø§ ÙŠÙˆØ¬Ø¯" if lang=="ar" else "None"))
+    chip = _chip(("œ… " + _tf(lang,"promp.sub.active","Ù†Ø´Ø·" if lang=="ar" else "Active")) + (f" €” {(_tf(lang,'promp.sub.left','ØªØ¨Ù‚Ù‘Ù‰' if lang=='ar' else 'Left'))}: {left_s}" if left_s else "")) if (sub.get("status")=="active") else _chip("ðŸš« "+_tf(lang,"promp.sub.none","Ù„Ø§ ÙŠÙˆØ¬Ø¯" if lang=="ar" else "None"))
     expires_at = _ts_to_str(sub.get("expires_at"))
     tg = u.get("telegram", {}) or {}; tg_block = _tg_line(lang, tg)
     links_s = _fmt_links(_merged_links(u))
-    return ("ðŸ§‘â€ðŸ’¼ <b>"+title+"</b>\n"
-            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
+    return ("ðŸ§‘€ðŸ’¼ <b>"+title+"</b>\n"
+            "””””””””””””””””””””\n"
             f"{name_label}: <b>{u.get('name','-')}</b>\n"
             f"{tg_block}\n"
-            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
+            "””””””””””””””””””””\n"
             f"{links_label}:\n{links_s}\n"
-            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
+            "””””””””””””””””””””\n"
             f"{app_label}: <code>{u.get('app_id') or '-'}</code>\n"
             f"{sub_label}: {chip}\n"
             f"{exp_label}: <code>{expires_at}</code>\n")
@@ -203,22 +203,22 @@ def _profile_text(lang: str, u: Dict[str, Any]) -> str:
     tg = u.get("telegram", {}) or {}; tg_block = _tg_line(lang, tg)
     links_s = _fmt_links(_merged_links(u))
     return ("ðŸªª <b>"+title+"</b>\n"
-            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
+            "””””””””””””””””””””\n"
             f"{name_label}: <b>{u.get('name','-')}</b>\n"
-            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
+            "””””””””””””””””””””\n"
             f"{links_label}:\n{links_s}\n"
-            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
+            "””””””””””””””””””””\n"
             f"{tg_block}\n")
 
 def _profile_kb(lang: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="âœï¸ " + _tf(lang,"promp.edit.name","ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ø§Ø³Ù…" if lang=="ar" else "Edit name"),
+        [InlineKeyboardButton(text="œï¸ " + _tf(lang,"promp.edit.name","ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ø§Ø³Ù…" if lang=="ar" else "Edit name"),
                               callback_data="promp:edit:name"),
          InlineKeyboardButton(text="ðŸ”— " + _tf(lang,"promp.edit.links","ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ø±ÙˆØ§Ø¨Ø·" if lang=="ar" else "Edit links"),
                               callback_data="promp:edit:links")],
-        [InlineKeyboardButton(text="âœˆï¸ " + _tf(lang,"promp.edit.tg","ØªØ¹Ø¯ÙŠÙ„ Ù…Ø¹Ø±Ù ØªÙŠÙ„ÙŠØ¬Ø±Ø§Ù…" if lang=="ar" else "Edit Telegram"),
+        [InlineKeyboardButton(text="œˆï¸ " + _tf(lang,"promp.edit.tg","ØªØ¹Ø¯ÙŠÙ„ Ù…Ø¹Ø±Ù ØªÙŠÙ„ÙŠØ¬Ø±Ø§Ù…" if lang=="ar" else "Edit Telegram"),
                               callback_data="promp:edit:tg")],
-        [InlineKeyboardButton(text="â¬…ï¸ " + _tf(lang,"promp.btn.back","Ø±Ø¬ÙˆØ¹" if lang=="ar" else "Back"),
+        [InlineKeyboardButton(text="¬…ï¸ " + _tf(lang,"promp.btn.back","Ø±Ø¬ÙˆØ¹" if lang=="ar" else "Back"),
                               callback_data="promp:open")],
     ])
 
@@ -239,7 +239,7 @@ def _sub_text(lang: str, u: Dict[str, Any]) -> str:
     rb = int(sub.get("remind_before_h", 24) or 24)
     return (
         f"ðŸŽ« <b>{_tf(lang,'promp.sub.title','ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ' if lang=='ar' else 'Subscription')}</b>\n\n"
-        f"{_tf(lang,'promp.sub.status','Ø§Ù„Ø­Ø§Ù„Ø©' if lang=='ar' else 'Status')}: <b>{friendly}</b>\n"
+        f"{_tf(lang,'promp.sub.status','Ø§Ù„ØØ§Ù„Ø©' if lang=='ar' else 'Status')}: <b>{friendly}</b>\n"
         f"{_tf(lang,'promp.sub.started','Ø¨Ø¯Ø£ ÙÙŠ' if lang=='ar' else 'Started')}: <code>{started}</code>\n"
         f"{_tf(lang,'promp.sub.expires','ÙŠÙ†ØªÙ‡ÙŠ ÙÙŠ' if lang=='ar' else 'Expires')}: <code>{expires}</code>\n"
         f"{_tf(lang,'promp.sub.left','Ø§Ù„ÙˆÙ‚Øª Ø§Ù„Ù…ØªØ¨Ù‚ÙŠ' if lang=='ar' else 'Time left')}: <b>{left_s}</b>\n"
@@ -248,21 +248,21 @@ def _sub_text(lang: str, u: Dict[str, Any]) -> str:
 
 
 def _sub_kb(lang: str, selected_hours: Optional[int] = None) -> InlineKeyboardMarkup:
-    # Ø§Ù„Ù‚ÙŠÙ…Ø© Ø§Ù„Ø­Ø§Ù„ÙŠØ© Ø§Ù„Ù…Ø®ØªØ§Ø±Ø© (Ø§ÙØªØ±Ø§Ø¶ÙŠ 24h Ø¥Ø°Ø§ Ù„Ù… ØªÙØ±Ø³Ù„)
+    # Ø§Ù„Ù‚ÙŠÙ…Ø© Ø§Ù„ØØ§Ù„ÙŠØ© Ø§Ù„Ù…Ø®ØªØ§Ø±Ø© (Ø§ÙØªØ±Ø§Ø¶ÙŠ 24h Ø¥Ø°Ø§ Ù„Ù… ØªÙØ±Ø³Ù„)
     sel = 24 if selected_hours is None else int(selected_hours)
     off_txt = _tf(lang, "promp.remind.off", "Ø¥ÙŠÙ‚Ø§Ù" if lang == "ar" else "Off")
 
-    btn24 = "âœ… 24h" if sel == 24 else "ðŸ”” 24h"
-    btn48 = "âœ… 48h" if sel == 48 else "ðŸ”” 48h"
-    btn72 = "âœ… 72h" if sel == 72 else "ðŸ”” 72h"
-    btnOff = f"âœ… {off_txt}" if sel == 0 else f"ðŸ”• {off_txt}"
+    btn24 = "œ… 24h" if sel == 24 else "ðŸ”” 24h"
+    btn48 = "œ… 48h" if sel == 48 else "ðŸ”” 48h"
+    btn72 = "œ… 72h" if sel == 72 else "ðŸ”” 72h"
+    btnOff = f"œ… {off_txt}" if sel == 0 else f"ðŸ”• {off_txt}"
 
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=btn24, callback_data="promp:remind:24"),
          InlineKeyboardButton(text=btn48, callback_data="promp:remind:48"),
          InlineKeyboardButton(text=btn72, callback_data="promp:remind:72"),
          InlineKeyboardButton(text=btnOff, callback_data="promp:remind:0")],
-        [InlineKeyboardButton(text="â¬…ï¸ " + _tf(lang,"promp.btn.back","Ø±Ø¬ÙˆØ¹" if lang=="ar" else "Back"),
+        [InlineKeyboardButton(text="¬…ï¸ " + _tf(lang,"promp.btn.back","Ø±Ø¬ÙˆØ¹" if lang=="ar" else "Back"),
                               callback_data="promp:open")],
     ])
 
@@ -288,7 +288,7 @@ def _apply_extend_seconds(u: Dict[str, Any], add_seconds: int) -> int:
     sub["expires_at"] = new_expires
     return new_expires
 
-# ===== Ø­Ø§Ù„Ø§Øª FSM =====
+# ===== ØØ§Ù„Ø§Øª FSM =====
 class EditProfile(StatesGroup):
     name  = State()
     links = State()
@@ -329,7 +329,7 @@ class LiveStart(StatesGroup):
 
 # ===== Ù…Ù†ØµØ§Øª ÙˆØ¹Ø±Ø¶Ù‡Ø§ =====
 _PLAT_ICONS = {
-    "youtube":"â–¶ï¸","tiktok":"ðŸŽµ","telegram":"âœˆï¸",
+    "youtube":"–¶ï¸","tiktok":"ðŸŽµ","telegram":"œˆï¸",
     "instagram":"ðŸ“¸","facebook":"ðŸ“˜","twitch":"ðŸŽ®",
     "other":"ðŸ§©",
 }
@@ -357,7 +357,7 @@ def _live_platforms_kb(lang: str) -> InlineKeyboardMarkup:
     for p in platforms:
         kb.add(InlineKeyboardButton(text=f"{_plat_icon(p)} {_plat_label(lang,p)}", callback_data=f"promp:live:plat:{p}"))
     kb.adjust(2)
-    kb.row(InlineKeyboardButton(text=_tf(lang,"promp.btn.back","â¬…ï¸ Ø±Ø¬ÙˆØ¹" if lang=="ar" else "â¬…ï¸ Back"), callback_data="promp:open"))
+    kb.row(InlineKeyboardButton(text=_tf(lang,"promp.btn.back","¬…ï¸ Ø±Ø¬ÙˆØ¹" if lang=="ar" else "¬…ï¸ Back"), callback_data="promp:open"))
     return kb.as_markup()
 
 def _make_url(platform: str, handle: str) -> str:
@@ -406,7 +406,7 @@ def _parse_duration_to_hours(s: str) -> Optional[float]:
         return None
     return val
 
-# ===== Ù„ÙˆØ­Ø© Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬ =====
+# ===== Ù„ÙˆØØ© Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬ =====
 def _panel_kb(lang: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="ðŸªª " + _tf(lang,"promp.btn.profile","Ù…Ø¹Ù„ÙˆÙ…Ø§ØªÙŠ / ØªØ¹Ø¯ÙŠÙ„" if lang=="ar" else "My profile / Edit"), callback_data="promp:profile")],
@@ -415,15 +415,15 @@ def _panel_kb(lang: str) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="ðŸ“¤ " + _tf(lang,"promp.btn.proof","Ø±ÙØ¹ Ø¥Ø«Ø¨Ø§Øª Ù†Ø´Ø§Ø·" if lang=="ar" else "Upload activity proof"), callback_data="promp:proof")],
         [InlineKeyboardButton(text="ðŸ†˜ " + _tf(lang,"promp.btn.support","Ø¯Ø¹Ù… Ù…Ø¨Ø§Ø´Ø±" if lang=="ar" else "Direct support"), callback_data="promp:support")],
         [InlineKeyboardButton(text="ðŸŽ¥ " + _tf(lang,"promp.btn.live","Ø¨Ø¯Ø¡ Ø¨Ø« Ù…Ø¨Ø§Ø´Ø±" if lang=="ar" else "Start Live"), callback_data="promp:live:start")],
-        [InlineKeyboardButton(text="â¬…ï¸ " + _tf(lang,"promp.btn.back","Ø±Ø¬ÙˆØ¹" if lang=="ar" else "Back"), callback_data="back_to_menu"),
-         InlineKeyboardButton(text="ðŸ”„ " + _tf(lang,"promp.btn.refresh","ØªØ­Ø¯ÙŠØ«" if lang=="ar" else "Refresh"), callback_data="promp:open")],
+        [InlineKeyboardButton(text="¬…ï¸ " + _tf(lang,"promp.btn.back","Ø±Ø¬ÙˆØ¹" if lang=="ar" else "Back"), callback_data="back_to_menu"),
+         InlineKeyboardButton(text="ðŸ”„ " + _tf(lang,"promp.btn.refresh","ØªØØ¯ÙŠØ«" if lang=="ar" else "Refresh"), callback_data="promp:open")],
     ])
 
 @router.callback_query(F.data.in_({"prom:panel", "promp:open"}))
 async def open_panel(cb: CallbackQuery):
     lang = L(cb.from_user.id)
     if not _is_promoter(cb.from_user.id):
-        return await cb.answer(_tf(lang, "prom.not_approved", "Ù‡Ø°Ù‡ Ø§Ù„Ù„ÙˆØ­Ø© Ù„Ù„Ù…Ø±ÙˆÙ‘Ø¬ÙŠÙ† Ø§Ù„Ù…ÙˆØ§ÙÙ‚ Ø¹Ù„ÙŠÙ‡Ù… ÙÙ‚Ø·." if lang=="ar" else "Promoters only."), show_alert=True)
+        return await cb.answer(_tf(lang, "prom.not_approved", "Ù‡Ø°Ù‡ Ø§Ù„Ù„ÙˆØØ© Ù„Ù„Ù…Ø±ÙˆÙ‘Ø¬ÙŠÙ† Ø§Ù„Ù…ÙˆØ§ÙÙ‚ Ø¹Ù„ÙŠÙ‡Ù… ÙÙ‚Ø·." if lang=="ar" else "Promoters only."), show_alert=True)
     d = _load(); u = _u(d, cb.from_user.id)
     await cb.message.answer(_panel_text(lang, u), reply_markup=_panel_kb(lang), parse_mode=ParseMode.HTML, disable_web_page_preview=True)
     await cb.answer()
@@ -450,7 +450,7 @@ async def edit_name_save(m: Message, state: FSMContext):
     u["name"] = (m.text or "").strip()
     _save(d)
     await state.clear()
-    await m.answer(_tf(lang,"promp.ok","ØªÙ… Ø§Ù„Ø­ÙØ¸ âœ…" if lang=="ar" else "Saved âœ…"))
+    await m.answer(_tf(lang,"promp.ok","ØªÙ… Ø§Ù„ØÙØ¸ œ…" if lang=="ar" else "Saved œ…"))
     await m.answer(_profile_text(lang, u), reply_markup=_profile_kb(lang), parse_mode=ParseMode.HTML)
 
 @router.callback_query(F.data == "promp:edit:links")
@@ -468,7 +468,7 @@ async def edit_links_save(m: Message, state: FSMContext):
     u["links"] = links
     _save(d)
     await state.clear()
-    await m.answer(_tf(lang,"promp.ok","ØªÙ… Ø§Ù„Ø­ÙØ¸ âœ…" if lang=="ar" else "Saved âœ…"))
+    await m.answer(_tf(lang,"promp.ok","ØªÙ… Ø§Ù„ØÙØ¸ œ…" if lang=="ar" else "Saved œ…"))
     await m.answer(_profile_text(lang, u), reply_markup=_profile_kb(lang), parse_mode=ParseMode.HTML)
 
 @router.callback_query(F.data == "promp:edit:tg")
@@ -488,13 +488,13 @@ async def edit_tg_save(m: Message, state: FSMContext):
     u["telegram"] = {"declared": tg, "real": tg_real, "match": bool(tg_real and tg_real.lower() == tg.lower())}
     _save(d)
     await state.clear()
-    await m.answer(_tf(lang,"promp.ok","ØªÙ… Ø§Ù„Ø­ÙØ¸ âœ…" if lang=="ar" else "Saved âœ…"))
+    await m.answer(_tf(lang,"promp.ok","ØªÙ… Ø§Ù„ØÙØ¸ œ…" if lang=="ar" else "Saved œ…"))
     await m.answer(_profile_text(lang, u), reply_markup=_profile_kb(lang), parse_mode=ParseMode.HTML)
 
 @router.message(EditProfile.tg)
 async def edit_tg_invalid(m: Message):
     lang = L(m.from_user.id)
-    await m.answer(_tf(lang,"prom.err.tg","Ø§Ù„Ù…Ø¹Ø±Ù‘Ù ØºÙŠØ± ØµØ§Ù„Ø­. Ù…Ø«Ø§Ù„: @MyChannel" if lang=="ar" else "Invalid handle. Example: @MyChannel"))
+    await m.answer(_tf(lang,"prom.err.tg","Ø§Ù„Ù…Ø¹Ø±Ù‘Ù ØºÙŠØ± ØµØ§Ù„Ø. Ù…Ø«Ø§Ù„: @MyChannel" if lang=="ar" else "Invalid handle. Example: @MyChannel"))
 
 # ===== Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ =====
 @router.callback_query(F.data == "promp:sub")
@@ -518,7 +518,7 @@ async def sub_set_remind(cb: CallbackQuery):
     u.setdefault("subscription", {})["remind_before_h"] = max(0, hours)
     _save(d)
 
-    # ØªØ­Ø¯ÙŠØ« Ù†ÙØ³ Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ù„Ø¥Ø¸Ù‡Ø§Ø± âœ… Ø¹Ù„Ù‰ Ø§Ù„Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„Ø­Ø§Ù„ÙŠ
+    # ØªØØ¯ÙŠØ« Ù†ÙØ³ Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ù„Ø¥Ø¸Ù‡Ø§Ø± œ… Ø¹Ù„Ù‰ Ø§Ù„Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„ØØ§Ù„ÙŠ
     try:
         await cb.message.edit_text(
             _sub_text(lang, u),
@@ -526,17 +526,17 @@ async def sub_set_remind(cb: CallbackQuery):
             parse_mode=ParseMode.HTML
         )
     except Exception:
-        # ÙÙŠ Ø­Ø§Ù„ ÙØ´Ù„ Ø§Ù„ØªØ¹Ø¯ÙŠÙ„ (Ù…Ø«Ù„Ø§Ù‹ Ø¨Ø³Ø¨Ø¨ ÙˆÙ‚Øª Ù‚Ø¯ÙŠÙ…)ØŒ Ø£Ø±Ø³Ù„ Ø±Ø³Ø§Ù„Ø© Ø¬Ø¯ÙŠØ¯Ø© ÙƒØ¨Ø¯ÙŠÙ„
+        # ÙÙŠ ØØ§Ù„ ÙØ´Ù„ Ø§Ù„ØªØ¹Ø¯ÙŠÙ„ (Ù…Ø«Ù„Ø§Ù‹ Ø¨Ø³Ø¨Ø¨ ÙˆÙ‚Øª Ù‚Ø¯ÙŠÙ…)ØŒ Ø£Ø±Ø³Ù„ Ø±Ø³Ø§Ù„Ø© Ø¬Ø¯ÙŠØ¯Ø© ÙƒØ¨Ø¯ÙŠÙ„
         await cb.message.answer(
             _sub_text(lang, u),
             reply_markup=_sub_kb(lang, hours),
             parse_mode=ParseMode.HTML
         )
 
-    await cb.answer(_tf(lang, "promp.saved", "ØªÙ… Ø§Ù„Ø­ÙØ¸ âœ…" if lang=="ar" else "Saved âœ…"), show_alert=False)
+    await cb.answer(_tf(lang, "promp.saved", "ØªÙ… Ø§Ù„ØÙØ¸ œ…" if lang=="ar" else "Saved œ…"), show_alert=False)
 
 
-# ============== Ø·Ù„Ø¨ ØªØ¬Ø¯ÙŠØ¯ â€” Ø¬Ù…Ø¹ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ù‚Ø¨Ù„ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„ ==============
+# ============== Ø·Ù„Ø¨ ØªØ¬Ø¯ÙŠØ¯ €” Ø¬Ù…Ø¹ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ù‚Ø¨Ù„ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„ ==============
 @router.callback_query(F.data == "promp:renew")
 async def sub_request_renew_start(cb: CallbackQuery, state: FSMContext):
     lang_user = L(cb.from_user.id)
@@ -547,10 +547,10 @@ async def sub_request_renew_start(cb: CallbackQuery, state: FSMContext):
     await state.set_state(RenewUser.ask_appid)
     await state.update_data(prev_app_id=prev_app_id, prev_game=prev_game)
 
-    hint = f"\n{_tf(lang_user,'promp.current','Ø§Ù„Ù…Ø­ÙÙˆØ¸ Ø­Ø§Ù„ÙŠÙ‹Ø§' if lang_user=='ar' else 'Current')}: <code>{prev_app_id or 'â€”'}</code>" if prev_app_id else ""
+    hint = f"\n{_tf(lang_user,'promp.current','Ø§Ù„Ù…ØÙÙˆØ¸ ØØ§Ù„ÙŠÙ‹Ø§' if lang_user=='ar' else 'Current')}: <code>{prev_app_id or '€”'}</code>" if prev_app_id else ""
     msg = (
         "Ù‚Ø¨Ù„ Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ Ø§Ù„ØªØ¬Ø¯ÙŠØ¯ØŒ Ø£Ø±Ø³Ù„ <b>Ù…Ø¹Ø±Ù‘Ù Ø§Ù„Ø«Ø¹Ø¨Ø§Ù† (App ID)</b> Ø§Ù„Ø®Ø§Øµ Ø¨Ùƒ.\n"
-        "Ø£Ø±Ø³Ù„ Â«-Â» Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ù…Ø¹Ø±Ù Ø§Ù„Ù…Ø­ÙÙˆØ¸ Ø¥Ù† ÙˆÙØ¬Ø¯."
+        "Ø£Ø±Ø³Ù„ Â«-Â» Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ù…Ø¹Ø±Ù Ø§Ù„Ù…ØÙÙˆØ¸ Ø¥Ù† ÙˆÙØ¬Ø¯."
         if lang_user == "ar" else
         "Before sending the renewal request, send your <b>Snake/App ID</b>.\n"
         "Send '-' to keep the saved one."
@@ -566,8 +566,8 @@ async def sub_renew_collect_appid(m: Message, state: FSMContext):
 
     app_id = data.get("prev_app_id") if s == "-" else s
     if not app_id or len(app_id) < 2:
-        return await m.reply("âš ï¸ Ø§Ù„Ø±Ø¬Ø§Ø¡ Ø¥Ø¯Ø®Ø§Ù„ Ù…Ø¹Ø±Ù ØµØ§Ù„Ø­ (Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„ Ø­Ø±ÙØ§Ù†)." if lang_user=="ar"
-                             else "âš ï¸ Please provide a valid ID (at least 2 chars).")
+        return await m.reply("š ï¸ Ø§Ù„Ø±Ø¬Ø§Ø¡ Ø¥Ø¯Ø®Ø§Ù„ Ù…Ø¹Ø±Ù ØµØ§Ù„Ø (Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„ ØØ±ÙØ§Ù†)." if lang_user=="ar"
+                             else "š ï¸ Please provide a valid ID (at least 2 chars).")
 
     # Ø®Ø²Ù‘Ù† Ø§Ù„Ù…Ø¹Ø±Ù‘Ù
     d = _load(); u = _u(d, m.from_user.id)
@@ -578,9 +578,9 @@ async def sub_renew_collect_appid(m: Message, state: FSMContext):
     await state.set_state(RenewUser.ask_game)
 
     prev_game = data.get("prev_game") or (u.get("app_name") or "")
-    hint = f"\n{_tf(lang_user,'promp.current','Ø§Ù„Ù…Ø­ÙÙˆØ¸ Ø­Ø§Ù„ÙŠÙ‹Ø§' if lang_user=='ar' else 'Current')}: <code>{prev_game or 'â€”'}</code>" if prev_game else ""
-    q = "Ù…Ø§ Ø§Ø³Ù… Ø§Ù„Ù„Ø¹Ø¨Ø© Ø§Ù„Ù…Ø±ØªØ¨Ø·Ø© Ø¨Ø§Ù„Ù…Ø¹Ø±Ù‘ÙØŸ (Ø£Ø±Ø³Ù„ Â«-Â» Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ù…Ø­ÙÙˆØ¸)" if lang_user=="ar" else \
-        "Whatâ€™s the game name for this ID? (send '-' to keep saved)"
+    hint = f"\n{_tf(lang_user,'promp.current','Ø§Ù„Ù…ØÙÙˆØ¸ ØØ§Ù„ÙŠÙ‹Ø§' if lang_user=='ar' else 'Current')}: <code>{prev_game or '€”'}</code>" if prev_game else ""
+    q = "Ù…Ø§ Ø§Ø³Ù… Ø§Ù„Ù„Ø¹Ø¨Ø© Ø§Ù„Ù…Ø±ØªØ¨Ø·Ø© Ø¨Ø§Ù„Ù…Ø¹Ø±Ù‘ÙØŸ (Ø£Ø±Ø³Ù„ Â«-Â» Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ù…ØÙÙˆØ¸)" if lang_user=="ar" else \
+        "What€™s the game name for this ID? (send '-' to keep saved)"
     await m.answer(q + hint, parse_mode=ParseMode.HTML)
 
 @router.message(RenewUser.ask_game, F.text)
@@ -593,7 +593,7 @@ async def sub_renew_collect_game(m: Message, state: FSMContext):
     if game == "-":
         game = (u.get("app_name") or data.get("prev_game") or "").strip()
     if not game:
-        return await m.reply("âš ï¸ Ø§Ù„Ø±Ø¬Ø§Ø¡ ÙƒØªØ§Ø¨Ø© Ø§Ø³Ù… Ø§Ù„Ù„Ø¹Ø¨Ø©." if lang_user=="ar" else "âš ï¸ Please enter the game name.")
+        return await m.reply("š ï¸ Ø§Ù„Ø±Ø¬Ø§Ø¡ ÙƒØªØ§Ø¨Ø© Ø§Ø³Ù… Ø§Ù„Ù„Ø¹Ø¨Ø©." if lang_user=="ar" else "š ï¸ Please enter the game name.")
 
     # Ø®Ø²Ù‘Ù† Ø§Ø³Ù… Ø§Ù„Ù„Ø¹Ø¨Ø©
     u["app_name"] = game
@@ -603,14 +603,14 @@ async def sub_renew_collect_game(m: Message, state: FSMContext):
 
     await state.clear()
     await _send_renew_request_to_admins(m.bot, m.from_user.id, lang_user, app_id, game)
-    await m.answer("ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ Ø§Ù„ØªØ¬Ø¯ÙŠØ¯ Ø¥Ù„Ù‰ Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© âœ…" if lang_user=="ar" else "Renewal request sent to admins âœ…")
+    await m.answer("ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨ Ø§Ù„ØªØ¬Ø¯ÙŠØ¯ Ø¥Ù„Ù‰ Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© œ…" if lang_user=="ar" else "Renewal request sent to admins œ…")
 
 async def _send_renew_request_to_admins(bot, uid: int, lang_user: str, app_id: str, app_name: str):
     try:
         chat = await bot.get_chat(uid)
-        uname = ("@" + chat.username) if getattr(chat, "username", None) else "â€”"
+        uname = ("@" + chat.username) if getattr(chat, "username", None) else "€”"
     except Exception:
-        uname = "â€”"
+        uname = "€”"
     mention = f"<a href='tg://user?id={uid}'>{uid}</a>"
 
     # Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ
@@ -626,22 +626,22 @@ async def _send_renew_request_to_admins(bot, uid: int, lang_user: str, app_id: s
     started = _ts_to_str(sub.get("started_at"))
     expires = _ts_to_str(sub.get("expires_at"))
     left_sec = max(0, int(sub.get("expires_at") or 0) - _now())
-    left_human = _format_duration(left_sec, lang_user) if left_sec else "â€”"
+    left_human = _format_duration(left_sec, lang_user) if left_sec else "€”"
 
     head = ("ðŸ” Ø·Ù„Ø¨ ØªØ¬Ø¯ÙŠØ¯ Ù„Ù„Ù…Ø±ÙˆÙ‘Ø¬" if lang_user=="ar" else "ðŸ” Promoter renewal request")
-    notes = ("Ù…Ù„Ø§Ø­Ø¸Ø©: Ù‡Ø°Ø§ Ø¥Ø´Ø¹Ø§Ø± ÙÙ‚Ø·. Ø§Ø³ØªØ®Ø¯Ù… Ø§Ù„Ø£Ø²Ø±Ø§Ø± Ø¨Ø§Ù„Ø£Ø³ÙÙ„ Ù„ØªØ¬Ø¯ÙŠØ¯ Ø§Ù„Ù…Ø¯Ø©.\n"
+    notes = ("Ù…Ù„Ø§ØØ¸Ø©: Ù‡Ø°Ø§ Ø¥Ø´Ø¹Ø§Ø± ÙÙ‚Ø·. Ø§Ø³ØªØ®Ø¯Ù… Ø§Ù„Ø£Ø²Ø±Ø§Ø± Ø¨Ø§Ù„Ø£Ø³ÙÙ„ Ù„ØªØ¬Ø¯ÙŠØ¯ Ø§Ù„Ù…Ø¯Ø©.\n"
              if lang_user=="ar" else
              "Note: This is only a request. Use the buttons below to renew.\n")
 
     txt = (
         f"{head}\n"
-        f"ðŸ‘¤ {mention} â€” <code>{uid}</code> Â· {uname}\n"
+        f"ðŸ‘¤ {mention} €” <code>{uid}</code> Â· {uname}\n"
         f"ðŸ“± {(_tf(lang_user,'promp.app_id','Ù…Ø¹Ø±Ù‘Ù Ø§Ù„ØªØ·Ø¨ÙŠÙ‚' if lang_user=='ar' else 'App ID'))}: <code>{app_id}</code>\n"
         f"ðŸ§© {(_tf(lang_user,'promp.app_name','Ø§Ø³Ù… Ø§Ù„Ù„Ø¹Ø¨Ø©' if lang_user=='ar' else 'Game'))}: <b>{app_name}</b>\n"
-        f"ðŸŽ« {(_tf(lang_user,'promp.sub.status','Ø§Ù„Ø­Ø§Ù„Ø©' if lang_user=='ar' else 'Status'))}: <b>{friendly}</b>\n"
-        f"â± {(_tf(lang_user,'promp.sub.started','Ø¨Ø¯Ø£ ÙÙŠ' if lang_user=='ar' else 'Started'))}: <code>{started}</code>\n"
-        f"âŒ›ï¸ {(_tf(lang_user,'promp.sub.expires','ÙŠÙ†ØªÙ‡ÙŠ ÙÙŠ' if lang_user=='ar' else 'Expires'))}: <code>{expires}</code>\n"
-        f"â³ {(_tf(lang_user,'promp.sub.left','Ø§Ù„Ù…ØªØ¨Ù‚ÙŠ' if lang_user=='ar' else 'Left'))}: <b>{left_human}</b>\n\n"
+        f"ðŸŽ« {(_tf(lang_user,'promp.sub.status','Ø§Ù„ØØ§Ù„Ø©' if lang_user=='ar' else 'Status'))}: <b>{friendly}</b>\n"
+        f"± {(_tf(lang_user,'promp.sub.started','Ø¨Ø¯Ø£ ÙÙŠ' if lang_user=='ar' else 'Started'))}: <code>{started}</code>\n"
+        f"Œ›ï¸ {(_tf(lang_user,'promp.sub.expires','ÙŠÙ†ØªÙ‡ÙŠ ÙÙŠ' if lang_user=='ar' else 'Expires'))}: <code>{expires}</code>\n"
+        f"³ {(_tf(lang_user,'promp.sub.left','Ø§Ù„Ù…ØªØ¨Ù‚ÙŠ' if lang_user=='ar' else 'Left'))}: <b>{left_human}</b>\n\n"
         f"{notes}"
     )
 
@@ -689,7 +689,7 @@ async def activate_collect_appid(m: Message, state: FSMContext):
 
 @router.message(Activate.game, F.text.len() > 0)
 async def activate_finish(m: Message, state: FSMContext):
-    """Ø¨Ø¹Ø¯ Ø¬Ù…Ø¹ App ID + Ø§Ø³Ù… Ø§Ù„Ù„Ø¹Ø¨Ø© Ù†Ø±Ø³Ù„ Ø·Ù„Ø¨ Ø§Ù„ØªÙØ¹ÙŠÙ„ Ù„Ù„Ø¥Ø¯Ø§Ø±Ø© Ù…Ø¹ Ù„ÙˆØ­Ø© Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø©."""
+    """Ø¨Ø¹Ø¯ Ø¬Ù…Ø¹ App ID + Ø§Ø³Ù… Ø§Ù„Ù„Ø¹Ø¨Ø© Ù†Ø±Ø³Ù„ Ø·Ù„Ø¨ Ø§Ù„ØªÙØ¹ÙŠÙ„ Ù„Ù„Ø¥Ø¯Ø§Ø±Ø© Ù…Ø¹ Ù„ÙˆØØ© Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø©."""
     lang = L(m.from_user.id)
     data = await state.get_data()
     appid = (data.get("activate_appid") or "").strip()
@@ -699,12 +699,12 @@ async def activate_finish(m: Message, state: FSMContext):
 
     # ØªØ¬Ù‡ÙŠØ² Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬
     uid = m.from_user.id
-    uname = ("@" + m.from_user.username) if m.from_user.username else "â€”"
+    uname = ("@" + m.from_user.username) if m.from_user.username else "€”"
     mention = f"<a href='tg://user?id={uid}'>{m.from_user.full_name or uid}</a>"
 
     tg_decl = (u.get("telegram", {}) or {}).get("declared") or "-"
     tg_real = ("@" + m.from_user.username) if m.from_user.username else ((u.get("telegram", {}) or {}).get("real") or "-")
-    tg_match = "âœ…" if (isinstance(tg_real, str) and isinstance(tg_decl, str) and tg_real.lower()==tg_decl.lower()) else "â—ï¸"
+    tg_match = "œ…" if (isinstance(tg_real, str) and isinstance(tg_decl, str) and tg_real.lower()==tg_decl.lower()) else "—ï¸"
 
     links_short = _fmt_links_short(_merged_links(u), limit=3)
     name = u.get("name") or m.from_user.full_name or f"User {uid}"
@@ -713,24 +713,24 @@ async def activate_finish(m: Message, state: FSMContext):
     head = _tf(lang,'promp.adm.activate_req','Ø·Ù„Ø¨ ØªÙØ¹ÙŠÙ„ Ø§Ø´ØªØ±Ø§Ùƒ Ù…Ø±ÙˆÙ‘Ø¬' if lang=='ar' else 'Promoter activation request')
     txt = (
         f"ðŸš€ <b>{head}</b>\n"
-        f"ðŸ‘¤ {mention} â€” <code>{uid}</code> Â· {uname}\n"
+        f"ðŸ‘¤ {mention} €” <code>{uid}</code> Â· {uname}\n"
         f"ðŸªª { _tf(lang,'promp.name','Ø§Ù„Ø§Ø³Ù…' if lang=='ar' else 'Name') }: <b>{name}</b>\n"
-        f"âœˆï¸ TG: <code>{tg_real}</code> ({_tf(lang,'promp.tg.declared_label','Ø§Ù„Ù…Ø¹Ù„Ù†' if lang=='ar' else 'declared')}: <code>{tg_decl}</code>) {tg_match}\n"
+        f"œˆï¸ TG: <code>{tg_real}</code> ({_tf(lang,'promp.tg.declared_label','Ø§Ù„Ù…Ø¹Ù„Ù†' if lang=='ar' else 'declared')}: <code>{tg_decl}</code>) {tg_match}\n"
         f"ðŸ”— { _tf(lang,'promp.links','Ø§Ù„Ø±ÙˆØ§Ø¨Ø·' if lang=='ar' else 'Links') }: {links_short}\n"
         f"ðŸ“± { _tf(lang,'promp.app_id','Ù…Ø¹Ø±Ù‘Ù Ø§Ù„ØªØ·Ø¨ÙŠÙ‚' if lang=='ar' else 'App ID') }: <code>{appid or '-'}</code>\n"
         f"ðŸ§© { _tf(lang,'promp.app_name','Ø§Ù„Ù„Ø¹Ø¨Ø©' if lang=='ar' else 'Game') }: <b>{game}</b>\n\n"
-        f"{_tf(lang,'promp.renew.notes','Ù…Ù„Ø§Ø­Ø¸Ø©: Ø§Ø³ØªØ®Ø¯Ù… Ø§Ù„Ø£Ø²Ø±Ø§Ø± Ø¨Ø§Ù„Ø£Ø³ÙÙ„ Ù„Ø¥ØªÙ…Ø§Ù… Ø§Ù„ØªÙØ¹ÙŠÙ„.' if lang=='ar' else 'Note: use the buttons below to activate.')}\n"
+        f"{_tf(lang,'promp.renew.notes','Ù…Ù„Ø§ØØ¸Ø©: Ø§Ø³ØªØ®Ø¯Ù… Ø§Ù„Ø£Ø²Ø±Ø§Ø± Ø¨Ø§Ù„Ø£Ø³ÙÙ„ Ù„Ø¥ØªÙ…Ø§Ù… Ø§Ù„ØªÙØ¹ÙŠÙ„.' if lang=='ar' else 'Note: use the buttons below to activate.')}\n"
     )
 
-    # Ù„ÙˆØ­Ø© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© (ØªÙØ¹ÙŠÙ„ Ø³Ø±ÙŠØ¹/Ø±ÙØ¶)
+    # Ù„ÙˆØØ© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© (ØªÙØ¹ÙŠÙ„ Ø³Ø±ÙŠØ¹/Ø±ÙØ¶)
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="âœ… 30d", callback_data=f"promp:adm:activate:{uid}:30"),
-         InlineKeyboardButton(text="âœ… 90d", callback_data=f"promp:adm:activate:{uid}:90")],
+        [InlineKeyboardButton(text="œ… 30d", callback_data=f"promp:adm:activate:{uid}:30"),
+         InlineKeyboardButton(text="œ… 90d", callback_data=f"promp:adm:activate:{uid}:90")],
         [InlineKeyboardButton(
             text=_tf(lang, "promp.renew.custom", "Ù…Ø¯Ø© Ù…Ø®ØµØµØ©" if lang=="ar" else "Custom duration"),
             callback_data=f"promp:adm:activate_custom:{uid}"
         )],
-        [InlineKeyboardButton(text="âŒ " + (_tf(lang,'promp.adm.deny','رفض' if lang=='ar' else 'Deny')),
+        [InlineKeyboardButton(text="Œ " + (_tf(lang,'promp.adm.deny','رفض' if lang=='ar' else 'Deny')),
                               callback_data=f"promp:adm:deny:{uid}")],
     ])
 
@@ -752,14 +752,14 @@ async def activate_finish(m: Message, state: FSMContext):
                 pass
 
     await state.clear()
-    await m.answer(_tf(lang,"promp.activate.sent","ØªÙ… Ø§Ø³ØªÙ„Ø§Ù… Ø§Ù„Ø¨ÙŠØ§Ù†Ø§ØªØŒ ÙˆØ³ÙŠØªÙ… Ø§Ù„ØªÙØ¹ÙŠÙ„ Ø¨Ø¹Ø¯ Ù…Ø±Ø§Ø¬Ø¹Ø© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© âœ…" if lang=="ar" else "App details received; admin will activate soon âœ…"))
+    await m.answer(_tf(lang,"promp.activate.sent","ØªÙ… Ø§Ø³ØªÙ„Ø§Ù… Ø§Ù„Ø¨ÙŠØ§Ù†Ø§ØªØŒ ÙˆØ³ÙŠØªÙ… Ø§Ù„ØªÙØ¹ÙŠÙ„ Ø¨Ø¹Ø¯ Ù…Ø±Ø§Ø¬Ø¹Ø© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© œ…" if lang=="ar" else "App details received; admin will activate soon œ…"))
 
 # ===== Ø¥Ø«Ø¨Ø§Øª Ù†Ø´Ø§Ø· =====
 @router.callback_query(F.data == "promp:proof")
 async def proof_start(cb: CallbackQuery, state: FSMContext):
     lang = L(cb.from_user.id)
     await state.set_state(ProofState.wait)
-    await cb.message.answer(_tf(lang,"promp.proof.ask","Ø£Ø±Ø³Ù„ ØµÙˆØ±Ø©/ÙÙŠØ¯ÙŠÙˆ Ø£Ùˆ Ø±Ø§Ø¨Ø· ÙŠØ«Ø¨Øª Ù†Ø´Ø§Ø·Ùƒ (Ø¨Ø« Ù…Ø¨Ø§Ø´Ø±/ÙÙŠØ¯ÙŠÙˆ Ø¬Ø¯ÙŠØ¯)..." if lang=="ar" else "Send a photo/video/link that proves your activityâ€¦"))
+    await cb.message.answer(_tf(lang,"promp.proof.ask","Ø£Ø±Ø³Ù„ ØµÙˆØ±Ø©/ÙÙŠØ¯ÙŠÙˆ Ø£Ùˆ Ø±Ø§Ø¨Ø· ÙŠØ«Ø¨Øª Ù†Ø´Ø§Ø·Ùƒ (Ø¨Ø« Ù…Ø¨Ø§Ø´Ø±/ÙÙŠØ¯ÙŠÙˆ Ø¬Ø¯ÙŠØ¯)..." if lang=="ar" else "Send a photo/video/link that proves your activity€¦"))
     await cb.answer()
 
 @router.message(ProofState.wait, F.content_type.in_({ContentType.PHOTO, ContentType.VIDEO, ContentType.TEXT}))
@@ -778,7 +778,7 @@ async def proof_receive(m: Message, state: FSMContext):
             elif m.video: await m.bot.send_video(admin_id, m.video.file_id, caption=txt, parse_mode=ParseMode.HTML)
             else: await m.bot.send_message(admin_id, txt + (m.text or ""), parse_mode=ParseMode.HTML)
         except Exception: pass
-    await m.answer(_tf(lang,"promp.proof.ok","Ø´ÙƒØ±Ù‹Ø§! ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø¥Ø«Ø¨Ø§Øª Ù„Ù„Ø¥Ø¯Ø§Ø±Ø© âœ…" if lang=="ar" else "Thanks! Your proof was sent to admins âœ…"))
+    await m.answer(_tf(lang,"promp.proof.ok","Ø´ÙƒØ±Ù‹Ø§! ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø¥Ø«Ø¨Ø§Øª Ù„Ù„Ø¥Ø¯Ø§Ø±Ø© œ…" if lang=="ar" else "Thanks! Your proof was sent to admins œ…"))
 
 # ====== Ø¯Ø¹Ù… Ù…Ø¨Ø§Ø´Ø± ======
 ACTIVE_SUPPORT: dict[int, int] = {}
@@ -786,13 +786,13 @@ ADMIN_ACTIVE: dict[int, int] = {}
 
 def _claim_kb(uid: int, lang: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text=_tf(lang, "promp.support.claim", "Ø§Ø³ØªÙ„Ø§Ù… Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø© â†©ï¸" if lang=="ar" else "Claim chat â†©ï¸"),
+        InlineKeyboardButton(text=_tf(lang, "promp.support.claim", "Ø§Ø³ØªÙ„Ø§Ù… Ø§Ù„Ù…ØØ§Ø¯Ø«Ø© †©ï¸" if lang=="ar" else "Claim chat †©ï¸"),
                              callback_data=f"promp:support:claim:{uid}")
     ]])
 
 def _admin_controls_kb(uid: int, lang: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text=_tf(lang, "promp.support.end", "Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø© ðŸ›‘" if lang=="ar" else "End chat ðŸ›‘"),
+        InlineKeyboardButton(text=_tf(lang, "promp.support.end", "Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ù…ØØ§Ø¯Ø«Ø© ðŸ›‘" if lang=="ar" else "End chat ðŸ›‘"),
                              callback_data=f"promp:support:end:{uid}")
     ]])
 
@@ -805,18 +805,18 @@ async def _clear_state_for(bot, storage, user_id: int):
 async def _end_chat(bot, uid: int, admin_id: int, lang_user: str, lang_admin: str, storage):
     ACTIVE_SUPPORT.pop(uid, None); ADMIN_ACTIVE.pop(admin_id, None)
     await _clear_state_for(bot, storage, uid); await _clear_state_for(bot, storage, admin_id)
-    try: await bot.send_message(uid, _tf(lang_user, "promp.support.closed_user", "ØªÙ… Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø©." if lang_user=="ar" else "Chat ended."))
+    try: await bot.send_message(uid, _tf(lang_user, "promp.support.closed_user", "ØªÙ… Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ù…ØØ§Ø¯Ø«Ø©." if lang_user=="ar" else "Chat ended."))
     except Exception: pass
-    try: await bot.send_message(admin_id, _tf(lang_admin, "promp.support.closed_admin", "ØªÙ… Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø© Ù…Ø¹ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…." if lang_admin=="ar" else "Chat with the user was ended."))
+    try: await bot.send_message(admin_id, _tf(lang_admin, "promp.support.closed_admin", "ØªÙ… Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ù…ØØ§Ø¯Ø«Ø© Ù…Ø¹ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…." if lang_admin=="ar" else "Chat with the user was ended."))
     except Exception: pass
 
 @router.callback_query(F.data == "promp:support")
 async def support_start(cb: CallbackQuery, state: FSMContext):
     lang = L(cb.from_user.id)
     if cb.from_user.id in ADMIN_IDS:
-        return await cb.answer(_tf(lang, "promp.support.self_forbidden","Ù„Ø§ ÙŠÙ…ÙƒÙ†Ùƒ Ø¨Ø¯Ø¡ Ù…Ø­Ø§Ø¯Ø«Ø© Ø¯Ø¹Ù… Ù…Ù† Ø­Ø³Ø§Ø¨ Ø§Ù„Ø£Ø¯Ù…Ù†." if lang=="ar" else "You can't start support from an admin account."), show_alert=True)
+        return await cb.answer(_tf(lang, "promp.support.self_forbidden","Ù„Ø§ ÙŠÙ…ÙƒÙ†Ùƒ Ø¨Ø¯Ø¡ Ù…ØØ§Ø¯Ø«Ø© Ø¯Ø¹Ù… Ù…Ù† ØØ³Ø§Ø¨ Ø§Ù„Ø£Ø¯Ù…Ù†." if lang=="ar" else "You can't start support from an admin account."), show_alert=True)
     await state.set_state(SupportUser.chatting)
-    await cb.message.answer(_tf(lang, "promp.support.ask","Ø£Ø±Ø³Ù„ Ø±Ø³Ø§Ù„ØªÙƒ Ù„Ù„Ø¯Ø¹Ù… Ø§Ù„Ø¢Ù†â€¦ Ø£Ø±Ø³Ù„ /cancel Ù„Ù„Ø¥Ù„ØºØ§Ø¡." if lang=="ar" else "Send your support message nowâ€¦ Type /cancel to cancel."))
+    await cb.message.answer(_tf(lang, "promp.support.ask","Ø£Ø±Ø³Ù„ Ø±Ø³Ø§Ù„ØªÙƒ Ù„Ù„Ø¯Ø¹Ù… Ø§Ù„Ø¢Ù†€¦ Ø£Ø±Ø³Ù„ /cancel Ù„Ù„Ø¥Ù„ØºØ§Ø¡." if lang=="ar" else "Send your support message now€¦ Type /cancel to cancel."))
     await cb.answer()
 
 @router.message(SupportUser.chatting, F.text == "/cancel")
@@ -826,7 +826,7 @@ async def support_cancel_user(m: Message, state: FSMContext):
     await state.clear()
     if admin_id:
         ADMIN_ACTIVE.pop(admin_id, None); ACTIVE_SUPPORT.pop(uid, None)
-        try: await m.bot.send_message(admin_id, _tf(lang, "promp.support.user_left", "Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø£Ù†Ù‡Ù‰ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø©." if lang=="ar" else "User ended the chat."))
+        try: await m.bot.send_message(admin_id, _tf(lang, "promp.support.user_left", "Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø£Ù†Ù‡Ù‰ Ø§Ù„Ù…ØØ§Ø¯Ø«Ø©." if lang=="ar" else "User ended the chat."))
         except Exception: pass
     await m.answer(_tf(lang, "promp.cancel", "ØªÙ… Ø§Ù„Ø¥Ù„ØºØ§Ø¡." if lang=="ar" else "Cancelled."))
 
@@ -843,7 +843,7 @@ async def support_user_message(m: Message, state: FSMContext):
         return
     recipients = [a for a in ADMIN_IDS if a != uid]
     if not recipients:
-        await m.answer(_tf(lang_user, "promp.support.no_admins", "Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø£Ø¹Ø¶Ø§Ø¡ Ø¯Ø¹Ù… Ù…ØªØ§Ø­ÙˆÙ† Ø­Ø§Ù„ÙŠÙ‹Ø§." if lang_user=="ar" else "No support agents available right now."))
+        await m.answer(_tf(lang_user, "promp.support.no_admins", "Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø£Ø¹Ø¶Ø§Ø¡ Ø¯Ø¹Ù… Ù…ØªØ§ØÙˆÙ† ØØ§Ù„ÙŠÙ‹Ø§." if lang_user=="ar" else "No support agents available right now."))
         return
     for a in recipients:
         adm_lang = L(a)
@@ -855,7 +855,7 @@ async def support_user_message(m: Message, state: FSMContext):
             if m.caption: copy_kwargs["caption"] = m.caption
             await m.copy_to(a, **copy_kwargs)
         except Exception: pass
-    await m.answer(_tf(lang_user, "promp.support.wait_admin", "ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø±Ø³Ø§Ù„ØªÙƒ. Ø¨Ø§Ù†ØªØ¸Ø§Ø± Ø§Ù†Ø¶Ù…Ø§Ù… Ø£Ø­Ø¯ Ø£Ø¹Ø¶Ø§Ø¡ Ø§Ù„Ø¯Ø¹Ù…â€¦" if lang_user=="ar" else "Message sent. Waiting for a support agentâ€¦"))
+    await m.answer(_tf(lang_user, "promp.support.wait_admin", "ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø±Ø³Ø§Ù„ØªÙƒ. Ø¨Ø§Ù†ØªØ¸Ø§Ø± Ø§Ù†Ø¶Ù…Ø§Ù… Ø£ØØ¯ Ø£Ø¹Ø¶Ø§Ø¡ Ø§Ù„Ø¯Ø¹Ù…€¦" if lang_user=="ar" else "Message sent. Waiting for a support agent€¦"))
 
 @router.callback_query(F.data.startswith("promp:adm:activate_custom:"))
 async def adm_activate_custom_start(cb: CallbackQuery, state: FSMContext):
@@ -897,11 +897,11 @@ async def adm_activate_custom_value(m: Message, state: FSMContext):
             seconds = int(float(s)) * 24 * 3600
     except Exception:
         return await m.reply(_tf(L(m.from_user.id), "promp.renew.custom.invalid",
-                                 "Ù‚ÙŠÙ…Ø© ØºÙŠØ± ØµØ§Ù„Ø­Ø©. Ø¬Ø±Ù‘Ø¨ Ù…Ø«Ù„ 30d Ø£Ùˆ 12h." if L(m.from_user.id)=="ar" else "Invalid value. Try 30d or 12h."))
+                                 "Ù‚ÙŠÙ…Ø© ØºÙŠØ± ØµØ§Ù„ØØ©. Ø¬Ø±Ù‘Ø¨ Ù…Ø«Ù„ 30d Ø£Ùˆ 12h." if L(m.from_user.id)=="ar" else "Invalid value. Try 30d or 12h."))
 
     if seconds <= 0:
         return await m.reply(_tf(L(m.from_user.id), "promp.renew.custom.invalid",
-                                 "Ù‚ÙŠÙ…Ø© ØºÙŠØ± ØµØ§Ù„Ø­Ø©. Ø¬Ø±Ù‘Ø¨ Ù…Ø«Ù„ 30d Ø£Ùˆ 12h." if L(m.from_user.id)=="ar" else "Invalid value. Try 30d or 12h."))
+                                 "Ù‚ÙŠÙ…Ø© ØºÙŠØ± ØµØ§Ù„ØØ©. Ø¬Ø±Ù‘Ø¨ Ù…Ø«Ù„ 30d Ø£Ùˆ 12h." if L(m.from_user.id)=="ar" else "Invalid value. Try 30d or 12h."))
 
     d = _load()
     u = d.get("users", {}).get(str(uid))
@@ -922,14 +922,14 @@ async def adm_activate_custom_value(m: Message, state: FSMContext):
         lang_user = L(int(uid))
         await m.bot.send_message(
             int(uid),
-            _tf(lang_user, "promp.sub.activated", "ØªÙ… ØªÙØ¹ÙŠÙ„ Ø§Ø´ØªØ±Ø§ÙƒÙƒ âœ…" if lang_user=="ar" else "Your subscription is active âœ…")
+            _tf(lang_user, "promp.sub.activated", "ØªÙ… ØªÙØ¹ÙŠÙ„ Ø§Ø´ØªØ±Ø§ÙƒÙƒ œ…" if lang_user=="ar" else "Your subscription is active œ…")
             + f"\n{_tf(lang_user, 'promp.sub.expires', 'ÙŠÙ†ØªÙ‡ÙŠ ÙÙŠ' if lang_user=='ar' else 'Expires at')}: {_ts_to_str(expires)}"
         )
     except Exception:
         pass
 
     # ØªØ£ÙƒÙŠØ¯ Ù„Ù„Ø£Ø¯Ù…Ù†
-    await m.reply(_tf(L(m.from_user.id), "common.done", "Done âœ…"))
+    await m.reply(_tf(L(m.from_user.id), "common.done", "Done œ…"))
 
 @router.callback_query(F.data.startswith("promp:support:claim:"))
 async def support_claim(cb: CallbackQuery, state: FSMContext):
@@ -937,7 +937,7 @@ async def support_claim(cb: CallbackQuery, state: FSMContext):
         return await cb.answer(_tf(L(cb.from_user.id),'common.admins_only','Admins only.'), show_alert=True)
     lang_admin = L(cb.from_user.id); uid = int(cb.data.split(":")[-1])
     if uid == cb.from_user.id:
-        return await cb.answer(_tf(lang_admin, "promp.support.self_claim", "Ù„Ø§ ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ø³ØªÙ„Ø§Ù… Ù…Ø­Ø§Ø¯Ø«Ø© Ù…Ø¹ Ù†ÙØ³Ùƒ." if lang_admin=="ar" else "You can't claim a chat with yourself."), show_alert=True)
+        return await cb.answer(_tf(lang_admin, "promp.support.self_claim", "Ù„Ø§ ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ø³ØªÙ„Ø§Ù… Ù…ØØ§Ø¯Ø«Ø© Ù…Ø¹ Ù†ÙØ³Ùƒ." if lang_admin=="ar" else "You can't claim a chat with yourself."), show_alert=True)
     if uid in ACTIVE_SUPPORT:
         other = ACTIVE_SUPPORT[uid]
         if other == cb.from_user.id:
@@ -947,13 +947,13 @@ async def support_claim(cb: CallbackQuery, state: FSMContext):
     ACTIVE_SUPPORT[uid] = cb.from_user.id; ADMIN_ACTIVE[cb.from_user.id] = uid
     await state.set_state(SupportAdmin.chatting); await state.update_data(with_uid=uid)
     lang_user = L(uid)
-    try: await cb.bot.send_message(uid, _tf(lang_user, "promp.support.agent_joined", "Ø§Ù†Ø¶Ù…Ù‘ Ø£Ø­Ø¯ Ø£Ø¹Ø¶Ø§Ø¡ Ø§Ù„Ø¯Ø¹Ù… Ù„Ù„Ù…Ø­Ø§Ø¯Ø«Ø©." if lang_user=="ar" else "A support agent joined the chat."))
+    try: await cb.bot.send_message(uid, _tf(lang_user, "promp.support.agent_joined", "Ø§Ù†Ø¶Ù…Ù‘ Ø£ØØ¯ Ø£Ø¹Ø¶Ø§Ø¡ Ø§Ù„Ø¯Ø¹Ù… Ù„Ù„Ù…ØØ§Ø¯Ø«Ø©." if lang_user=="ar" else "A support agent joined the chat."))
     except Exception: pass
     try:
         await cb.message.answer(_tf(lang_admin, "promp.support.claimed", f"ØªÙ… Ø§Ø³ØªÙ„Ø§Ù… Ø§Ù„Ø¬Ù„Ø³Ø© Ù…Ø¹ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… <code>{uid}</code>." if lang_admin=="ar" else f"Chat with <code>{uid}</code> claimed."),
                                 reply_markup=_admin_controls_kb(uid, lang_admin), parse_mode=ParseMode.HTML)
     except Exception: pass
-    await cb.answer(_tf(lang_admin, "promp.support.you_are_live", "Ø£Ù†Øª Ø§Ù„Ø¢Ù† ÙÙŠ Ù…Ø­Ø§Ø¯Ø«Ø© Ù…Ø¨Ø§Ø´Ø±Ø©. Ø£Ø±Ø³Ù„ Ø±Ø³Ø§Ù„ØªÙƒ." if lang_admin=="ar" else "You're live. Send your messages."), show_alert=False)
+    await cb.answer(_tf(lang_admin, "promp.support.you_are_live", "Ø£Ù†Øª Ø§Ù„Ø¢Ù† ÙÙŠ Ù…ØØ§Ø¯Ø«Ø© Ù…Ø¨Ø§Ø´Ø±Ø©. Ø£Ø±Ø³Ù„ Ø±Ø³Ø§Ù„ØªÙƒ." if lang_admin=="ar" else "You're live. Send your messages."), show_alert=False)
 
 @router.callback_query(F.data.startswith("promp:support:end:"))
 async def support_end_btn(cb: CallbackQuery, state: FSMContext):
@@ -971,14 +971,14 @@ async def support_admin_message(m: Message, state: FSMContext):
     data = await state.get_data(); uid = data.get("with_uid")
     if not uid: return
     if uid == m.from_user.id:
-        await m.answer(_tf(L(m.from_user.id), "promp.support.self_echo", "Ù‡Ø°Ù‡ Ù…Ø­Ø§Ø¯Ø«Ø© Ù…Ø¹ Ù†ÙØ³ÙƒØ› Ø§Ù„Ø±Ø³Ø§Ø¦Ù„ Ù„Ù† ØªÙÙˆØ¬Ù‘ÙŽÙ‡." if L(m.from_user.id)=="ar" else "This would echo to yourself; use another account."))
+        await m.answer(_tf(L(m.from_user.id), "promp.support.self_echo", "Ù‡Ø°Ù‡ Ù…ØØ§Ø¯Ø«Ø© Ù…Ø¹ Ù†ÙØ³ÙƒØ› Ø§Ù„Ø±Ø³Ø§Ø¦Ù„ Ù„Ù† ØªÙÙˆØ¬Ù‘ÙŽÙ‡." if L(m.from_user.id)=="ar" else "This would echo to yourself; use another account."))
         return
     if (m.text or "").strip().lower() in {"/end", "/cancel"}:
         await _end_chat(m.bot, uid, m.from_user.id, L(uid), L(m.from_user.id), state.storage); return
     try: await m.copy_to(uid, caption=m.caption, parse_mode=ParseMode.HTML)
     except Exception: pass
 
-# ===== Ø­Ù…Ø§ÙŠØ§Øª Ø¹Ø§Ù…Ø© =====
+# ===== ØÙ…Ø§ÙŠØ§Øª Ø¹Ø§Ù…Ø© =====
 @router.message(EditProfile.name)
 @router.message(EditProfile.links)
 @router.message(EditProfile.tg)
@@ -1002,7 +1002,7 @@ async def live_public_entry(cb: CallbackQuery, state: FSMContext):
     await cb.message.answer(text, reply_markup=kb, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
     await cb.answer()
 
-# Ø¨Ø¯Ø¡ Ø§Ù„Ø¨Ø« Ù…Ù† Ø¯Ø§Ø®Ù„ Ù„ÙˆØ­Ø© Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬
+# Ø¨Ø¯Ø¡ Ø§Ù„Ø¨Ø« Ù…Ù† Ø¯Ø§Ø®Ù„ Ù„ÙˆØØ© Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬
 @router.callback_query(F.data == "promp:live:start")
 async def live_start_entry(cb: CallbackQuery, state: FSMContext):
     lang = L(cb.from_user.id)
@@ -1021,13 +1021,13 @@ async def live_start_entry(cb: CallbackQuery, state: FSMContext):
             f"ðŸŽ¥ <b>{_tf(lang,'promp.live.now','Ø¨Ø«Ùƒ Ø§Ù„Ø¢Ù†' if lang=='ar' else 'Your live now')}</b>\n"
             f"{_plat_icon(platform)} <a href='{url}'>{plat_human}</a>\n"
             f"ðŸ”— <code>{mine.get('handle','')}</code>\n"
-            f"ðŸ“ {(mine.get('title') or 'â€”')}\n"
-            f"â± <code>{_ts_to_str(mine.get('started_at'))}</code>\n"
-            f"âŒ›ï¸ <code>{_tf(lang,'promp.live.ends','ÙŠÙ†ØªÙ‡ÙŠ' if lang=='ar' else 'Ends')}: {ends}</code>"
+            f"ðŸ“ {(mine.get('title') or '€”')}\n"
+            f"± <code>{_ts_to_str(mine.get('started_at'))}</code>\n"
+            f"Œ›ï¸ <code>{_tf(lang,'promp.live.ends','ÙŠÙ†ØªÙ‡ÙŠ' if lang=='ar' else 'Ends')}: {ends}</code>"
         )
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="ðŸ”´ "+_tf(lang,"promp.live.end","Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¨Ø«" if lang=="ar" else "End live"), callback_data=f"promp:live:end:{mine['id']}")],
-            [InlineKeyboardButton(text="â¬…ï¸ "+_tf(lang,"promp.btn.back","Ø±Ø¬ÙˆØ¹" if lang=="ar" else "Back"), callback_data="promp:open")],
+            [InlineKeyboardButton(text="¬…ï¸ "+_tf(lang,"promp.btn.back","Ø±Ø¬ÙˆØ¹" if lang=="ar" else "Back"), callback_data="promp:open")],
         ])
         await cb.message.answer(txt, reply_markup=kb, parse_mode=ParseMode.HTML, disable_web_page_preview=False)
         return await cb.answer()
@@ -1046,15 +1046,15 @@ async def live_pick_platform(cb: CallbackQuery, state: FSMContext):
         await state.update_data(platform="other")
         await state.set_state(LiveStart.ask_platform_name)
         ask = _tf(lang, "promp.live.ask_other_name",
-                  "Ø§ÙƒØªØ¨ Ø§Ø³Ù… Ø§Ù„Ù…Ù†ØµÙ‘Ø© (Ù…Ø«Ø§Ù„: Trovo / Kick / â€¦)" if lang=="ar"
-                  else "Type the platform name (e.g., Trovo / Kick / â€¦)")
+                  "Ø§ÙƒØªØ¨ Ø§Ø³Ù… Ø§Ù„Ù…Ù†ØµÙ‘Ø© (Ù…Ø«Ø§Ù„: Trovo / Kick / €¦)" if lang=="ar"
+                  else "Type the platform name (e.g., Trovo / Kick / €¦)")
         await cb.message.answer(f"{_plat_icon('other')} <b>{_plat_label_custom(lang,'other')}</b>\n{ask}", parse_mode=ParseMode.HTML)
         return await cb.answer()
 
     await state.update_data(platform=plat)
     await state.set_state(LiveStart.ask_handle)
     hint = _tf(lang,"promp.live.ask_handle",
-               "Ø£Ø±Ø³Ù„ Ø§Ø³Ù… Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø£Ùˆ Ø±Ø§Ø¨Ø· Ø§Ù„Ù‚Ù†Ø§Ø©/Ø§Ù„Ø¨Ø« (Ù…Ø«Ø§Ù„: @myuser Ø£Ùˆ https://â€¦)" if lang=="ar"
+               "Ø£Ø±Ø³Ù„ Ø§Ø³Ù… Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø£Ùˆ Ø±Ø§Ø¨Ø· Ø§Ù„Ù‚Ù†Ø§Ø©/Ø§Ù„Ø¨Ø« (Ù…Ø«Ø§Ù„: @myuser Ø£Ùˆ https://€¦)" if lang=="ar"
                else "Send the @handle or full channel/live URL:")
     await cb.message.answer(f"{_plat_icon(plat)} <b>{_plat_label(lang,plat)}</b>\n{hint}", parse_mode=ParseMode.HTML)
     await cb.answer()
@@ -1066,8 +1066,8 @@ async def live_other_platform_name(m: Message, state: FSMContext):
     await state.update_data(platform_name=name)
     await state.set_state(LiveStart.ask_handle)
     hint = _tf(lang, "promp.live.ask_other_url",
-               "Ø£Ø±Ø³Ù„ Ø±Ø§Ø¨Ø· Ø§Ù„Ø¨Ø« Ø§Ù„ÙƒØ§Ù…Ù„ (Ù…Ø«Ø§Ù„: https://example.com/â€¦)" if lang=="ar"
-               else "Send the full live URL (e.g., https://example.com/â€¦)")
+               "Ø£Ø±Ø³Ù„ Ø±Ø§Ø¨Ø· Ø§Ù„Ø¨Ø« Ø§Ù„ÙƒØ§Ù…Ù„ (Ù…Ø«Ø§Ù„: https://example.com/€¦)" if lang=="ar"
+               else "Send the full live URL (e.g., https://example.com/€¦)")
     await m.answer(hint)
 
 # Ø§Ø³ØªÙ‚Ø¨Ø§Ù„ Ø§Ù„Ù…Ø¹Ø±Ù‘Ù/Ø§Ù„Ø±Ø§Ø¨Ø·
@@ -1082,19 +1082,19 @@ async def live_set_handle(m: Message, state: FSMContext):
         if not (handle.startswith("http://") or handle.startswith("https://")):
             return await m.answer(
                 _tf(lang, "promp.live.other.url_required",
-                    "âš ï¸ Ø±Ø¬Ø§Ø¡Ù‹ Ø£Ø±Ø³Ù„ Ø±Ø§Ø¨Ø·Ù‹Ø§ ÙƒØ§Ù…Ù„Ø§Ù‹ ÙŠØ¨Ø¯Ø£ Ø¨Ù€ http:// Ø£Ùˆ https://"
+                    "š ï¸ Ø±Ø¬Ø§Ø¡Ù‹ Ø£Ø±Ø³Ù„ Ø±Ø§Ø¨Ø·Ù‹Ø§ ÙƒØ§Ù…Ù„Ø§Ù‹ ÙŠØ¨Ø¯Ø£ Ø¨Ù€ http:// Ø£Ùˆ https://"
                     if lang=="ar" else
-                    "âš ï¸ Please send a full URL starting with http:// or https://")
+                    "š ï¸ Please send a full URL starting with http:// or https://")
             )
 
     await state.update_data(handle=handle)
     await state.set_state(LiveStart.ask_title)
     await m.answer(_tf(lang, "promp.live.ask_title",
-                       "Ø£Ø±Ø³Ù„ Ø¹Ù†ÙˆØ§Ù†Ù‹Ø§ Ù„Ù„Ø¨Ø« (Ø§Ø®ØªÙŠØ§Ø±ÙŠ) â€” Ø£Ø±Ø³Ù„ Â«-Â» Ù„ØªØ®Ø·ÙŠ."
+                       "Ø£Ø±Ø³Ù„ Ø¹Ù†ÙˆØ§Ù†Ù‹Ø§ Ù„Ù„Ø¨Ø« (Ø§Ø®ØªÙŠØ§Ø±ÙŠ) €” Ø£Ø±Ø³Ù„ Â«-Â» Ù„ØªØ®Ø·ÙŠ."
                        if lang=="ar" else
-                       "Send a title (optional) â€” send '-' to skip."))
+                       "Send a title (optional) €” send '-' to skip."))
 
-# Ø§Ø³ØªÙ‚Ø¨Ø§Ù„ Ø§Ù„Ø¹Ù†ÙˆØ§Ù† â†’ Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„Ù…Ø¯Ø©
+# Ø§Ø³ØªÙ‚Ø¨Ø§Ù„ Ø§Ù„Ø¹Ù†ÙˆØ§Ù† †’ Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„Ù…Ø¯Ø©
 @router.message(LiveStart.ask_title, F.text)
 async def live_ask_duration(m: Message, state: FSMContext):
     lang = L(m.from_user.id)
@@ -1113,7 +1113,7 @@ async def live_ask_duration(m: Message, state: FSMContext):
         [InlineKeyboardButton(text=_tf(lang,"promp.btn.back","Ø±Ø¬ÙˆØ¹" if lang=="ar" else "Back"), callback_data="promp:open")],
     ])
     await state.set_state(LiveStart.ask_duration)
-    msg = _tf(lang,"promp.live.dur.ask","Ø§Ø®ØªØ± Ù…Ø¯Ø© Ø§Ù„Ø¨Ø« (Ù…Ù† 30 Ø¯Ù‚ÙŠÙ‚Ø© Ø­ØªÙ‰ 24 Ø³Ø§Ø¹Ø©):" if lang=="ar" else "Choose live duration (30m to 24h):")
+    msg = _tf(lang,"promp.live.dur.ask","Ø§Ø®ØªØ± Ù…Ø¯Ø© Ø§Ù„Ø¨Ø« (Ù…Ù† 30 Ø¯Ù‚ÙŠÙ‚Ø© ØØªÙ‰ 24 Ø³Ø§Ø¹Ø©):" if lang=="ar" else "Choose live duration (30m to 24h):")
     await m.answer(msg, reply_markup=kb)
 
 # Ø§Ù„Ù…Ø¯Ù‘Ø© Ø§Ù„Ø¬Ø§Ù‡Ø²Ø©
@@ -1138,7 +1138,7 @@ async def live_pick_duration(cb: CallbackQuery, state: FSMContext):
 async def live_duration_custom(cb: CallbackQuery, state: FSMContext):
     lang = L(cb.from_user.id)
     await state.set_state(LiveStart.ask_duration_custom)
-    ask = _tf(lang,"promp.live.dur.custom.ask","Ø£Ø±Ø³Ù„ Ø§Ù„Ù…Ø¯Ø© Ù…Ø«Ù„: 30m, 1h, 1.5h, 90m (Ø§Ù„Ù…Ø³Ù…ÙˆØ­ 30mâ€“24h)." if lang=="ar" else "Send duration like: 30m, 1h, 1.5h, 90m (allowed 30mâ€“24h).")
+    ask = _tf(lang,"promp.live.dur.custom.ask","Ø£Ø±Ø³Ù„ Ø§Ù„Ù…Ø¯Ø© Ù…Ø«Ù„: 30m, 1h, 1.5h, 90m (Ø§Ù„Ù…Ø³Ù…ÙˆØ 30m€“24h)." if lang=="ar" else "Send duration like: 30m, 1h, 1.5h, 90m (allowed 30m€“24h).")
     await cb.message.answer(ask)
     await cb.answer()
 
@@ -1147,7 +1147,7 @@ async def live_duration_custom_value(m: Message, state: FSMContext):
     lang = L(m.from_user.id)
     hours = _parse_duration_to_hours(m.text or "")
     if hours is None:
-        return await m.answer(_tf(lang,"promp.live.dur.custom.invalid","Ù‚ÙŠÙ…Ø© ØºÙŠØ± ØµØ§Ù„Ø­Ø©. Ø§Ø³ØªØ®Ø¯Ù… 30m..24h Ù…Ø«Ù„ 30m/1h/1.5h/90m." if lang=="ar" else "Invalid value. Use 30m..24h, e.g., 30m/1h/1.5h/90m."))
+        return await m.answer(_tf(lang,"promp.live.dur.custom.invalid","Ù‚ÙŠÙ…Ø© ØºÙŠØ± ØµØ§Ù„ØØ©. Ø§Ø³ØªØ®Ø¯Ù… 30m..24h Ù…Ø«Ù„ 30m/1h/1.5h/90m." if lang=="ar" else "Invalid value. Use 30m..24h, e.g., 30m/1h/1.5h/90m."))
     await state.update_data(ttl_hours=hours)
     d = _load(); u = _u(d, m.from_user.id)
     suggested = (u.get("name") or m.from_user.full_name or f"User {m.from_user.id}")
@@ -1155,7 +1155,7 @@ async def live_duration_custom_value(m: Message, state: FSMContext):
     ask = _tf(lang,"promp.live.ask_display","Ø§ÙƒØªØ¨ Ø§Ù„Ø§Ø³Ù… Ø§Ù„Ø°ÙŠ Ø³ÙŠØ¸Ù‡Ø± Ù„Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙŠÙ† (Ø£Ø±Ø³Ù„ Â«-Â» Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠ)" if lang=="ar" else "Send the display name (send '-' to use default)")
     await m.answer(f"{ask}\n<code>{suggested}</code>", parse_mode=ParseMode.HTML)
 
-# Ø§Ø³ØªÙ‚Ø¨Ø§Ù„ Ø§Ø³Ù… Ø§Ù„Ø¹Ø±Ø¶ â†’ ØªØ´ØºÙŠÙ„ Ø§Ù„Ø¨Ø«
+# Ø§Ø³ØªÙ‚Ø¨Ø§Ù„ Ø§Ø³Ù… Ø§Ù„Ø¹Ø±Ø¶ †’ ØªØ´ØºÙŠÙ„ Ø§Ù„Ø¨Ø«
 @router.message(LiveStart.ask_display, F.text)
 async def live_do_start(m: Message, state: FSMContext):
     data = await state.get_data()
@@ -1169,11 +1169,11 @@ async def live_do_start(m: Message, state: FSMContext):
     d = _load(); u = _u(d, m.from_user.id)
     display_name = (u.get("name") or m.from_user.full_name or f"User {m.from_user.id}") if (disp == "-" or not disp) else disp
 
-    # Ø­ÙØ¸ Ø§Ù„Ø±Ø§Ø¨Ø· ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‹Ø§ ÙÙŠ auto_links Ù„Ø¸Ù‡ÙˆØ±Ù‡ Ù„Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙŠÙ†
+    # ØÙØ¸ Ø§Ù„Ø±Ø§Ø¨Ø· ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‹Ø§ ÙÙŠ auto_links Ù„Ø¸Ù‡ÙˆØ±Ù‡ Ù„Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙŠÙ†
     url = _make_url(platform, handle or "")
     if _is_http_url(url):
         _add_auto_link(u, url)
-        _save(d)  # Ø§Ø­ÙØ¸ ÙÙˆØ±Ù‹Ø§ Ù‚Ø¨Ù„ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„
+        _save(d)  # Ø§ØÙØ¸ ÙÙˆØ±Ù‹Ø§ Ù‚Ø¨Ù„ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„
 
     rec = live_start(
         m.from_user.id,
@@ -1189,15 +1189,15 @@ async def live_do_start(m: Message, state: FSMContext):
     lang = L(m.from_user.id)
     plat_human = _plat_label_custom(lang, platform, rec=rec, name=platform_name)
     txt = (
-        f"ðŸŽ¥ <b>{_tf(lang,'promp.live.started','ØªÙ… ØªØ´ØºÙŠÙ„ Ø§Ù„Ø¨Ø« âœ…' if lang=='ar' else 'Live started âœ…')}</b>\n"
+        f"ðŸŽ¥ <b>{_tf(lang,'promp.live.started','ØªÙ… ØªØ´ØºÙŠÙ„ Ø§Ù„Ø¨Ø« œ…' if lang=='ar' else 'Live started œ…')}</b>\n"
         f"ðŸ‘¤ {display_name}\n{_plat_icon(platform)} <a href='{url}'>{plat_human}</a>\n"
-        f"ðŸ“ {(title or 'â€”')}\n"
-        f"â± <code>{_ts_to_str(rec.get('started_at'))}</code>\n"
-        f"âŒ›ï¸ <code>{_tf(lang,'promp.live.ends','ÙŠÙ†ØªÙ‡ÙŠ' if lang=='ar' else 'Ends')}: {_ts_to_str(rec.get('expires_at'))}</code>"
+        f"ðŸ“ {(title or '€”')}\n"
+        f"± <code>{_ts_to_str(rec.get('started_at'))}</code>\n"
+        f"Œ›ï¸ <code>{_tf(lang,'promp.live.ends','ÙŠÙ†ØªÙ‡ÙŠ' if lang=='ar' else 'Ends')}: {_ts_to_str(rec.get('expires_at'))}</code>"
     )
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="ðŸ”´ "+(_tf(lang,"promp.live.end","Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¨Ø«" if lang=="ar" else "End live")), callback_data=f"promp:live:end:{rec['id']}")],
-        [InlineKeyboardButton(text="â¬…ï¸ "+(_tf(lang,"promp.btn.back","Ø±Ø¬ÙˆØ¹" if lang=="ar" else "Back")), callback_data="promp:open")],
+        [InlineKeyboardButton(text="¬…ï¸ "+(_tf(lang,"promp.btn.back","Ø±Ø¬ÙˆØ¹" if lang=="ar" else "Back")), callback_data="promp:open")],
     ])
     await m.answer(txt, reply_markup=kb, parse_mode=ParseMode.HTML, disable_web_page_preview=False)
 
@@ -1205,9 +1205,9 @@ async def live_do_start(m: Message, state: FSMContext):
         f"ðŸ“£ LIVE\n"
         f"UID: <code>{m.from_user.id}</code>\n"
         f"ðŸ‘¤ {display_name}\n"
-        f"{_plat_icon(platform)} {plat_human} â€” <code>{handle}</code>\n"
-        f"ðŸ“ {(title or 'â€”')}\n"
-        f"âŒ›ï¸ {_tf(L(m.from_user.id),'promp.live.ends','ÙŠÙ†ØªÙ‡ÙŠ' if lang=='ar' else 'Ends')}: {_ts_to_str(rec.get('expires_at'))}"
+        f"{_plat_icon(platform)} {plat_human} €” <code>{handle}</code>\n"
+        f"ðŸ“ {(title or '€”')}\n"
+        f"Œ›ï¸ {_tf(L(m.from_user.id),'promp.live.ends','ÙŠÙ†ØªÙ‡ÙŠ' if lang=='ar' else 'Ends')}: {_ts_to_str(rec.get('expires_at'))}"
     )
     for admin_id in ADMIN_IDS:
         try:
@@ -1247,11 +1247,11 @@ async def live_end_handler(cb: CallbackQuery):
             lang_user = L(uid)
             plat = (rec.get("platform") or "").lower()
             handle = rec.get("handle") or ""
-            title = rec.get("title") or "â€”"
+            title = rec.get("title") or "€”"
             plat_human = _plat_label_custom(lang_user, plat, rec=rec)
             msg_user = (
                 f"ðŸ”´ { _tf(lang_user,'promp.live.ended.by_admin','ØªÙ… Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¨Ø« Ù…Ù† Ù‚Ø¨Ù„ Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©.' if lang_user=='ar' else 'Your live was ended by the admin.') }\n"
-                f"{_plat_icon(plat)} {plat_human} â€” <code>{handle}</code>\n"
+                f"{_plat_icon(plat)} {plat_human} €” <code>{handle}</code>\n"
                 f"ðŸ“ {title}"
             )
             await cb.bot.send_message(uid, msg_user, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
@@ -1266,7 +1266,7 @@ async def live_end_handler(cb: CallbackQuery):
 
 # =========== Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø¹Ø§Ù…Ø© ===========
 def _truncate(s: str, n: int) -> str:
-    s=(s or "").strip(); return s if len(s)<=n else s[:n-1]+"â€¦"
+    s=(s or "").strip(); return s if len(s)<=n else s[:n-1]+"€¦"
 
 def _group_by_promoter(items: list[dict]) -> list[dict]:
     grouped: dict[int, dict] = {}
@@ -1296,18 +1296,18 @@ def _render_public_list(lang: str, _platform_ignored: str, page: int):
 
     if total==0:
         kb=InlineKeyboardMarkup(inline_keyboard=[[
-            InlineKeyboardButton(text="ðŸ”„ "+_tf(lang,"promp.btn.refresh","ØªØ­Ø¯ÙŠØ«" if lang=="ar" else "Refresh"), callback_data="promp:live"),
+            InlineKeyboardButton(text="ðŸ”„ "+_tf(lang,"promp.btn.refresh","ØªØØ¯ÙŠØ«" if lang=="ar" else "Refresh"), callback_data="promp:live"),
         ],[
             InlineKeyboardButton(text=_tf(lang,"promp.btn.back","Ø±Ø¬ÙˆØ¹" if lang=="ar" else "Back"), callback_data="back_to_menu")
         ]])
-        return head+"\n"+(_tf(lang,"promp.live.none","Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø¨Ø« Ù…Ø¨Ø§Ø´Ø± Ø­Ø§Ù„ÙŠÙ‹Ø§." if lang=="ar" else "No live streams right now.")), kb
+        return head+"\n"+(_tf(lang,"promp.live.none","Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø¨Ø« Ù…Ø¨Ø§Ø´Ø± ØØ§Ù„ÙŠÙ‹Ø§." if lang=="ar" else "No live streams right now.")), kb
 
     kb=InlineKeyboardBuilder()
     for g in shown:
         name=_truncate(g["name"],22)
         since_short=_duration_short(max(0,_now()-int(g.get("since_ts",_now()))), lang)
         icons=g["icons"] or "ðŸ”´"
-        btn_txt = f"ðŸ‘¤ {name} Â· â± {since_short} Â· {icons}"
+        btn_txt = f"ðŸ‘¤ {name} Â· ± {since_short} Â· {icons}"
         kb.row(InlineKeyboardButton(text=btn_txt, callback_data=f"promp:live:view:{g['user_id']}:all:{page}"))
 
     nav=[]
@@ -1316,8 +1316,8 @@ def _render_public_list(lang: str, _platform_ignored: str, page: int):
     if page<pages: nav.append(InlineKeyboardButton(text=_tf(lang,"promp.nav.next","Ø§Ù„ØªØ§Ù„ÙŠ" if lang=="ar" else "Next")+" Â»", callback_data=f"promp:live:list:all:{page+1}"))
     kb.row(*nav)
     kb.row(
-        InlineKeyboardButton(text="ðŸ”„ "+_tf(lang,"promp.btn.refresh","ØªØ­Ø¯ÙŠØ«" if lang=="ar" else "Refresh"), callback_data=f"promp:live:list:all:{page}"),
-        InlineKeyboardButton(text="â¬…ï¸ "+_tf(lang,"promp.btn.back","Ø±Ø¬ÙˆØ¹" if lang=="ar" else "Back"), callback_data="back_to_menu")
+        InlineKeyboardButton(text="ðŸ”„ "+_tf(lang,"promp.btn.refresh","ØªØØ¯ÙŠØ«" if lang=="ar" else "Refresh"), callback_data=f"promp:live:list:all:{page}"),
+        InlineKeyboardButton(text="¬…ï¸ "+_tf(lang,"promp.btn.back","Ø±Ø¬ÙˆØ¹" if lang=="ar" else "Back"), callback_data="back_to_menu")
     )
     return head, kb.as_markup()
 
@@ -1340,7 +1340,7 @@ def _render_promoter_detail(lang: str, uid: int, platform_ctx: str, page_ctx: in
         )
         kb = InlineKeyboardMarkup(inline_keyboard=[[
             InlineKeyboardButton(
-                text="â¬…ï¸ " + _tf(lang, "promp.btn.back", "Ø±Ø¬ÙˆØ¹" if lang == "ar" else "Back"),
+                text="¬…ï¸ " + _tf(lang, "promp.btn.back", "Ø±Ø¬ÙˆØ¹" if lang == "ar" else "Back"),
                 callback_data=f"promp:live:list:{platform_ctx}:{page_ctx}"
             )
         ]])
@@ -1350,8 +1350,8 @@ def _render_promoter_detail(lang: str, uid: int, platform_ctx: str, page_ctx: in
     title_lbl = _tf(lang, "promp.live.details", "ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ø¨Ø«" if lang == "ar" else "Live details")
     pro_hdr   = _tf(lang, "promp.live.promoter", "Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬" if lang == "ar" else "Promoter")
     ends_lbl  = _tf(lang, "promp.live.ends", "ÙŠÙ†ØªÙ‡ÙŠ" if lang == "ar" else "Ends")
-    open_lbl  = _tf(lang, "promp.live.open", "ÙØªØ­ Ø§Ù„Ø¨Ø«" if lang == "ar" else "Open stream")
-    invalid_link_lbl = _tf(lang, "promp.live.invalid_link", "Ø±Ø§Ø¨Ø· ØºÙŠØ± ØµØ§Ù„Ø­" if lang == "ar" else "Invalid link")
+    open_lbl  = _tf(lang, "promp.live.open", "ÙØªØ Ø§Ù„Ø¨Ø«" if lang == "ar" else "Open stream")
+    invalid_link_lbl = _tf(lang, "promp.live.invalid_link", "Ø±Ø§Ø¨Ø· ØºÙŠØ± ØµØ§Ù„Ø" if lang == "ar" else "Invalid link")
     links_lbl = _tf(lang, "promp.links", "Ø§Ù„Ø±ÙˆØ§Ø¨Ø·" if lang == "ar" else "Links")
 
     txt_lines = [f"ðŸ‘¤ <b>{name}</b>", f"ðŸŽ¥ <b>{title_lbl}</b>"]
@@ -1363,35 +1363,35 @@ def _render_promoter_detail(lang: str, uid: int, platform_ctx: str, page_ctx: in
         url = _make_url(p, raw_handle)
         started = int(r.get("started_at") or 0)
         since = _since_phrase(started, lang)
-        stream_title = r.get("title") or "â€”"
+        stream_title = r.get("title") or "€”"
         ends = _ts_to_str(r.get("expires_at"))
         plat_human = _plat_label_custom(lang, p, rec=r)
 
         txt_lines.append(
             f"{_plat_icon(p)} <b>{plat_human}</b>\n"
             f"ðŸ“ {stream_title}\n"
-            f"â± {since}\n"
-            f"âŒ›ï¸ {ends_lbl}: {ends}"
+            f"± {since}\n"
+            f"Œ›ï¸ {ends_lbl}: {ends}"
         )
 
         if _is_http_url(url):
-            kb.row(InlineKeyboardButton(text=f"{_plat_icon(p)} {open_lbl} â€“ {plat_human}", url=url))
+            kb.row(InlineKeyboardButton(text=f"{_plat_icon(p)} {open_lbl} €“ {plat_human}", url=url))
         else:
-            # Ù„Ø§ Ù†Ø¶Ø¹ Ø²Ø± URL Ø¥Ù† Ù„Ù… ÙŠÙƒÙ† ØµØ§Ù„Ø­Ù‹Ø§ØŒ ÙˆÙ†Ø°ÙƒØ± Ø§Ù„Ù‚ÙŠÙ…Ø© ÙƒÙ†Øµ ÙÙ‚Ø·
-            txt_lines.append(f"ðŸ”— <code>{raw_handle or 'â€”'}</code>")
+            # Ù„Ø§ Ù†Ø¶Ø¹ Ø²Ø± URL Ø¥Ù† Ù„Ù… ÙŠÙƒÙ† ØµØ§Ù„ØÙ‹Ø§ØŒ ÙˆÙ†Ø°ÙƒØ± Ø§Ù„Ù‚ÙŠÙ…Ø© ÙƒÙ†Øµ ÙÙ‚Ø·
+            txt_lines.append(f"ðŸ”— <code>{raw_handle or '€”'}</code>")
             kb.row(InlineKeyboardButton(text=f"{_plat_icon(p)} {invalid_link_lbl}", callback_data="noop"))
 
-    # Ø¨Ø·Ø§Ù‚Ø© Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬ â€” Ø¨Ø¯ÙˆÙ† ØªÙŠÙ„ÙŠØ¬Ø±Ø§Ù… (Ø®ØµÙˆØµÙŠØ©) ÙˆØ¨Ø±ÙˆØ§Ø¨Ø· Ø§Ù„Ù„Ø§ÙŠÙ ÙÙ‚Ø·
+    # Ø¨Ø·Ø§Ù‚Ø© Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬ €” Ø¨Ø¯ÙˆÙ† ØªÙŠÙ„ÙŠØ¬Ø±Ø§Ù… (Ø®ØµÙˆØµÙŠØ©) ÙˆØ¨Ø±ÙˆØ§Ø¨Ø· Ø§Ù„Ù„Ø§ÙŠÙ ÙÙ‚Ø·
     txt_lines.append("\n" + f"ðŸªª <b>{pro_hdr}</b>")
     if live_links:
         txt_lines.append(f"ðŸ”— {links_lbl}: {links_short}")
 
     kb.row(InlineKeyboardButton(
-        text="â¬…ï¸ " + _tf(lang, "promp.btn.back", "Ø±Ø¬ÙˆØ¹" if lang == "ar" else "Back"),
+        text="¬…ï¸ " + _tf(lang, "promp.btn.back", "Ø±Ø¬ÙˆØ¹" if lang == "ar" else "Back"),
         callback_data=f"promp:live:list:{platform_ctx}:{page_ctx}"
     ))
     kb.row(InlineKeyboardButton(
-        text="ðŸ”„ " + _tf(lang, "promp.btn.refresh", "ØªØ­Ø¯ÙŠØ«" if lang == "ar" else "Refresh"),
+        text="ðŸ”„ " + _tf(lang, "promp.btn.refresh", "ØªØØ¯ÙŠØ«" if lang == "ar" else "Refresh"),
         callback_data=f"promp:live:view:{uid}:{platform_ctx}:{page_ctx}"
     ))
 
@@ -1399,7 +1399,7 @@ def _render_promoter_detail(lang: str, uid: int, platform_ctx: str, page_ctx: in
 
 # Ø¶Ø¹Ù‡Ø§ Ù…Ø¹ Ø¨Ù‚ÙŠØ© Ø§Ù„Ù€ helpers
 def _collect_live_links(items: list[dict]) -> list[str]:
-    """ÙŠØ±Ø¬Ø¹ ÙÙ‚Ø· Ø§Ù„Ø±ÙˆØ§Ø¨Ø· http/https Ø§Ù„Ù…Ø±Ø³Ù„Ø© ÙˆÙ‚Øª ÙØªØ­ Ø§Ù„Ù„Ø§ÙŠÙ (Ù…Ù† handle Ø¥Ù† ÙƒØ§Ù† URL)."""
+    """ÙŠØ±Ø¬Ø¹ ÙÙ‚Ø· Ø§Ù„Ø±ÙˆØ§Ø¨Ø· http/https Ø§Ù„Ù…Ø±Ø³Ù„Ø© ÙˆÙ‚Øª ÙØªØ Ø§Ù„Ù„Ø§ÙŠÙ (Ù…Ù† handle Ø¥Ù† ÙƒØ§Ù† URL)."""
     out, seen = [], set()
     for r in items:
         h = (r.get("handle") or "").strip()

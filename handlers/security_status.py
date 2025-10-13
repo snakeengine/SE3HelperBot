@@ -13,7 +13,7 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.enums import ParseMode
 from lang import t, get_user_lang
 
-# Ø¯Ø¹Ù… Ø§Ù„Ù…Ù†Ø·Ù‚Ø© Ø§Ù„Ø²Ù…Ù†ÙŠØ© (Python 3.9+). ÙÙŠ Ø­Ø§Ù„ Ø¹Ø¯Ù… ØªÙˆÙØ±Ù‡Ø§ Ù†Ø³ØªØ®Ø¯Ù… ØªØ¹ÙˆÙŠØ¶ +3
+# Ø¯Ø¹Ù… Ø§Ù„Ù…Ù†Ø·Ù‚Ø© Ø§Ù„Ø²Ù…Ù†ÙŠØ© (Python 3.9+). ÙÙŠ ØØ§Ù„ Ø¹Ø¯Ù… ØªÙˆÙØ±Ù‡Ø§ Ù†Ø³ØªØ®Ø¯Ù… ØªØ¹ÙˆÙŠØ¶ +3
 try:
     from zoneinfo import ZoneInfo  # Python 3.9+
 except Exception:
@@ -33,10 +33,10 @@ def is_admin(uid: int) -> bool:
 def L(user_id: int) -> str:
     return (get_user_lang(user_id) or "ar").lower()
 
-# Ø¥Ø¸Ù‡Ø§Ø± Ø²Ø± "Ù„ÙˆØ­Ø© ØªØ­ÙƒÙ… Ø§Ù„Ø£Ù…Ø§Ù†" Ø¯Ø§Ø®Ù„ Ø´Ø§Ø´Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…ØŸ Ø§ÙØªØ±Ø§Ø¶ÙŠÙ‹Ø§: Ù…Ø®ÙÙŠ
+# Ø¥Ø¸Ù‡Ø§Ø± Ø²Ø± "Ù„ÙˆØØ© ØªØÙƒÙ… Ø§Ù„Ø£Ù…Ø§Ù†" Ø¯Ø§Ø®Ù„ Ø´Ø§Ø´Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…ØŸ Ø§ÙØªØ±Ø§Ø¶ÙŠÙ‹Ø§: Ù…Ø®ÙÙŠ
 SHOW_INLINE_ADMIN = False
 
-# ========= Ù…Ù„Ù Ø§Ù„Ø­Ø§Ù„Ø© =========
+# ========= Ù…Ù„Ù Ø§Ù„ØØ§Ù„Ø© =========
 DATA_FILE = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "data", "security_status.json"))
 
 DEFAULT_GAMES = {
@@ -103,7 +103,7 @@ def _baghdad_tz():
 
 def _format_updated_at(dt_iso: str | None) -> str:
     """
-    ÙŠØ¹Ø±Ø¶ Ø¢Ø®Ø± ØªØ­Ø¯ÙŠØ« Ø¨ØµÙŠØºØ©: 12-08-2025 14:05 UTC
+    ÙŠØ¹Ø±Ø¶ Ø¢Ø®Ø± ØªØØ¯ÙŠØ« Ø¨ØµÙŠØºØ©: 12-08-2025 14:05 UTC
     Ù†Ø¹ØªÙ…Ø¯ Ø¯Ø§Ø¦Ù…Ù‹Ø§ Ø¹Ù„Ù‰ UTC Ù„ØªØ¬Ù†Ø¨ Ù…Ø´Ø§ÙƒÙ„ Ø§Ù„Ù…Ù†Ø§Ø·Ù‚ Ø§Ù„Ø²Ù…Ù†ÙŠØ©.
     """
     if not dt_iso:
@@ -123,10 +123,10 @@ def _format_updated_at(dt_iso: str | None) -> str:
         return dt_iso or "-"
 
 def _now_ping_str() -> str:
-    # ÙˆÙ‚Øª Ù„Ø­Ø¸ÙŠ Ø¨ØµÙŠØºØ© UTC: 17:40:12 12-08-2025 UTC
+    # ÙˆÙ‚Øª Ù„ØØ¸ÙŠ Ø¨ØµÙŠØºØ© UTC: 17:40:12 12-08-2025 UTC
     return datetime.datetime.now(tz=datetime.timezone.utc).strftime("%H:%M:%S %d-%m-%Y") + " UTC"
 
-# ========= Ø®Ø±Ø§Ø¦Ø· Ø§Ù„Ø­Ø§Ù„Ø§Øª =========
+# ========= Ø®Ø±Ø§Ø¦Ø· Ø§Ù„ØØ§Ù„Ø§Øª =========
 STATUS_ORDER = ["safe", "warn", "down"]
 STATUS_ICON = {
     "safe": "âœ…",
@@ -186,7 +186,7 @@ def _kb_main(lang: str, as_admin: bool, *, src: str) -> InlineKeyboardBuilder:
     src âˆˆ {'main','vip'}
     - main â†’ Ø²Ø± Ø§Ù„Ø±Ø¬ÙˆØ¹ back_to_menu
     - vip  â†’ Ø²Ø± Ø§Ù„Ø±Ø¬ÙˆØ¹ vip:open_tools
-    Ù†Ø­Ø§ÙØ¸ Ø¹Ù„Ù‰ src ÙÙŠ Ø¬Ù…ÙŠØ¹ Ø§Ù„Ø£Ø²Ø±Ø§Ø±.
+    Ù†ØØ§ÙØ¸ Ø¹Ù„Ù‰ src ÙÙŠ Ø¬Ù…ÙŠØ¹ Ø§Ù„Ø£Ø²Ø±Ø§Ø±.
     """
     kb = InlineKeyboardBuilder()
     data = _load()
@@ -213,14 +213,14 @@ def _kb_main(lang: str, as_admin: bool, *, src: str) -> InlineKeyboardBuilder:
             kb.row(a, width=1)
             i += 1
 
-    # Ø²Ø± ØªØ­Ø¯ÙŠØ«
+    # Ø²Ø± ØªØØ¯ÙŠØ«
     kb.row(InlineKeyboardButton(text="ðŸ”„ " + t(lang, "sec.btn_refresh"), callback_data=f"sec:refresh:{src}"), width=1)
 
-    # Ø²Ø± Ù„ÙˆØ­Ø© Ø§Ù„ØªØ­ÙƒÙ… (Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø· Ø¥Ø°Ø§ Ù…ÙÙØ¹Ù‘Ù„)
+    # Ø²Ø± Ù„ÙˆØØ© Ø§Ù„ØªØÙƒÙ… (Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø· Ø¥Ø°Ø§ Ù…ÙÙØ¹Ù‘Ù„)
     if as_admin and SHOW_INLINE_ADMIN:
         kb.row(InlineKeyboardButton(text=t(lang, "sec.btn_admin_panel"), callback_data="sec:admin"), width=1)
 
-    # Ø±Ø¬ÙˆØ¹ Ø­Ø³Ø¨ Ø§Ù„Ù…ØµØ¯Ø±
+    # Ø±Ø¬ÙˆØ¹ ØØ³Ø¨ Ø§Ù„Ù…ØµØ¯Ø±
     back_cb = "vip:open_tools" if src == "vip" else "back_to_menu"
     kb.row(InlineKeyboardButton(text=t(lang, "sec.btn_back"), callback_data=back_cb), width=1)
     return kb
@@ -231,10 +231,10 @@ def _kb_admin(lang: str) -> InlineKeyboardBuilder:
 
     MARK_ON, MARK_OFF = "â—", "â—‹"
 
-    # Ø²Ø± ØªØ­Ø¯ÙŠØ« Ù„ÙˆØ­Ø© Ø§Ù„ØªØ­ÙƒÙ…
+    # Ø²Ø± ØªØØ¯ÙŠØ« Ù„ÙˆØØ© Ø§Ù„ØªØÙƒÙ…
     kb.row(InlineKeyboardButton(text="ðŸ”„ " + t(lang, "sec.btn_refresh"), callback_data="sec:adm_refresh"), width=1)
 
-    # === Ø§Ù„Ø­Ø§Ù„Ø© Ø§Ù„Ø¹Ø§Ù…Ø© ===
+    # === Ø§Ù„ØØ§Ù„Ø© Ø§Ù„Ø¹Ø§Ù…Ø© ===
     g_status = data.get("global", {}).get("status", "safe")
     kb.row(
         InlineKeyboardButton(
@@ -244,7 +244,7 @@ def _kb_admin(lang: str) -> InlineKeyboardBuilder:
         width=1
     )
 
-    # ØµÙ Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„Ø­Ø§Ù„Ø© Ø§Ù„Ø¹Ø§Ù…Ø© (3 Ø£Ø²Ø±Ø§Ø±)
+    # ØµÙ Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„ØØ§Ù„Ø© Ø§Ù„Ø¹Ø§Ù…Ø© (3 Ø£Ø²Ø±Ø§Ø±)
     glob_row = [
         InlineKeyboardButton(text=f"{MARK_ON if g_status=='safe' else MARK_OFF} âœ…", callback_data="sec:adm:glob:safe"),
         InlineKeyboardButton(text=f"{MARK_ON if g_status=='warn' else MARK_OFF} âš ï¸", callback_data="sec:adm:glob:warn"),
@@ -278,7 +278,7 @@ def _main_text(lang: str, *, ping_now: bool = False) -> str:
     g = d.get("global", {})
     st = g.get("status", "safe")
 
-    # Ù…Ù„Ø§Ø­Ø¸Ø© Ø§ÙØªØ±Ø§Ø¶ÙŠØ© Ø¥Ø°Ø§ ÙØ§Ø±ØºØ©
+    # Ù…Ù„Ø§ØØ¸Ø© Ø§ÙØªØ±Ø§Ø¶ÙŠØ© Ø¥Ø°Ø§ ÙØ§Ø±ØºØ©
     note = g.get("note")
     if not note or str(note).strip() == "":
         note = t(lang, "sec.no_note")
@@ -302,7 +302,7 @@ def _game_text(lang: str, code: str) -> str:
     name = g.get("name", {}).get(lang, g.get("name", {}).get("en", code))
     st = g.get("status", "safe")
 
-    # Ù…Ù„Ø§Ø­Ø¸Ø© Ø§ÙØªØ±Ø§Ø¶ÙŠØ© Ø¥Ø°Ø§ ÙØ§Ø±ØºØ©
+    # Ù…Ù„Ø§ØØ¸Ø© Ø§ÙØªØ±Ø§Ø¶ÙŠØ© Ø¥Ø°Ø§ ÙØ§Ø±ØºØ©
     note = g.get("note")
     if not note or str(note).strip() == "":
         note = t(lang, "sec.no_note")
@@ -315,7 +315,7 @@ def _game_text(lang: str, code: str) -> str:
 
 # ====== Ù†Ù‚Ø§Ø· Ø§Ù„Ø¯Ø®ÙˆÙ„ ======
 
-# ÙØªØ­ Ù…Ù† Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ© Ø£Ùˆ Ù…Ù† VIP
+# ÙØªØ Ù…Ù† Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ© Ø£Ùˆ Ù…Ù† VIP
 @router.callback_query(F.data.in_({"security_status", "security_status:vip"}))
 async def security_menu(cb: CallbackQuery):
     lang = L(cb.from_user.id)
@@ -325,7 +325,7 @@ async def security_menu(cb: CallbackQuery):
     await _smart_edit_or_send(cb.message, text, kb)
     await cb.answer()
 
-# ØªØ­Ø¯ÙŠØ« Ø§Ù„Ø´Ø§Ø´Ø© Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ© (ÙŠØ­Ø§ÙØ¸ Ø¹Ù„Ù‰ Ù…ØµØ¯Ø± Ø§Ù„ÙØªØ­)
+# ØªØØ¯ÙŠØ« Ø§Ù„Ø´Ø§Ø´Ø© Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ© (ÙŠØØ§ÙØ¸ Ø¹Ù„Ù‰ Ù…ØµØ¯Ø± Ø§Ù„ÙØªØ)
 @router.callback_query(F.data.regexp(r"^sec:refresh:(vip|main)$"))
 async def security_refresh(cb: CallbackQuery):
     lang = L(cb.from_user.id)
@@ -354,7 +354,7 @@ async def security_game(cb: CallbackQuery):
     await _smart_edit_or_send(cb.message, text, kb.as_markup())
     await cb.answer()
 
-# Ø±Ø¬ÙˆØ¹ Ø¥Ù„Ù‰ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© (ÙŠØ­Ø§ÙØ¸ Ø¹Ù„Ù‰ Ø§Ù„Ù…ØµØ¯Ø±)
+# Ø±Ø¬ÙˆØ¹ Ø¥Ù„Ù‰ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© (ÙŠØØ§ÙØ¸ Ø¹Ù„Ù‰ Ø§Ù„Ù…ØµØ¯Ø±)
 @router.callback_query(F.data.regexp(r"^sec:back_list:(vip|main)$"))
 async def security_back_list(cb: CallbackQuery):
     lang = L(cb.from_user.id)
@@ -364,7 +364,7 @@ async def security_back_list(cb: CallbackQuery):
     await _smart_edit_or_send(cb.message, text, kb)
     await cb.answer()
 
-# ====== Ù„ÙˆØ­Ø© ØªØ­ÙƒÙ… Ø§Ù„Ø£Ø¯Ù…Ù† (Ø¥Ù†Ù„Ø§ÙŠÙ†) ======
+# ====== Ù„ÙˆØØ© ØªØÙƒÙ… Ø§Ù„Ø£Ø¯Ù…Ù† (Ø¥Ù†Ù„Ø§ÙŠÙ†) ======
 @router.callback_query(F.data == "sec:admin")
 async def security_admin(cb: CallbackQuery):
     lang = L(cb.from_user.id)
@@ -375,7 +375,7 @@ async def security_admin(cb: CallbackQuery):
     await _smart_edit_or_send(cb.message, text, kb)
     await cb.answer()
 
-# ØªØ­Ø¯ÙŠØ« Ù„ÙˆØ­Ø© Ø§Ù„ØªØ­ÙƒÙ…
+# ØªØØ¯ÙŠØ« Ù„ÙˆØØ© Ø§Ù„ØªØÙƒÙ…
 @router.callback_query(F.data == "sec:adm_refresh")
 async def security_admin_refresh(cb: CallbackQuery):
     lang = L(cb.from_user.id)

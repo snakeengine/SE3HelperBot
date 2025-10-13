@@ -43,7 +43,7 @@ def _home_kb(lang: str) -> InlineKeyboardMarkup:
                               callback_data="sin:list:report"),
          InlineKeyboardButton(text="ðŸ“¥ " + _tf(lang,"inbox.list_chats","Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø± (Ø¯Ø±Ø¯Ø´Ø©)"),
                               callback_data="sin:list:chat")],
-        [InlineKeyboardButton(text="ðŸ”„ " + _tf(lang,"inbox.refresh","ØªØ­Ø¯ÙŠØ«"), callback_data="sin:home")]
+        [InlineKeyboardButton(text="ðŸ”„ " + _tf(lang,"inbox.refresh","ØªØØ¯ÙŠØ«"), callback_data="sin:home")]
     ])
 
 async def _render_home(msg_or_cb, lang: str):
@@ -52,7 +52,7 @@ async def _render_home(msg_or_cb, lang: str):
         "ðŸ“¬ <b>Support Inbox</b>\n"
         f"â€¢ Reports â€” waiting: <b>{c['report']['waiting']}</b>, assigned: <b>{c['report']['assigned']}</b>, total: {c['report']['total']}\n"
         f"â€¢ Live chat â€” waiting: <b>{c['chat']['waiting']}</b>, assigned: <b>{c['chat']['assigned']}</b>, total: {c['chat']['total']}\n"
-        "\n" + _tf(lang,"inbox.help","Ø§Ø®ØªØ± â€œØ§Ù„ØªØ§Ù„ÙŠâ€ Ù„ÙØªØ­ Ø£ÙˆÙ„ ØªØ°ÙƒØ±Ø© Ø¨Ø§Ù†ØªØ¸Ø§Ø±Ùƒ.")
+        "\n" + _tf(lang,"inbox.help","Ø§Ø®ØªØ± â€œØ§Ù„ØªØ§Ù„ÙŠâ€ Ù„ÙØªØ Ø£ÙˆÙ„ ØªØ°ÙƒØ±Ø© Ø¨Ø§Ù†ØªØ¸Ø§Ø±Ùƒ.")
     )
     kb = _home_kb(lang)
     if isinstance(msg_or_cb, Message):
@@ -72,11 +72,11 @@ async def inbox_home(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
     await _render_home(cb, lang); await cb.answer()
 
-# ====== ÙØªØ­ Ø§Ù„ØªØ§Ù„ÙŠ ======
+# ====== ÙØªØ Ø§Ù„ØªØ§Ù„ÙŠ ======
 def _ticket_kb(uid: int, src: str, lang: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="âœ‰ï¸ " + _tf(lang,"inbox.reply","Ø±Ø¯Ù‘"), callback_data=f"sin:reply:{src}:{uid}")],
-        [InlineKeyboardButton(text="â­ï¸ " + _tf(lang,"inbox.skip","ØªØ®Ø·ÙŠ"), callback_data=f"sin:skip:{src}:{uid}"),
+        [InlineKeyboardButton(text="âï¸ " + _tf(lang,"inbox.skip","ØªØ®Ø·ÙŠ"), callback_data=f"sin:skip:{src}:{uid}"),
          InlineKeyboardButton(text="âœ… " + _tf(lang,"inbox.close","Ø¥ØºÙ„Ø§Ù‚"), callback_data=f"sin:close:{src}:{uid}")],
         [InlineKeyboardButton(text="â¬…ï¸ " + _tf(lang,"inbox.back","Ø±Ø¬ÙˆØ¹"), callback_data="sin:home")]
     ])
@@ -139,7 +139,7 @@ async def do_reply(m: Message, state: FSMContext):
         await m.copy_to(chat_id=uid)
     except Exception:
         await m.bot.send_message(uid, (m.text or ""))
-    # Ø§ÙØªØ­ Ø§Ù„Ø¬Ø³Ø± Ù„Ù„Ø¨Ù„Ø§ØºØ§Øª Ø¨Ø¹Ø¯ Ø£ÙˆÙ„ Ø±Ø¯
+    # Ø§ÙØªØ Ø§Ù„Ø¬Ø³Ø± Ù„Ù„Ø¨Ù„Ø§ØºØ§Øª Ø¨Ø¹Ø¯ Ø£ÙˆÙ„ Ø±Ø¯
     if src == "report" and _open_report_session:
         try: _open_report_session(uid, admin_id=m.from_user.id)
         except Exception: pass

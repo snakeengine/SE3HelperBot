@@ -17,7 +17,7 @@ from aiogram.enums import ParseMode
 from utils.known_users import add_known_user
 from lang import t, get_user_lang
 
-# Ø¨Ø·Ø§Ù‚Ø© Ø§Ù„ØªØ±Ø­ÙŠØ¨ Ø§Ù„Ø¬Ø¯ÙŠØ¯Ø© (Hero Pro)
+# Ø¨Ø·Ø§Ù‚Ø© Ø§Ù„ØªØ±ØÙŠØ¨ Ø§Ù„Ø¬Ø¯ÙŠØ¯Ø© (Hero Pro)
 from handlers.home_hero import render_home_card
 
 # ===== Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø¹Ø§Ù…Ø© =====
@@ -29,7 +29,7 @@ router = Router(name="start")
 router.message.filter(F.chat.type == "private")
 router.callback_query.filter(F.message.chat.type == "private")
 
-# ðŸ‘‡ Ù…Ù†Ø¹ ÙØªØ­ Ø§Ù„Ù‚ÙˆØ§Ø¦Ù… Ø£Ø«Ù†Ø§Ø¡ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„Ø­ÙŠÙ‘Ø©
+# ðŸ‘‡ Ù…Ù†Ø¹ ÙØªØ Ø§Ù„Ù‚ÙˆØ§Ø¦Ù… Ø£Ø«Ù†Ø§Ø¡ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„ØÙŠÙ‘Ø©
 try:
     from handlers.live_chat import LiveChat
 except Exception:
@@ -92,7 +92,7 @@ except Exception:
         from aiogram.utils.keyboard import InlineKeyboardBuilder
         return InlineKeyboardBuilder().as_markup()
 
-# (Ø§Ø®ØªÙŠØ§Ø±ÙŠ) Ø®Ø±ÙŠØ·Ø© CB Ø¨Ø³ÙŠØ·Ø© Ù„Ù„Ø§Ø³ØªÙ‡Ù„Ø§Ùƒ Ù…Ù† Ù…Ù„ÙØ§Øª Ø£Ø®Ø±Ù‰ Ø¥Ù† Ø§Ø­ØªØ§Ø¬Øª
+# (Ø§Ø®ØªÙŠØ§Ø±ÙŠ) Ø®Ø±ÙŠØ·Ø© CB Ø¨Ø³ÙŠØ·Ø© Ù„Ù„Ø§Ø³ØªÙ‡Ù„Ø§Ùƒ Ù…Ù† Ù…Ù„ÙØ§Øª Ø£Ø®Ø±Ù‰ Ø¥Ù† Ø§ØØªØ§Ø¬Øª
 CB = {
     "BOT_OPEN": "bot:open",
     "TRUSTED_SUPPLIERS": "trusted_suppliers",
@@ -134,7 +134,7 @@ async def _get_user_mini(tg_user) -> UserMini:
         role=role,
     )
 
-# ===== ÙˆØ§Ø¬Ù‡Ø© Ø§Ù„ØªØ±Ø­ÙŠØ¨: ÙƒÙ„ Ø§Ù„Ø¹Ø±Ø¶ Ø¹Ø¨Ø± Ø¨Ø·Ø§Ù‚Ø© Hero Pro =====
+# ===== ÙˆØ§Ø¬Ù‡Ø© Ø§Ù„ØªØ±ØÙŠØ¨: ÙƒÙ„ Ø§Ù„Ø¹Ø±Ø¶ Ø¹Ø¨Ø± Ø¨Ø·Ø§Ù‚Ø© Hero Pro =====
 async def _send_welcome_single_message(
     *,
     target_msg,      # Message Ø£Ùˆ CallbackQuery.message
@@ -149,10 +149,10 @@ async def _send_welcome_single_message(
 # ======================== /start ========================
 @router.message(CommandStart())
 async def start_handler(message: Message, state: FSMContext):
-    # Ù„Ùˆ ÙÙŠÙ‡ Ø¬Ù„Ø³Ø© Ø¯Ø±Ø¯Ø´Ø© Ø­ÙŠØ© Ù†Ø´Ø·Ø© â€” Ù„Ø§ ØªÙØªØ­ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø©ØŒ Ø§Ø·Ù„Ø¨ Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø£ÙˆÙ„Ù‹Ø§
+    # Ù„Ùˆ ÙÙŠÙ‡ Ø¬Ù„Ø³Ø© Ø¯Ø±Ø¯Ø´Ø© ØÙŠØ© Ù†Ø´Ø·Ø© â€” Ù„Ø§ ØªÙØªØ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø©ØŒ Ø§Ø·Ù„Ø¨ Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø£ÙˆÙ„Ù‹Ø§
     if await _is_live_active(state):
         lang = get_user_lang(message.from_user.id) or "ar"
-        txt = ("âš ï¸ Ù„Ø¯ÙŠÙƒ Ø¬Ù„Ø³Ø© Ø¯Ø±Ø¯Ø´Ø© Ø­ÙŠÙ‘Ø© Ù…ÙØªÙˆØ­Ø©.\n"
+        txt = ("âš ï¸ Ù„Ø¯ÙŠÙƒ Ø¬Ù„Ø³Ø© Ø¯Ø±Ø¯Ø´Ø© ØÙŠÙ‘Ø© Ù…ÙØªÙˆØØ©.\n"
                "ÙŠØ±Ø¬Ù‰ Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ù…Ù† Ø§Ù„Ø²Ø± Â«âŒ Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø©Â» Ø£ÙˆÙ„Ù‹Ø§ Ù„Ù„Ø¹ÙˆØ¯Ø© Ù„Ù„Ù‚Ø§Ø¦Ù…Ø©.")
         if lang != "ar":
             txt = "âš ï¸ You have an active live chat.\nPlease end the chat first (âŒ End chat) to go back to the menu."
@@ -161,7 +161,7 @@ async def start_handler(message: Message, state: FSMContext):
 
     await state.clear()
 
-    # Ø¥Ø®ÙØ§Ø¡ Ø£ÙŠ Ù„ÙˆØ­Ø© Ø±Ø¯ Ø³Ø§Ø¨Ù‚Ø© (Ø§Ù„ØªØ¨ÙˆÙŠØ¨Ø§Øª /sections Ù…Ø«Ù„Ø§Ù‹)
+    # Ø¥Ø®ÙØ§Ø¡ Ø£ÙŠ Ù„ÙˆØØ© Ø±Ø¯ Ø³Ø§Ø¨Ù‚Ø© (Ø§Ù„ØªØ¨ÙˆÙŠØ¨Ø§Øª /sections Ù…Ø«Ù„Ø§Ù‹)
     try:
         rm = await message.answer("\u2063", reply_markup=ReplyKeyboardRemove())
         await rm.delete()
@@ -170,12 +170,12 @@ async def start_handler(message: Message, state: FSMContext):
 
     await _serve_home(message)
 
-# ÙÙŠ Ø­Ø§Ù„ ÙƒØ§Ù† ÙÙŠÙ‡ Ø£ÙŠ Ø­Ø§Ù„Ø© Ø£Ø®Ø±Ù‰ ØºÙŠØ± LiveChatØŒ /start ÙŠÙ„ØºÙŠÙ‡Ø§ ÙˆÙŠØ¹ÙŠØ¯Ùƒ Ù„Ù„Ù‚Ø§Ø¦Ù…Ø©
+# ÙÙŠ ØØ§Ù„ ÙƒØ§Ù† ÙÙŠÙ‡ Ø£ÙŠ ØØ§Ù„Ø© Ø£Ø®Ø±Ù‰ ØºÙŠØ± LiveChatØŒ /start ÙŠÙ„ØºÙŠÙ‡Ø§ ÙˆÙŠØ¹ÙŠØ¯Ùƒ Ù„Ù„Ù‚Ø§Ø¦Ù…Ø©
 @router.message(~StateFilter(None), F.text.regexp(r"^/start(\s|$)"))
 async def start_handler_in_state(message: Message, state: FSMContext):
     if await _is_live_active(state):
         lang = get_user_lang(message.from_user.id) or "ar"
-        txt = ("âš ï¸ Ù„Ø¯ÙŠÙƒ Ø¬Ù„Ø³Ø© Ø¯Ø±Ø¯Ø´Ø© Ø­ÙŠÙ‘Ø© Ù…ÙØªÙˆØ­Ø©.\n"
+        txt = ("âš ï¸ Ù„Ø¯ÙŠÙƒ Ø¬Ù„Ø³Ø© Ø¯Ø±Ø¯Ø´Ø© ØÙŠÙ‘Ø© Ù…ÙØªÙˆØØ©.\n"
                "ÙŠØ±Ø¬Ù‰ Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ù…Ù† Ø§Ù„Ø²Ø± Â«âŒ Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø©Â» Ø£ÙˆÙ„Ù‹Ø§ Ù„Ù„Ø¹ÙˆØ¯Ø© Ù„Ù„Ù‚Ø§Ø¦Ù…Ø©.")
         if lang != "ar":
             txt = "âš ï¸ You have an active live chat.\nPlease end the chat first (âŒ End chat) to go back to the menu."
@@ -197,7 +197,7 @@ async def _serve_home(message: Message):
     if load_maintenance_mode() and (message.from_user.id not in ADMIN_IDS):
         await message.answer(
             (t(user.lang, "maintenance_active") or
-             "ðŸš§ The bot is currently under maintenance.\nðŸš§ Ø§Ù„Ø¨ÙˆØª ØªØ­Øª Ø§Ù„ØµÙŠØ§Ù†Ø© Ø­Ø§Ù„ÙŠØ§Ù‹.\n\nØ§Ù„Ø±Ø¬Ø§Ø¡ Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø© Ù„Ø§Ø­Ù‚Ø§Ù‹. Please try again later."),
+             "ðŸš§ The bot is currently under maintenance.\nðŸš§ Ø§Ù„Ø¨ÙˆØª ØªØØª Ø§Ù„ØµÙŠØ§Ù†Ø© ØØ§Ù„ÙŠØ§Ù‹.\n\nØ§Ù„Ø±Ø¬Ø§Ø¡ Ø§Ù„Ù…ØØ§ÙˆÙ„Ø© Ù„Ø§ØÙ‚Ø§Ù‹. Please try again later."),
             parse_mode=ParseMode.HTML,
             disable_web_page_preview=True,
         )
@@ -263,10 +263,10 @@ async def _serve_home(message: Message):
 # ===== Ø²Ø± Ø±Ø¬ÙˆØ¹ Ø¹Ø§Ù… =====
 @router.callback_query(F.data.in_({"back_to_menu", "home"}))
 async def back_to_menu_handler(callback: CallbackQuery, state: FSMContext):
-    # Ù„Ø§ Ù†Ø¹Ø±Ø¶ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© Ø£Ø«Ù†Ø§Ø¡ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„Ø­ÙŠÙ‘Ø©
+    # Ù„Ø§ Ù†Ø¹Ø±Ø¶ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© Ø£Ø«Ù†Ø§Ø¡ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ø§Ù„ØÙŠÙ‘Ø©
     if await _is_live_active(state):
         lang = get_user_lang(callback.from_user.id) or "ar"
-        txt = ("âš ï¸ Ù„Ø¯ÙŠÙƒ Ø¬Ù„Ø³Ø© Ø¯Ø±Ø¯Ø´Ø© Ø­ÙŠÙ‘Ø© Ù…ÙØªÙˆØ­Ø©.\n"
+        txt = ("âš ï¸ Ù„Ø¯ÙŠÙƒ Ø¬Ù„Ø³Ø© Ø¯Ø±Ø¯Ø´Ø© ØÙŠÙ‘Ø© Ù…ÙØªÙˆØØ©.\n"
                "ÙŠØ±Ø¬Ù‰ Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø© Ù…Ù† Ø§Ù„Ø²Ø± Â«âŒ Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø©Â» Ø£ÙˆÙ„Ù‹Ø§ Ù„Ù„Ø¹ÙˆØ¯Ø© Ù„Ù„Ù‚Ø§Ø¦Ù…Ø©.")
         if lang != "ar":
             txt = "âš ï¸ You have an active live chat.\nPlease end the chat first (âŒ End chat) to go back to the menu."

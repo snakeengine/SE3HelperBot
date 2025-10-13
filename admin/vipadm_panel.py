@@ -42,7 +42,7 @@ def _tt(lang: str, key: str, fallback: str) -> str:
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 REQ_FILE = DATA_DIR / "vip_user_requests.json"
 
-# ===== Ù…Ø³Ø§Ø¹Ø¯Ø§Øª Ù‚Ø±Ø§Ø¡Ø©/Ø¨Ø­Ø« =====
+# ===== Ù…Ø³Ø§Ø¹Ø¯Ø§Øª Ù‚Ø±Ø§Ø¡Ø©/Ø¨ØØ« =====
 def _load_reqs() -> List[Dict]:
     try:
         if not REQ_FILE.exists():
@@ -61,7 +61,7 @@ def _find(ticket_id: str) -> Optional[Dict]:
 def _count_by_status(status: str) -> int:
     return sum(1 for it in _load_reqs() if it.get("status") == status)
 
-# ===== Ù„ÙˆØ­Ø§Øª Ø£Ø²Ø±Ø§Ø± =====
+# ===== Ù„ÙˆØØ§Øª Ø£Ø²Ø±Ø§Ø± =====
 def _kb_home(lang: str) -> InlineKeyboardMarkup:
     open_n = _count_by_status("open")
     kb = InlineKeyboardBuilder()
@@ -74,7 +74,7 @@ def _kb_home(lang: str) -> InlineKeyboardMarkup:
         callback_data="vipadm:reqs:all:1"
     ))
     kb.row(InlineKeyboardButton(
-        text="ðŸ›¡ï¸ " + _tt(lang, "vipadm.btn.security", "Ù„ÙˆØ­Ø© Ø§Ù„Ø£Ù…Ø§Ù†"),
+        text="ðŸ›¡ï¸ " + _tt(lang, "vipadm.btn.security", "Ù„ÙˆØØ© Ø§Ù„Ø£Ù…Ø§Ù†"),
         callback_data="sec:admin"
     ))
     kb.row(InlineKeyboardButton(text="â¬…ï¸ " + _tt(lang, "admin.back", "Ø±Ø¬ÙˆØ¹"), callback_data="ah:menu"))
@@ -117,7 +117,7 @@ def _kb_ticket(lang: str, req: Dict) -> InlineKeyboardMarkup:
 # ===== ØªÙ†Ø³ÙŠÙ‚Ø§Øª Ù†ØµÙŠØ© =====
 def _fmt_req(lang: str, r: Dict) -> str:
     head = "ðŸŽ« <b>{}</b>: <code>{}</code>\n".format(_tt(lang, "vipadm.ticket", "Ø§Ù„ØªØ°ÙƒØ±Ø©"), r.get("ticket_id"))
-    st   = "ðŸ“Œ {}: <b>{}</b>\n".format(_tt(lang, "vipadm.status", "Ø§Ù„Ø­Ø§Ù„Ø©"), r.get("status"))
+    st   = "ðŸ“Œ {}: <b>{}</b>\n".format(_tt(lang, "vipadm.status", "Ø§Ù„ØØ§Ù„Ø©"), r.get("status"))
     rtype = r.get("type")
     rtype_h = {"manage_id": _tt(lang, "vipadm.rt.manage", "Ø¥Ø¯Ø§Ø±Ø©/ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ù…Ø¹Ø±Ù‘Ù"),
                "transfer":  _tt(lang, "vipadm.rt.transfer", "Ù†Ù‚Ù„ Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ"),
@@ -147,7 +147,7 @@ def _fmt_req(lang: str, r: Dict) -> str:
     if r.get("contact"):
         lines.append(f"â˜Žï¸ {_tt(lang,'vipadm.contact','Ø§Ù„ØªÙˆØ§ØµÙ„')}: {r.get('contact')}\n")
     if r.get("note"):
-        lines.append(f"ðŸ“ {_tt(lang,'vipadm.note','Ù…Ù„Ø§Ø­Ø¸Ø©')}: {r.get('note')}\n")
+        lines.append(f"ðŸ“ {_tt(lang,'vipadm.note','Ù…Ù„Ø§ØØ¸Ø©')}: {r.get('note')}\n")
     return "".join(lines)
 
 # ===== Handlers =====
@@ -176,7 +176,7 @@ async def vipadm_reqs_list(cb: CallbackQuery):
     reqs = _load_reqs()
     if scope == "open":
         reqs = [r for r in reqs if r.get("status") == "open"]
-    # ØªØ±ØªÙŠØ¨ Ù…Ù† Ø§Ù„Ø£Ø­Ø¯Ø«
+    # ØªØ±ØªÙŠØ¨ Ù…Ù† Ø§Ù„Ø£ØØ¯Ø«
     reqs.sort(key=lambda r: r.get("when") or "", reverse=True)
 
     total = len(reqs)
@@ -185,7 +185,7 @@ async def vipadm_reqs_list(cb: CallbackQuery):
     page_items = reqs[start:end]
 
     if not page_items:
-        await cb.message.edit_text("ðŸ“­ " + _tt(lang, "vipadm.empty", "Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¹Ù†Ø§ØµØ± Ù‡Ù†Ø§."),
+        await cb.message.edit_text("ðŸ“ " + _tt(lang, "vipadm.empty", "Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¹Ù†Ø§ØµØ± Ù‡Ù†Ø§."),
                                    reply_markup=_kb_reqs_nav(lang, scope, page, page>1, end<total))
         return await cb.answer()
 

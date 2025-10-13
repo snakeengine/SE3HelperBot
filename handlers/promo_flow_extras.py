@@ -48,7 +48,7 @@ def _now() -> int: return int(time.time())
 def _is_locked(rec: dict) -> bool:
     return bool(rec.get("locked")) or str(rec.get("status")) in {"ready_for_activation","activated"}
 
-# Ø§Ù„Ø®Ø·Ø· Ø§Ù„Ù…ØªØ§Ø­Ø© Ù„Ù„ØªÙØ¹ÙŠÙ„
+# Ø§Ù„Ø®Ø·Ø· Ø§Ù„Ù…ØªØ§ØØ© Ù„Ù„ØªÙØ¹ÙŠÙ„
 PLANS = {
     "3d":"3 Ø£ÙŠØ§Ù…","10d":"10 Ø£ÙŠØ§Ù…","30d":"30 ÙŠÙˆÙ…","90d":"90 ÙŠÙˆÙ…","180d":"180 ÙŠÙˆÙ…",
 }
@@ -70,7 +70,7 @@ def activation_kb(uid: int, game: str):
 def _user_chat_kb(uid: int):
     kb = InlineKeyboardBuilder()
     kb.row(
-        InlineKeyboardButton(text=_L(uid, "ðŸ”’ Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø©", "ðŸ”’ End chat"),
+        InlineKeyboardButton(text=_L(uid, "ðŸ”’ Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ù…ØØ§Ø¯Ø«Ø©", "ðŸ”’ End chat"),
                              callback_data="user:chat:close"),
         InlineKeyboardButton(text=_L(uid, "âœ… ØªÙ…Ù‘ / Ø´ÙƒØ±Ø§Ù‹", "âœ… Done / Thanks"),
                              callback_data="user:chat:done"),
@@ -115,7 +115,7 @@ def _cooldown_left(rec: dict) -> int:
     left = REAPPLY_COOLDOWN_SECS - max(0, _now() - t0)
     return max(0, left)
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Ù„ÙˆØ­Ø© Ø£Ø¯Ù…Ù† Ù„Ù„Ù…Ø±Ø§Ø¬Ø¹Ø© â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Ù„ÙˆØØ© Ø£Ø¯Ù…Ù† Ù„Ù„Ù…Ø±Ø§Ø¬Ø¹Ø© â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def admin_menu_kb(uid: int):
     kb = InlineKeyboardBuilder()
     kb.row(
@@ -154,7 +154,7 @@ SMART_TEMPLATES = {
         "en":"ðŸ”¢ Send your Snake ID (digits only).",
     },
     "busy": {
-        "ar":"âŒ› Ø­Ø§Ø¶Ø±ØŒ Ø³Ø£ØªÙˆØ§ØµÙ„ Ù…Ø¹Ùƒ Ù‚Ø±ÙŠØ¨Ù‹Ø§.",
+        "ar":"âŒ› ØØ§Ø¶Ø±ØŒ Ø³Ø£ØªÙˆØ§ØµÙ„ Ù…Ø¹Ùƒ Ù‚Ø±ÙŠØ¨Ù‹Ø§.",
         "en":"âŒ› Got it â€” Iâ€™ll be with you shortly.",
     },
     "thanks": {
@@ -162,7 +162,7 @@ SMART_TEMPLATES = {
         "en":"âœ… Received, thank you.",
     },
     "close": {
-        "ar":"ðŸ”’ ØªÙ… Ø¥ØºÙ„Ø§Ù‚ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø©. Ø¥Ù† Ø§Ø­ØªØ¬Øª Ø´ÙŠØ¦Ù‹Ø§ Ø§ÙØªØ­ ØªØ°ÙƒØ±Ø© Ø¬Ø¯ÙŠØ¯Ø©.",
+        "ar":"ðŸ”’ ØªÙ… Ø¥ØºÙ„Ø§Ù‚ Ø§Ù„Ù…ØØ§Ø¯Ø«Ø©. Ø¥Ù† Ø§ØØªØ¬Øª Ø´ÙŠØ¦Ù‹Ø§ Ø§ÙØªØ ØªØ°ÙƒØ±Ø© Ø¬Ø¯ÙŠØ¯Ø©.",
         "en":"ðŸ”’ Chat closed. If you need anything, open a new ticket.",
     },
 }
@@ -170,11 +170,11 @@ SMART_TEMPLATES = {
 def _block_reason_txt(uid: int, kind: str, reason: str | None):
     if kind == "ban":
         return _L(uid,
-            f"âŒ ØªÙ… Ø­Ø¸Ø± Ø­Ø³Ø§Ø¨Ùƒ Ø¹Ù† Ø§Ù„Ù…Ø´Ø§Ø±ÙƒØ©.{f' Ø§Ù„Ø³Ø¨Ø¨: {reason}' if reason else ''}",
+            f"âŒ ØªÙ… ØØ¸Ø± ØØ³Ø§Ø¨Ùƒ Ø¹Ù† Ø§Ù„Ù…Ø´Ø§Ø±ÙƒØ©.{f' Ø§Ù„Ø³Ø¨Ø¨: {reason}' if reason else ''}",
             f"âŒ You are banned from participating.{f' Reason: {reason}' if reason else ''}")
     else:
         return _L(uid,
-            f"ðŸ§Š ØªÙ… ØªØ¬Ù…ÙŠØ¯ Ø­Ø³Ø§Ø¨Ùƒ Ù…Ø¤Ù‚ØªÙ‹Ø§.{f' Ø§Ù„Ø³Ø¨Ø¨: {reason}' if reason else ''}",
+            f"ðŸ§Š ØªÙ… ØªØ¬Ù…ÙŠØ¯ ØØ³Ø§Ø¨Ùƒ Ù…Ø¤Ù‚ØªÙ‹Ø§.{f' Ø§Ù„Ø³Ø¨Ø¨: {reason}' if reason else ''}",
             f"ðŸ§Š Your account is temporarily frozen.{f' Reason: {reason}' if reason else ''}")
 
 def _t(uid: int, key: str) -> str:
@@ -224,7 +224,7 @@ def _reset_after_unban(uid: int):
         updated_at=_now(),
     )
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ NEW: Ù…Ù„ØªÙ‚Ø· Ø±ÙˆØ§Ø¨Ø· (ÙŠØ­ÙØ¸ post_url ÙˆÙŠØ´Ø¹Ø± Ø§Ù„Ø£Ø¯Ù…Ù†) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ NEW: Ù…Ù„ØªÙ‚Ø· Ø±ÙˆØ§Ø¨Ø· (ÙŠØÙØ¸ post_url ÙˆÙŠØ´Ø¹Ø± Ø§Ù„Ø£Ø¯Ù…Ù†) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def _looks_like_url(s: str) -> bool:
     if not s:
         return False
@@ -237,24 +237,24 @@ def _looks_like_url(s: str) -> bool:
 @router.message(F.chat.type == "private", F.text.regexp(r"https?://"))
 async def promo_capture_url(msg: Message):
     """
-    ÙŠÙ„ØªÙ‚Ø· Ø£ÙŠ Ø±Ø³Ø§Ù„Ø© ØªØ­ØªÙˆÙŠ Ø±Ø§Ø¨Ø· Ù…Ù† Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… ÙÙŠ Ø§Ù„Ø®Ø§Øµ Ø£Ø«Ù†Ø§Ø¡ Ù…Ø±Ø­Ù„Ø© Ø§Ù„Ø·Ù„Ø¨
-    (Ù‚Ø¨Ù„ Ø§Ù„ØªÙØ¹ÙŠÙ„)ØŒ ÙˆÙŠØ­ÙØ¸Ù‡Ø§ ÙƒÙ€ post_url ÙˆÙŠØºÙŠÙ‘Ø± Ø§Ù„Ø­Ø§Ù„Ø© Ø¥Ù„Ù‰ awaiting_adminØŒ
+    ÙŠÙ„ØªÙ‚Ø· Ø£ÙŠ Ø±Ø³Ø§Ù„Ø© ØªØØªÙˆÙŠ Ø±Ø§Ø¨Ø· Ù…Ù† Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… ÙÙŠ Ø§Ù„Ø®Ø§Øµ Ø£Ø«Ù†Ø§Ø¡ Ù…Ø±ØÙ„Ø© Ø§Ù„Ø·Ù„Ø¨
+    (Ù‚Ø¨Ù„ Ø§Ù„ØªÙØ¹ÙŠÙ„)ØŒ ÙˆÙŠØÙØ¸Ù‡Ø§ ÙƒÙ€ post_url ÙˆÙŠØºÙŠÙ‘Ø± Ø§Ù„ØØ§Ù„Ø© Ø¥Ù„Ù‰ awaiting_adminØŒ
     Ø«Ù… ÙŠØ±Ø³Ù„ Ø¥Ø´Ø¹Ø§Ø±Ù‹Ø§ Ù„Ù„Ø£Ø¯Ù…Ù†ÙŠÙ† Ù…Ø¹ ÙƒÙŠØ¨ÙˆØ±Ø¯ Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©.
-    ÙŠØªØ¬Ø§Ù‡Ù„ Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ø¥Ø°Ø§ ÙƒØ§Ù†Øª Ù…Ø­Ø§Ø¯Ø«Ø© Ø§Ù„Ø£Ø¯Ù…Ù† Ù…ÙØªÙˆØ­Ø© (chat_on).
+    ÙŠØªØ¬Ø§Ù‡Ù„ Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ø¥Ø°Ø§ ÙƒØ§Ù†Øª Ù…ØØ§Ø¯Ø«Ø© Ø§Ù„Ø£Ø¯Ù…Ù† Ù…ÙØªÙˆØØ© (chat_on).
     """
     uid = msg.from_user.id
     rec = find_request(uid) or {}
 
-    # Ù„Ùˆ Ø§Ù„Ø´Ø§Øª Ù…Ø¹ Ø§Ù„Ø£Ø¯Ù…Ù† Ù…ÙØªÙˆØ­ØŒ Ù„Ø§ Ù†ØªØ¯Ø®Ù„ (Ø­ØªÙ‰ ØªÙ…Ø± Ù„Ù„Ù€ relay)
+    # Ù„Ùˆ Ø§Ù„Ø´Ø§Øª Ù…Ø¹ Ø§Ù„Ø£Ø¯Ù…Ù† Ù…ÙØªÙˆØØŒ Ù„Ø§ Ù†ØªØ¯Ø®Ù„ (ØØªÙ‰ ØªÙ…Ø± Ù„Ù„Ù€ relay)
     if _chat_on(rec):
         return
 
     status = str(rec.get("status") or "")
-    # Ø­Ø§Ù„Ø§Øª Ù…Ø¤Ù‡Ù„Ø© Ù„Ø§Ù„ØªÙ‚Ø§Ø· Ø§Ù„Ø±Ø§Ø¨Ø·
+    # ØØ§Ù„Ø§Øª Ù…Ø¤Ù‡Ù„Ø© Ù„Ø§Ù„ØªÙ‚Ø§Ø· Ø§Ù„Ø±Ø§Ø¨Ø·
     if status in {"banned", "activated"}:
         return
 
-    # Ù„Ø§ Ù†ÙƒØ±Ø± Ø¥Ø°Ø§ ÙƒØ§Ù† Ù…Ø­ÙÙˆØ¸Ù‹Ø§ Ù…Ø³Ø¨Ù‚Ù‹Ø§
+    # Ù„Ø§ Ù†ÙƒØ±Ø± Ø¥Ø°Ø§ ÙƒØ§Ù† Ù…ØÙÙˆØ¸Ù‹Ø§ Ù…Ø³Ø¨Ù‚Ù‹Ø§
     if rec.get("post_url"):
         return
 
@@ -262,7 +262,7 @@ async def promo_capture_url(msg: Message):
     if not _looks_like_url(text):
         return
 
-    # Ø§Ø­ÙØ¸ Ø§Ù„Ø±Ø§Ø¨Ø· ÙˆØ§Ø¯ÙØ¹Ù‡ Ù„Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©
+    # Ø§ØÙØ¸ Ø§Ù„Ø±Ø§Ø¨Ø· ÙˆØ§Ø¯ÙØ¹Ù‡ Ù„Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©
     update_request(
         uid,
         post_url=text,
@@ -305,7 +305,7 @@ async def promo_capture_url(msg: Message):
     except Exception:
         pass
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Ø­Ø¸Ø±/ØªØ¬Ù…ÙŠØ¯ (Ø£Ø²Ø±Ø§Ø± Ø§Ù„Ø£Ø¯Ù…Ù†) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ ØØ¸Ø±/ØªØ¬Ù…ÙŠØ¯ (Ø£Ø²Ø±Ø§Ø± Ø§Ù„Ø£Ø¯Ù…Ù†) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @router.callback_query(F.data.regexp(r"^admin:promo:(ban|unban|freeze|unfreeze):(\d+)$"))
 async def admin_block_ops(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
@@ -337,7 +337,7 @@ async def admin_block_ops(cb: CallbackQuery):
         try:
             await cb.bot.send_message(
                 uid,
-                _L(uid, "âœ… ØªÙ… Ø±ÙØ¹ Ø§Ù„Ø­Ø¸Ø±. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… Ù…Ù† Ø¬Ø¯ÙŠØ¯.", "âœ… Ban lifted. You can apply again.")
+                _L(uid, "âœ… ØªÙ… Ø±ÙØ¹ Ø§Ù„ØØ¸Ø±. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… Ù…Ù† Ø¬Ø¯ÙŠØ¯.", "âœ… Ban lifted. You can apply again.")
             )
         except Exception:
             pass
@@ -412,7 +412,7 @@ async def promo_unban(msg: Message):
     try:
         await msg.bot.send_message(
             uid,
-            _L(uid, "âœ… ØªÙ… Ø±ÙØ¹ Ø§Ù„Ø­Ø¸Ø±. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… Ù…Ù† Ø¬Ø¯ÙŠØ¯.", "âœ… Ban lifted. You can apply again.")
+            _L(uid, "âœ… ØªÙ… Ø±ÙØ¹ Ø§Ù„ØØ¸Ø±. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… Ù…Ù† Ø¬Ø¯ÙŠØ¯.", "âœ… Ban lifted. You can apply again.")
         )
     except Exception:
         pass
@@ -442,7 +442,7 @@ async def promo_unfreeze(msg: Message):
     except Exception: pass
     await msg.reply("âœ… unfrozen.")
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ ÙØªØ­/Ø¥ØºÙ„Ø§Ù‚ Ø§Ù„Ø´Ø§Øª â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ ÙØªØ/Ø¥ØºÙ„Ø§Ù‚ Ø§Ù„Ø´Ø§Øª â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @router.callback_query(F.data.regexp(r"^admin:promo:chat:(\d+)$"))
 async def open_chat(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
@@ -455,7 +455,7 @@ async def open_chat(cb: CallbackQuery):
     try:
         await cb.bot.send_message(
             uid,
-            _L(uid,"ðŸ’¬ ØªÙ… ÙØªØ­ Ù…Ø­Ø§Ø¯Ø«Ø© Ù…Ø¨Ø§Ø´Ø±Ø© Ù…Ø¹ Ø§Ù„Ù…Ø´Ø±Ù. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„Ø±Ø¯ Ù‡Ù†Ø§.",
+            _L(uid,"ðŸ’¬ ØªÙ… ÙØªØ Ù…ØØ§Ø¯Ø«Ø© Ù…Ø¨Ø§Ø´Ø±Ø© Ù…Ø¹ Ø§Ù„Ù…Ø´Ø±Ù. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„Ø±Ø¯ Ù‡Ù†Ø§.",
                     "ðŸ’¬ A direct chat with the admin was opened. You can reply here."),
             reply_markup=_user_chat_kb(uid)
         )
@@ -513,7 +513,7 @@ async def admin_quick_close(cb: CallbackQuery):
         pass
     await cb.answer("Closed âœ“")
 
-# ØªØ¯ÙˆÙŠÙ† Ù…Ù„Ø§Ø­Ø¸Ø© Ø¯Ø§Ø®Ù„ÙŠØ©
+# ØªØ¯ÙˆÙŠÙ† Ù…Ù„Ø§ØØ¸Ø© Ø¯Ø§Ø®Ù„ÙŠØ©
 @router.message(Command("note"))
 async def admin_note(msg: Message):
     if not _is_admin(msg.from_user.id): return
@@ -546,7 +546,7 @@ async def export_chat(msg: Message):
     except Exception:
         await msg.reply("failed to export.")
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Relay Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… â†’ Ø§Ù„Ø£Ø¯Ù…Ù† (Ø¹Ù†Ø¯ ÙØªØ­ Ø§Ù„Ø´Ø§Øª) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Relay Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… â†’ Ø§Ù„Ø£Ø¯Ù…Ù† (Ø¹Ù†Ø¯ ÙØªØ Ø§Ù„Ø´Ø§Øª) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @router.message(~StateFilter(RegState.enter_id), F.chat.type == "private")
 async def user_to_admin_relay(msg: Message):
     uid = msg.from_user.id
@@ -619,7 +619,7 @@ async def user_close_chat(cb: CallbackQuery):
     admin_id = int(rec.get("chat_admin") or 0)
     update_request(uid, chat_on=False, chat_admin=None)
     try:
-        await cb.message.answer(_L(uid, "ðŸ”’ ØªÙ… Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø©. Ø´ÙƒØ±Ø§Ù‹ Ù„Ùƒ.",
+        await cb.message.answer(_L(uid, "ðŸ”’ ØªÙ… Ø¥Ù†Ù‡Ø§Ø¡ Ø§Ù„Ù…ØØ§Ø¯Ø«Ø©. Ø´ÙƒØ±Ø§Ù‹ Ù„Ùƒ.",
                                          "ðŸ”’ Chat ended. Thank you."))
     except Exception:
         pass
@@ -636,7 +636,7 @@ async def user_done_chat(cb: CallbackQuery):
     rec = find_request(uid) or {}
     admin_id = int(rec.get("chat_admin") or 0)
     try:
-        await cb.message.answer(_L(uid, "âœ… Ø´ÙƒØ±Ù‹Ø§ Ù„Ùƒ! Ø³Ù†Ø¨Ù‚Ù‰ Ù…ØªØ§Ø­ÙŠÙ† Ù„Ø£ÙŠ Ø§Ø³ØªÙØ³Ø§Ø±.",
+        await cb.message.answer(_L(uid, "âœ… Ø´ÙƒØ±Ù‹Ø§ Ù„Ùƒ! Ø³Ù†Ø¨Ù‚Ù‰ Ù…ØªØ§ØÙŠÙ† Ù„Ø£ÙŠ Ø§Ø³ØªÙØ³Ø§Ø±.",
                                          "âœ… Thanks! We're here if you need anything."),
                                 reply_markup=_user_chat_kb(uid))
     except Exception:
@@ -670,7 +670,7 @@ async def get_snake_id(msg: Message, state: FSMContext):
     raw = raw.translate(trans)
     sid = re.sub(r"\D+","", raw)
     if not (3 <= len(sid) <= 18):
-        return await msg.reply("Ø§Ù„Ø±Ø¬Ø§Ø¡ Ø¥Ø¯Ø®Ø§Ù„ ID Ø±Ù‚Ù…ÙŠ ØµØ­ÙŠØ­ (3â€“18 Ø®Ø§Ù†Ø©). Ø£Ø±Ø³Ù„ Ø§Ù„Ø£Ø±Ù‚Ø§Ù… ÙÙ‚Ø·.")
+        return await msg.reply("Ø§Ù„Ø±Ø¬Ø§Ø¡ Ø¥Ø¯Ø®Ø§Ù„ ID Ø±Ù‚Ù…ÙŠ ØµØÙŠØ (3â€“18 Ø®Ø§Ù†Ø©). Ø£Ø±Ø³Ù„ Ø§Ù„Ø£Ø±Ù‚Ø§Ù… ÙÙ‚Ø·.")
     data = await state.get_data()
     game = data.get("game") or "-"
     update_request(

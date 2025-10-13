@@ -15,7 +15,7 @@ from aiogram.types import (
     InlineKeyboardButton,
 )
 from lang import t, get_user_lang
-# Ù†Ø§ÙØ°Ø© Ø§Ù„Ø³Ù…Ø§Ø­ Ø§Ù„Ù…Ø¤Ù‚ØªØ© Ù„Ù„Ø¥ÙŠØµØ§Ù„Ø§Øª
+# Ù†Ø§ÙØ°Ø© Ø§Ù„Ø³Ù…Ø§Ø Ø§Ù„Ù…Ø¤Ù‚ØªØ© Ù„Ù„Ø¥ÙŠØµØ§Ù„Ø§Øª
 try:
     from utils.receipt_gate import open_window as _open_receipt_window, close_window as _close_receipt_window
 except Exception:
@@ -47,8 +47,8 @@ def _is_admin(uid: int) -> bool:
 
 def _tr(lang: str, key: str, en: str, ar: str) -> str:
     """
-    ØªØ±Ø¬Ù…Ø© Ø¨Ù…ÙØªØ§Ø­ Ù…ÙˆØ¬ÙˆØ¯ Ù…Ø³Ø¨Ù‚Ù‹Ø§ Ù…Ø¹ Ù‚ÙŠÙ…Ø© Ø§Ø­ØªÙŠØ§Ø·ÙŠØ©.
-    Ù„Ø§ Ù†ØºÙŠÙ‘Ø± Ø§Ù„Ù…ÙØ§ØªÙŠØ­ Ø§Ù„Ù‚Ø¯ÙŠÙ…Ø©Ø› ÙÙ‚Ø· Ù†ÙˆÙÙ‘Ø± Ù†ØµÙ‹Ø§ Ø§ÙØªØ±Ø§Ø¶ÙŠÙ‹Ø§ Ù„Ùˆ Ø§Ù„Ù…ÙØªØ§Ø­ Ù†Ø§Ù‚Øµ.
+    ØªØ±Ø¬Ù…Ø© Ø¨Ù…ÙØªØ§Ø Ù…ÙˆØ¬ÙˆØ¯ Ù…Ø³Ø¨Ù‚Ù‹Ø§ Ù…Ø¹ Ù‚ÙŠÙ…Ø© Ø§ØØªÙŠØ§Ø·ÙŠØ©.
+    Ù„Ø§ Ù†ØºÙŠÙ‘Ø± Ø§Ù„Ù…ÙØ§ØªÙŠØ Ø§Ù„Ù‚Ø¯ÙŠÙ…Ø©Ø› ÙÙ‚Ø· Ù†ÙˆÙÙ‘Ø± Ù†ØµÙ‹Ø§ Ø§ÙØªØ±Ø§Ø¶ÙŠÙ‹Ø§ Ù„Ùˆ Ø§Ù„Ù…ÙØªØ§Ø Ù†Ø§Ù‚Øµ.
     """
     try:
         v = t(lang, key)
@@ -77,13 +77,13 @@ async def prompt_user_payment(bot, user_id: int, lang: str | None = None):
         lang, "pay_intro",
         "To activate your supplier account, send <b>${amount}</b> in USDT to Binance ID <code>{binance}</code>, "
         "then tap the button below.",
-        "Ù„ØªÙØ¹ÙŠÙ„ Ø­Ø³Ø§Ø¨ Ø§Ù„Ù…ÙˆØ±Ø¯ØŒ Ø£Ø±Ø³Ù„ <b>{amount}$</b> USDT Ø¥Ù„Ù‰ Ù…Ø¹Ø±Ù Ø¨Ø§ÙŠÙ†Ø§Ù†Ø³ <code>{binance}</code> "
+        "Ù„ØªÙØ¹ÙŠÙ„ ØØ³Ø§Ø¨ Ø§Ù„Ù…ÙˆØ±Ø¯ØŒ Ø£Ø±Ø³Ù„ <b>{amount}$</b> USDT Ø¥Ù„Ù‰ Ù…Ø¹Ø±Ù Ø¨Ø§ÙŠÙ†Ø§Ù†Ø³ <code>{binance}</code> "
         "Ø«Ù… Ø§Ø¶ØºØ· Ø§Ù„Ø²Ø± Ø¨Ø§Ù„Ø£Ø³ÙÙ„."
     )
     tail = _tr(
         lang, "pay_after_note",
         "After payment, verification is manual and may take some time.",
-        "Ø¨Ø¹Ø¯ Ø§Ù„ØªØ­ÙˆÙŠÙ„ØŒ ÙŠØªÙ… Ø§Ù„ØªØ­Ù‚Ù‚ ÙŠØ¯ÙˆÙŠÙ‹Ø§ ÙˆÙ‚Ø¯ ÙŠØ³ØªØºØ±Ù‚ Ø¨Ø¹Ø¶ Ø§Ù„ÙˆÙ‚Øª."
+        "Ø¨Ø¹Ø¯ Ø§Ù„ØªØÙˆÙŠÙ„ØŒ ÙŠØªÙ… Ø§Ù„ØªØÙ‚Ù‚ ÙŠØ¯ÙˆÙŠÙ‹Ø§ ÙˆÙ‚Ø¯ ÙŠØ³ØªØºØ±Ù‚ Ø¨Ø¹Ø¶ Ø§Ù„ÙˆÙ‚Øª."
     )
     body = body_template.format(amount=SUPPLIER_FEE, binance=BINANCE_ID)
 
@@ -111,7 +111,7 @@ async def supplier_paid_done(
     """
     Ø¹Ù†Ø¯ Ø¶ØºØ· Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… 'ØªÙ… Ø§Ù„Ø¯ÙØ¹' Ø£Ùˆ Ø§Ø³ØªØ¯Ø¹Ø§Ø¤Ù‡Ø§ ÙŠØ¯ÙˆÙŠÙ‹Ø§:
       - ØªØ´ÙƒØ± Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù….
-      - ØªØ±Ø³Ù„ Ø¥Ø´Ø¹Ø§Ø±Ù‹Ø§ Ù„Ù„Ø£Ø¯Ù…Ù† Ù…Ø¹ Ø£Ø²Ø±Ø§Ø± Ø§Ù„ØªØ­Ù‚Ù‚.
+      - ØªØ±Ø³Ù„ Ø¥Ø´Ø¹Ø§Ø±Ù‹Ø§ Ù„Ù„Ø£Ø¯Ù…Ù† Ù…Ø¹ Ø£Ø²Ø±Ø§Ø± Ø§Ù„ØªØÙ‚Ù‚.
     """
     lang = lang or get_user_lang(user_id) or "en"
 
@@ -120,7 +120,7 @@ async def supplier_paid_done(
         lang,
         "supplier_paid_ack",
         "Thanks! We've notified the developer. You'll be upgraded after manual verification.",
-        "Ø´ÙƒØ±Ù‹Ø§! ØªÙ… Ø¥Ø¨Ù„Ø§Øº Ø§Ù„Ù…Ø·ÙˆÙ‘Ø± ÙˆØ³ÙŠØªÙ… ØªØ±Ù‚ÙŠØªÙƒ Ø¨Ø¹Ø¯ Ø§Ù„ØªØ­Ù‚Ù‚ Ø§Ù„ÙŠØ¯ÙˆÙŠ."
+        "Ø´ÙƒØ±Ù‹Ø§! ØªÙ… Ø¥Ø¨Ù„Ø§Øº Ø§Ù„Ù…Ø·ÙˆÙ‘Ø± ÙˆØ³ÙŠØªÙ… ØªØ±Ù‚ÙŠØªÙƒ Ø¨Ø¹Ø¯ Ø§Ù„ØªØÙ‚Ù‚ Ø§Ù„ÙŠØ¯ÙˆÙŠ."
     )
     try:
         await bot.send_message(user_id, ack)
@@ -141,7 +141,7 @@ async def supplier_paid_done(
         f"{_tr(lang,'supplier_paid_confirms','confirms paying the $300 supplier fee.','ÙŠØ¤ÙƒØ¯ Ø¯ÙØ¹ Ø±Ø³ÙˆÙ… Ø§Ù„Ù…ÙˆØ±Ø¯ $300.')}\n\n"
         f"UserID: <code>{user_id}</code>\n"
         f"Binance ID: <code>{BINANCE_ID}</code>\n\n"
-        f"{_tr(lang,'supplier_paid_footer','Please verify and upgrade.','ÙŠØ±Ø¬Ù‰ Ø§Ù„ØªØ­Ù‚Ù‚ ÙˆØ§Ù„ØªØ±Ù‚ÙŠØ©.')}"
+        f"{_tr(lang,'supplier_paid_footer','Please verify and upgrade.','ÙŠØ±Ø¬Ù‰ Ø§Ù„ØªØÙ‚Ù‚ ÙˆØ§Ù„ØªØ±Ù‚ÙŠØ©.')}"
     )
 
     kb_admin = InlineKeyboardMarkup(inline_keyboard=[
@@ -179,7 +179,7 @@ async def _fallback_supplier_paid(cb: CallbackQuery):
     await cb.answer("OK")
 
 
-# =============== ÙƒÙˆÙ„Ø¨Ø§ÙƒØ§Øª Ø§Ù„Ø£Ø¯Ù…Ù† Ù„Ù„ØªØ­Ù‚Ù‚ ===============
+# =============== ÙƒÙˆÙ„Ø¨Ø§ÙƒØ§Øª Ø§Ù„Ø£Ø¯Ù…Ù† Ù„Ù„ØªØÙ‚Ù‚ ===============
 @router.callback_query(F.data.regexp(r"^suppverify:(confirm|reject|askreceipt|contact):\d+$"))
 async def admin_verify_actions(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
@@ -192,7 +192,7 @@ async def admin_verify_actions(cb: CallbackQuery):
     user_lang  = get_user_lang(target_uid) or "en"
 
     if action == "confirm":
-        # Ø£ØºÙ„Ù‚ Ù†Ø§ÙØ°Ø© Ø§Ù„Ø³Ù…Ø§Ø­ Ø¥Ù† ÙƒØ§Ù†Øª Ù…ÙØªÙˆØ­Ø©
+        # Ø£ØºÙ„Ù‚ Ù†Ø§ÙØ°Ø© Ø§Ù„Ø³Ù…Ø§Ø Ø¥Ù† ÙƒØ§Ù†Øª Ù…ÙØªÙˆØØ©
         _close_receipt_window(target_uid)
 
         if _set_supplier:
@@ -205,7 +205,7 @@ async def admin_verify_actions(cb: CallbackQuery):
             user_lang,
             "supplier_verify_ok_user",
             f"âœ… Payment verified. You're now a supplier. The developer {DEV_HANDLE} will contact you to finalize access. Use /start to see supplier tools.",
-            f"âœ… ØªÙ… Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ø¯ÙØ¹. ØªÙ… ØªØ±Ù‚ÙŠØªÙƒ ÙƒÙ…ÙˆØ±Ù‘Ø¯. Ø³ÙŠØªÙˆØ§ØµÙ„ Ù…Ø¹Ùƒ Ø§Ù„Ù…Ø·ÙˆÙ‘Ø± {DEV_HANDLE} Ù„Ø¥ØªÙ…Ø§Ù… Ø§Ù„ÙˆØµÙˆÙ„. Ø§Ø³ØªØ®Ø¯Ù… /start Ù„Ø±Ø¤ÙŠØ© Ø£Ø¯ÙˆØ§Øª Ø§Ù„Ù…ÙˆØ±Ø¯."
+            f"âœ… ØªÙ… Ø§Ù„ØªØÙ‚Ù‚ Ù…Ù† Ø§Ù„Ø¯ÙØ¹. ØªÙ… ØªØ±Ù‚ÙŠØªÙƒ ÙƒÙ…ÙˆØ±Ù‘Ø¯. Ø³ÙŠØªÙˆØ§ØµÙ„ Ù…Ø¹Ùƒ Ø§Ù„Ù…Ø·ÙˆÙ‘Ø± {DEV_HANDLE} Ù„Ø¥ØªÙ…Ø§Ù… Ø§Ù„ÙˆØµÙˆÙ„. Ø§Ø³ØªØ®Ø¯Ù… /start Ù„Ø±Ø¤ÙŠØ© Ø£Ø¯ÙˆØ§Øª Ø§Ù„Ù…ÙˆØ±Ø¯."
         )
         try:
             await cb.message.bot.send_message(target_uid, msg_user, disable_web_page_preview=True)
@@ -225,7 +225,7 @@ async def admin_verify_actions(cb: CallbackQuery):
         return await cb.answer("OK")
 
     if action == "reject":
-        # Ø£ØºÙ„Ù‚ Ù†Ø§ÙØ°Ø© Ø§Ù„Ø³Ù…Ø§Ø­ Ø¥Ù† ÙƒØ§Ù†Øª Ù…ÙØªÙˆØ­Ø©
+        # Ø£ØºÙ„Ù‚ Ù†Ø§ÙØ°Ø© Ø§Ù„Ø³Ù…Ø§Ø Ø¥Ù† ÙƒØ§Ù†Øª Ù…ÙØªÙˆØØ©
         _close_receipt_window(target_uid)
 
         # â¬‡ï¸ Ø£Ù„ØºÙŠ Ø§Ø¹ØªÙ…Ø§Ø¯ Ø§Ù„Ù…ÙˆØ±Ø¯ Ù„Ùˆ ÙƒØ§Ù† Ù…ÙØ¹Ù‘ÙŽÙ„Ù‹Ø§
@@ -239,7 +239,7 @@ async def admin_verify_actions(cb: CallbackQuery):
             user_lang,
             "supplier_verify_reject_user",
             f"â›” We couldn't verify your payment. If you already paid, please send the receipt or contact {DEV_HANDLE}.",
-            f"â›” ØªØ¹Ø°Ù‘Ø± Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ø¯ÙØ¹. Ø¥Ù† ÙƒÙ†Øª Ø¯ÙØ¹Øª Ø¨Ø§Ù„ÙØ¹Ù„ØŒ Ø§Ù„Ø±Ø¬Ø§Ø¡ Ø¥Ø±Ø³Ø§Ù„ Ø¥ÙŠØµØ§Ù„ Ø§Ù„ØªØ­ÙˆÙŠÙ„ Ø£Ùˆ Ø§Ù„ØªÙˆØ§ØµÙ„ Ù…Ø¹ {DEV_HANDLE}."
+            f"â›” ØªØ¹Ø°Ù‘Ø± Ø§Ù„ØªØÙ‚Ù‚ Ù…Ù† Ø§Ù„Ø¯ÙØ¹. Ø¥Ù† ÙƒÙ†Øª Ø¯ÙØ¹Øª Ø¨Ø§Ù„ÙØ¹Ù„ØŒ Ø§Ù„Ø±Ø¬Ø§Ø¡ Ø¥Ø±Ø³Ø§Ù„ Ø¥ÙŠØµØ§Ù„ Ø§Ù„ØªØÙˆÙŠÙ„ Ø£Ùˆ Ø§Ù„ØªÙˆØ§ØµÙ„ Ù…Ø¹ {DEV_HANDLE}."
         )
 
         try:
@@ -247,7 +247,7 @@ async def admin_verify_actions(cb: CallbackQuery):
         except Exception:
             pass
 
-        note = _tr(admin_lang, "supplier_verify_reject_admin", "Marked as not paid.", "ØªÙ… ÙˆØ¶Ø¹ Ø§Ù„Ø­Ø§Ù„Ø©: Ù„Ù… ÙŠØªÙ… Ø§Ù„Ø¯ÙØ¹.")
+        note = _tr(admin_lang, "supplier_verify_reject_admin", "Marked as not paid.", "ØªÙ… ÙˆØ¶Ø¹ Ø§Ù„ØØ§Ù„Ø©: Ù„Ù… ÙŠØªÙ… Ø§Ù„Ø¯ÙØ¹.")
         try:
             await cb.message.edit_text(cb.message.text + f"\n\n{note}", disable_web_page_preview=True)
         except Exception:
@@ -260,7 +260,7 @@ async def admin_verify_actions(cb: CallbackQuery):
         return await cb.answer("OK")
 
     if action == "askreceipt":
-        # Ø§Ø³Ù…Ø­ Ù„Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø¨Ø¥Ø±Ø³Ø§Ù„ ØµÙˆØ±Ø©/Ù…Ø³ØªÙ†Ø¯/Ù†Øµ Ù„Ù…Ø¯Ø© 60 Ø¯Ù‚ÙŠÙ‚Ø© (ÙŠÙ…ÙƒÙ† ØªØ¹Ø¯ÙŠÙ„Ù‡Ø§)
+        # Ø§Ø³Ù…Ø Ù„Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø¨Ø¥Ø±Ø³Ø§Ù„ ØµÙˆØ±Ø©/Ù…Ø³ØªÙ†Ø¯/Ù†Øµ Ù„Ù…Ø¯Ø© 60 Ø¯Ù‚ÙŠÙ‚Ø© (ÙŠÙ…ÙƒÙ† ØªØ¹Ø¯ÙŠÙ„Ù‡Ø§)
         _open_receipt_window(target_uid, types=("photo", "document", "text"), ttl=3600)
 
         ask = _tr(
@@ -278,7 +278,7 @@ async def admin_verify_actions(cb: CallbackQuery):
         return await cb.answer(done, show_alert=False)
 
     if action == "contact":
-        open_chat_text = _tr(admin_lang, "supplier_verify_contact_open", "Open chat", "ÙØªØ­ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø©")
+        open_chat_text = _tr(admin_lang, "supplier_verify_contact_open", "Open chat", "ÙØªØ Ø§Ù„Ù…ØØ§Ø¯Ø«Ø©")
         kb = InlineKeyboardMarkup(inline_keyboard=[[
             InlineKeyboardButton(text=open_chat_text, url=f"tg://user?id={target_uid}")
         ]])
@@ -317,7 +317,7 @@ async def cmd_unsupplier(msg: Message):
                 user_lang,
                 "supplier_demoted_user",
                 "Your supplier status has been removed. You are now a regular user. Use /start to refresh your menu.",
-                "ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø§Ø¹ØªÙ…Ø§Ø¯Ùƒ ÙƒÙ…ÙˆØ±Ù‘Ø¯. ØªÙ… ØªØ­ÙˆÙŠÙ„Ùƒ Ø¥Ù„Ù‰ Ù…Ø³ØªØ®Ø¯Ù… Ø¹Ø§Ø¯ÙŠ. Ø§Ø³ØªØ®Ø¯Ù… /start Ù„ØªØ­Ø¯ÙŠØ« Ù‚Ø§Ø¦Ù…ØªÙƒ."
+                "ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø§Ø¹ØªÙ…Ø§Ø¯Ùƒ ÙƒÙ…ÙˆØ±Ù‘Ø¯. ØªÙ… ØªØÙˆÙŠÙ„Ùƒ Ø¥Ù„Ù‰ Ù…Ø³ØªØ®Ø¯Ù… Ø¹Ø§Ø¯ÙŠ. Ø§Ø³ØªØ®Ø¯Ù… /start Ù„ØªØØ¯ÙŠØ« Ù‚Ø§Ø¦Ù…ØªÙƒ."
             )
         )
     except Exception:
@@ -359,13 +359,13 @@ async def admin_demote_cb(cb: CallbackQuery):
                 user_lang,
                 "supplier_demoted_user",
                 "Your supplier status has been removed. You are now a regular user. Use /start to refresh your menu.",
-                "ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø§Ø¹ØªÙ…Ø§Ø¯Ùƒ ÙƒÙ…ÙˆØ±Ù‘Ø¯. ØªÙ… ØªØ­ÙˆÙŠÙ„Ùƒ Ø¥Ù„Ù‰ Ù…Ø³ØªØ®Ø¯Ù… Ø¹Ø§Ø¯ÙŠ. Ø§Ø³ØªØ®Ø¯Ù… /start Ù„ØªØ­Ø¯ÙŠØ« Ù‚Ø§Ø¦Ù…ØªÙƒ."
+                "ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø§Ø¹ØªÙ…Ø§Ø¯Ùƒ ÙƒÙ…ÙˆØ±Ù‘Ø¯. ØªÙ… ØªØÙˆÙŠÙ„Ùƒ Ø¥Ù„Ù‰ Ù…Ø³ØªØ®Ø¯Ù… Ø¹Ø§Ø¯ÙŠ. Ø§Ø³ØªØ®Ø¯Ù… /start Ù„ØªØØ¯ÙŠØ« Ù‚Ø§Ø¦Ù…ØªÙƒ."
             )
         )
     except Exception:
         pass
 
-    # ØªØ­Ø¯ÙŠØ« Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ø£Ø¯Ù…Ù†
+    # ØªØØ¯ÙŠØ« Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ø£Ø¯Ù…Ù†
     try:
         note = _tr(admin_lang, "supplier_demoted_admin_short", "âœ… Supplier access removed.", "âœ… ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø§Ø¹ØªÙ…Ø§Ø¯ Ø§Ù„Ù…ÙˆØ±Ø¯.")
         await cb.message.edit_text(cb.message.text + f"\n\n{note}", disable_web_page_preview=True)

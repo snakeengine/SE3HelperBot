@@ -97,7 +97,7 @@ def _set_status(user_id: int, status: str) -> None:
     db[str(user_id)] = rec
     _safe_save(db)
 
-# ========= Ù…ÙØ§ØªÙŠØ­ Ø§Ù„ØªØ±Ø¬Ù…Ø© Ø§Ù„Ø¢Ù…Ù†Ø© =========
+# ========= Ù…ÙØ§ØªÙŠØ Ø§Ù„ØªØ±Ø¬Ù…Ø© Ø§Ù„Ø¢Ù…Ù†Ø© =========
 def _tr(lang: str, key: str, default: str) -> str:
     try:
         s = t(lang, key)
@@ -107,7 +107,7 @@ def _tr(lang: str, key: str, default: str) -> str:
         pass
     return default
 
-# ========= Ù„ÙˆØ­Ø§Øª =========
+# ========= Ù„ÙˆØØ§Øª =========
 def _confirm_kb(lang: str) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.row(
@@ -122,10 +122,10 @@ def _admin_kb(user_id: int, lang: str) -> InlineKeyboardMarkup:
         InlineKeyboardButton(text=_tr(lang, "admin.btn.approve", "âœ… Ù…ÙˆØ§ÙÙ‚Ø©"), callback_data=f"sapply:approve:{user_id}"),
         InlineKeyboardButton(text=_tr(lang, "admin.btn.reject", "âŒ Ø±ÙØ¶"),   callback_data=f"sapply:reject:{user_id}"),
     )
-    kb.row(InlineKeyboardButton(text=_tr(lang, "admin.btn.ask", "âœï¸ Ø·Ù„Ø¨ ØªÙˆØ¶ÙŠØ­"), callback_data=f"sapply:ask:{user_id}"))
+    kb.row(InlineKeyboardButton(text=_tr(lang, "admin.btn.ask", "âœï¸ Ø·Ù„Ø¨ ØªÙˆØ¶ÙŠØ"), callback_data=f"sapply:ask:{user_id}"))
     return kb.as_markup()
 
-# ========= Ø§Ù„Ø­Ø§Ù„Ø§Øª =========
+# ========= Ø§Ù„ØØ§Ù„Ø§Øª =========
 class SupplierApply(StatesGroup):
     FULL_NAME   = State()
     COUNTRY_CITY= State()
@@ -168,7 +168,7 @@ async def _notify_admins(bot, text: str, kb: Optional[InlineKeyboardMarkup] = No
 async def cmd_apply(message: Message, state: FSMContext):
     lang = get_user_lang(message.from_user.id) or "en"
     await message.answer(
-        f"ðŸ§¾ {_tr(lang,'apply.welcome','Ù…Ø±Ø­Ø¨Ø§! Ù‚Ø¯Ù‘Ù… Ø·Ù„Ø¨ Ø§Ù„Ø§Ù†Ø¶Ù…Ø§Ù… ÙƒÙ…ÙˆØ±Ù‘Ø¯.')}\n\n"
+        f"ðŸ§¾ {_tr(lang,'apply.welcome','Ù…Ø±ØØ¨Ø§! Ù‚Ø¯Ù‘Ù… Ø·Ù„Ø¨ Ø§Ù„Ø§Ù†Ø¶Ù…Ø§Ù… ÙƒÙ…ÙˆØ±Ù‘Ø¯.')}\n\n"
         f"{_tr(lang,'apply.note','Ø£Ø¬Ø¨ Ø¹Ù† Ø§Ù„Ø£Ø³Ø¦Ù„Ø© Ø§Ù„ØªØ§Ù„ÙŠØ© Ø¨Ø¯Ù‚Ø©.')}"
     )
     await message.answer(_tr(lang, "apply.q1", "Ù…Ø§ Ø§Ø³Ù…Ùƒ Ø§Ù„ÙƒØ§Ù…Ù„ØŸ"))
@@ -274,7 +274,7 @@ async def admin_approve(cb: CallbackQuery):
     except Exception:
         pass
 
-    await cb.message.answer(_tr(lang_u, "admin.done", "ØªÙ…."))  # Ù…Ù„Ø§Ø­Ø¸Ø© Ù„Ù„Ø£Ø¯Ù…Ù†
+    await cb.message.answer(_tr(lang_u, "admin.done", "ØªÙ…."))  # Ù…Ù„Ø§ØØ¸Ø© Ù„Ù„Ø£Ø¯Ù…Ù†
     await cb.answer(_tr(lang_u, "common.approved", "ØªÙ…Øª Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø©."))
 
 @router.callback_query(F.data.startswith("sapply:reject:"))
