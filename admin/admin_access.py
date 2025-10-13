@@ -9,12 +9,11 @@ from aiogram.enums import ParseMode
 import os
 from aiogram.exceptions import TelegramForbiddenError
 from lang import get_user_lang
-from utils.admins import ADMIN_IDS, OWNERS, is_admin, add_admin, remove_admin, list_admins
+from utils.admins import OWNERS, is_admin, add_admin, remove_admin, list_admins
 
 router = Router(name="admin_access")
-router.message.filter(F.chat.type == "private", F.from_user.id.in_(ADMIN_IDS))
-router.callback_query.filter(F.message.chat.type == "private", F.from_user.id.in_(ADMIN_IDS))
-
+router.message.filter(F.chat.type == "private", F.from_user.func(lambda u: is_admin(u.id)))
+router.callback_query.filter(F.message.chat.type == "private", F.from_user.func(lambda u: is_admin(u.id)))
 
 
 
