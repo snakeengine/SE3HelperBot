@@ -1,8 +1,5 @@
-from __future__ import annotations
-
-from utils.admins import get_admin_ids, is_admin, get_owner_ids
 # admin/promoter_actions.py
-
+from __future__ import annotations
 
 import os, json, time
 from pathlib import Path
@@ -17,9 +14,9 @@ DATA_DIR = Path("data"); DATA_DIR.mkdir(parents=True, exist_ok=True)
 STORE_FILE = DATA_DIR / "promoters.json"
 
 _admin_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
-ADMIN_IDS = get_admin_ids()
+ADMIN_IDS = [int(x) for x in str(_admin_env).split(",") if str(x).strip().isdigit()]
 if not ADMIN_IDS:
-    ADMIN_IDS = get_admin_ids()
+    ADMIN_IDS = [7360982123]
 
 def is_admin(uid: int) -> bool: 
     return uid in ADMIN_IDS
@@ -62,14 +59,14 @@ def _get_user(d, uid: str):
     u.setdefault("submitted_at", _now())
     return u
 
-# ====== Ø£ÙƒØ´Ù† Ø¹Ø§Ù… ======
-async def _finish(cb: CallbackQuery, note_key: str = "common.ok", fb: str = "OK âœ…"):
+# ====== أكشن عام ======
+async def _finish(cb: CallbackQuery, note_key: str = "common.ok", fb: str = "OK ✅"):
     try:
         await cb.answer(_tf(L(cb.from_user.id), note_key, fb))
     except Exception:
         pass
 
-# === Ù…ÙˆØ§ÙÙ‚Ø© / Ø±ÙØ¶ / ØªØ¹Ù„ÙŠÙ‚ / Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø¥Ø¶Ø§ÙÙŠØ© ===
+# === موافقة / رفض / تعليق / معلومات إضافية ===
 @router.callback_query(F.data.regexp(r"^prom:adm:(approve|reject|hold|more):\d+$"))
 async def action_basic(cb: CallbackQuery):
     lang = L(cb.from_user.id)
@@ -80,19 +77,19 @@ async def action_basic(cb: CallbackQuery):
     d = _load(); u = _get_user(d, uid)
 
     status_map = {
-        "approve": ("approved", "prom.user.approved", "âœ… ØªÙ…Øª Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø© Ø¹Ù„Ù‰ Ø·Ù„Ø¨Ùƒ ÙƒÙ…Ø±ÙˆÙ‘Ø¬."),
-        "reject":  ("rejected", "prom.user.rejected", "âŒ ØªÙ… Ø±ÙØ¶ Ø·Ù„Ø¨Ùƒ."),
-        "hold":    ("on_hold",  "prom.user.hold",     "â¸ ØªÙ… ØªØ¹Ù„ÙŠÙ‚ Ø·Ù„Ø¨Ùƒ Ù…Ø¤Ù‚ØªÙ‹Ø§."),
-        "more":    ("more_info","prom.user.more",     "âœï¸ Ù†ØØªØ§Ø¬ Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø¥Ø¶Ø§ÙÙŠØ© Ù„Ø·Ù„Ø¨Ùƒ."),
+        "approve": ("approved", "prom.user.approved", "✅ تمت الموافقة على طلبك كمروّج."),
+        "reject":  ("rejected", "prom.user.rejected", "❌ تم رفض طلبك."),
+        "hold":    ("on_hold",  "prom.user.hold",     "⏸ تم تعليق طلبك مؤقتًا."),
+        "more":    ("more_info","prom.user.more",     "✍️ نحتاج معلومات إضافية لطلبك."),
     }
     new_status, user_key, fb = status_map[act]
     u["status"] = new_status
     _save(d)
 
     await _notify_user(cb, int(uid), _tf(lang, user_key, fb))
-    await _finish(cb, "common.done", "Done âœ…")
+    await _finish(cb, "common.done", "Done ✅")
 
-# === Ù…Ù†Ø/Ø¥Ù„ØºØ§Ø¡ Ù„Ù‚Ø¨ Ù…Ø±ÙˆÙ‘Ø¬ ===
+# === منح/إلغاء لقب مروّج ===
 @router.callback_query(F.data.regexp(r"^prom:adm:(promote|demote):\d+$"))
 async def action_promote(cb: CallbackQuery):
     lang = L(cb.from_user.id)
@@ -104,16 +101,16 @@ async def action_promote(cb: CallbackQuery):
 
     if act == "promote":
         u["is_promoter"] = True
-        txt = _tf(lang, "prom.user.promoted", "ðŸ‘‘ ØªÙ… Ù…Ù†ØÙƒ Ù„Ù‚Ø¨ Â«Ù…Ø±ÙˆÙ‘Ø¬Â» ÙˆØªÙ… ØªÙØ¹ÙŠÙ„ Ù„ÙˆØØ© Ø§Ù„Ù…Ø±ÙˆÙ‘Ø¬ÙŠÙ†.")
+        txt = _tf(lang, "prom.user.promoted", "👑 تم منحك لقب «مروّج» وتم تفعيل لوحة المروّجين.")
     else:
         u["is_promoter"] = False
-        txt = _tf(lang, "prom.user.demoted", "ðŸ—‘ ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ù„Ù‚Ø¨ Â«Ù…Ø±ÙˆÙ‘Ø¬Â» Ù„Ø¯ÙŠÙƒ ÙˆØªØ¹Ø·ÙŠÙ„ Ù„ÙˆØØªÙƒ.")
+        txt = _tf(lang, "prom.user.demoted", "🗑 تم إلغاء لقب «مروّج» لديك وتعطيل لوحتك.")
     _save(d)
 
     await _notify_user(cb, int(uid), txt)
-    await _finish(cb, "common.done", "Done âœ…")
+    await _finish(cb, "common.done", "Done ✅")
 
-# === Ø§Ù„ØØ¸Ø± 1/7/30 ÙŠÙˆÙ… ===
+# === الحظر 1/7/30 يوم ===
 @router.callback_query(F.data.regexp(r"^prom:adm:ban(1|7|30):\d+$"))
 async def action_ban(cb: CallbackQuery):
     lang = L(cb.from_user.id)
@@ -129,11 +126,11 @@ async def action_ban(cb: CallbackQuery):
 
     await _notify_user(
         cb, int(uid),
-        _tf(lang, "prom.user.banned_days", f"ðŸš« ØªÙ… ØØ¸Ø±Ùƒ Ù„Ù…Ø¯Ø© {days} ÙŠÙˆÙ…Ù‹Ø§.").replace("{days}", str(days))
+        _tf(lang, "prom.user.banned_days", f"🚫 تم حظرك لمدة {days} يومًا.").replace("{days}", str(days))
     )
-    await _finish(cb, "common.done", "Done âœ…")
+    await _finish(cb, "common.done", "Done ✅")
 
-# === Ø¥Ø²Ø§Ù„Ø© Ø§Ù„ØØ¸Ø± ===
+# === إزالة الحظر ===
 @router.callback_query(F.data.regexp(r"^prom:adm:unban:\d+$"))
 async def action_unban(cb: CallbackQuery):
     lang = L(cb.from_user.id)
@@ -146,10 +143,10 @@ async def action_unban(cb: CallbackQuery):
     u["banned_until"] = 0
     _save(d)
 
-    await _notify_user(cb, int(uid), _tf(lang, "prom.user.unbanned", "â™»ï¸ ØªÙ… Ø¥Ø²Ø§Ù„Ø© Ø§Ù„ØØ¸Ø± Ø¹Ù† ØØ³Ø§Ø¨Ùƒ."))
-    await _finish(cb, "common.done", "Done âœ…")
+    await _notify_user(cb, int(uid), _tf(lang, "prom.user.unbanned", "♻️ تم إزالة الحظر عن حسابك."))
+    await _finish(cb, "common.done", "Done ✅")
 
-# === ØØ°Ù Ø§Ù„Ø·Ù„Ø¨ ===
+# === حذف الطلب ===
 @router.callback_query(F.data.regexp(r"^prom:adm:delete:\d+$"))
 async def action_delete(cb: CallbackQuery):
     lang = L(cb.from_user.id)
@@ -161,6 +158,5 @@ async def action_delete(cb: CallbackQuery):
     d.get("users", {}).pop(uid, None)
     _save(d)
 
-    await _notify_user(cb, int(uid), _tf(lang, "prom.user.deleted", "ðŸ—‘ ØªÙ… ØØ°Ù Ø·Ù„Ø¨Ùƒ."))
-    await _finish(cb, "common.done", "Done âœ…")
-
+    await _notify_user(cb, int(uid), _tf(lang, "prom.user.deleted", "🗑 تم حذف طلبك."))
+    await _finish(cb, "common.done", "Done ✅")

@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # 📁 utils/user_stats.py
-
+from __future__ import annotations
 import json, os, csv, time, threading
 from datetime import datetime, timezone, timedelta, date
 from typing import Dict, Any, Optional, Set, List

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 # utils_language.py
 """
 Compatibility shim for legacy imports.
@@ -13,6 +11,7 @@ Improvements:
 - Looks for locales under BASE/locales then ./locales.
 """
 
+from __future__ import annotations
 import os, json
 from pathlib import Path
 from typing import Optional, Dict

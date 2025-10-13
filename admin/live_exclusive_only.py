@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # لا يضمّن أي Router — مجرد patch خفيف يعمل وقت الاستيراد فقط
-
+from __future__ import annotations
 
 from typing import Optional
 

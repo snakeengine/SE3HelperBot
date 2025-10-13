@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # utils_user_resolver.py
-
+from __future__ import annotations
 import json
 import re
 from pathlib import Path

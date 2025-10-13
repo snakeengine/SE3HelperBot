@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # middlewares/tracer.py
-
+from __future__ import annotations
 import logging
 from aiogram import BaseMiddleware
 from aiogram.types import Update

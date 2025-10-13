@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # handlers/debug_storage.py
-
+from __future__ import annotations
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message

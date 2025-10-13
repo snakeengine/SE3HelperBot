@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # utils/anti_cheat.py
-
+from __future__ import annotations
 import os, time, random, string
 from typing import Tuple, Optional, Dict, Any
 

@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # utils/feature_flags.py
-
+from __future__ import annotations
 
 import json
 import os

@@ -1,8 +1,5 @@
-from __future__ import annotations
-
-from utils.admins import get_admin_ids, is_admin, get_owner_ids
 # admin/report_admin.py
-
+from __future__ import annotations
 
 import os, json, logging, time
 from pathlib import Path
@@ -19,32 +16,32 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters import Command 
 
 """
-Ù„ÙˆØØ© Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø¨Ù„Ø§ØºØ§Øª:
-- ØªÙ…ÙƒÙŠÙ†/ØªØ¹Ø·ÙŠÙ„ Ø§Ù„Ø¨Ù„Ø§ØºØ§Øª
-- Ø¶Ø¨Ø· Ù…Ø¯Ø© Ø§Ù„ØªØ¨Ø±ÙŠØ¯ (Ø£ÙŠØ§Ù…)
-- ØØ¸Ø±/ÙÙƒÙ‘ ØØ¸Ø± (Ù…Ø¤Ù‚Ù‘Øª/Ø¯Ø§Ø¦Ù…) + Ø¹Ø±Ø¶ Ø§Ù„Ù‚ÙˆØ§Ø¦Ù… (Ù…ØªÙƒØ§Ù…Ù„Ø© Ù…Ø¹ handlers/report.py)
-- Ù…Ø³Ø Ø§Ù„ØªØ¨Ø±ÙŠØ¯ Ù„Ù…Ø³ØªØ®Ø¯Ù… Ù…Ø¹ÙŠÙ‘Ù†
+لوحة إدارة البلاغات:
+- تمكين/تعطيل البلاغات
+- ضبط مدة التبريد (أيام)
+- حظر/فكّ حظر (مؤقّت/دائم) + عرض القوائم (متكاملة مع handlers/report.py)
+- مسح التبريد لمستخدم معيّن
 """
 
 router = Router(name="report_admin")
 log = logging.getLogger(__name__)
 
-# ====== Ù…Ù„ÙØ§Øª Ø§Ù„ØªØ®Ø²ÙŠÙ† ======
+# ====== ملفات التخزين ======
 DATA_DIR       = Path("data"); DATA_DIR.mkdir(parents=True, exist_ok=True)
-SETTINGS_FILE  = DATA_DIR / "report_settings.json"    # Ø§Ù„Ù‚Ø¯ÙŠÙ…Ø© (ØªØªØ¶Ù…Ù† banned[])
-BLOCKLIST_FILE = DATA_DIR / "report_blocklist.json"   # Ø§Ù„Ø¬Ø¯ÙŠØ¯Ø© Ù„Ù„ØØ¸Ø± Ø§Ù„Ù…Ø¤Ù‚Ù‘Øª/Ø§Ù„Ø¯Ø§Ø¦Ù…
-STATE_FILE     = DATA_DIR / "report_users.json"       # ØªØ¨Ø±ÙŠØ¯ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙŠÙ† {"last": {uid: iso}}
+SETTINGS_FILE  = DATA_DIR / "report_settings.json"    # القديمة (تتضمن banned[])
+BLOCKLIST_FILE = DATA_DIR / "report_blocklist.json"   # الجديدة للحظر المؤقّت/الدائم
+STATE_FILE     = DATA_DIR / "report_users.json"       # تبريد المستخدمين {"last": {uid: iso}}
 
 DEFAULTS = {"enabled": True, "cooldown_days": 3, "banned": []}
 
-# ====== ØµÙ„Ø§ØÙŠØ§Øª Ø§Ù„Ø£Ø¯Ù…Ù† ======
+# ====== صلاحيات الأدمن ======
 _admin_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
-ADMIN_IDS = get_admin_ids() or [7360982123]
+ADMIN_IDS = [int(x) for x in str(_admin_env).split(",") if str(x).strip().isdigit()] or [7360982123]
 
 def is_admin(uid: int) -> bool: return uid in ADMIN_IDS
 def L(uid: int) -> str: return get_user_lang(uid) or "en"
 
-# ====== ØªØ±Ø¬Ù…Ø© Ù…Ø¹ fallback ======
+# ====== ترجمة مع fallback ======
 def _tf(lang: str, key: str, fallback: str) -> str:
     try: s = t(lang, key)
     except Exception: s = None
@@ -74,13 +71,13 @@ def _build_banned_text_and_kb(lang: str) -> tuple[str, InlineKeyboardMarkup]:
     uids: set[int] = set()
 
     if legacy_ids:
-        lines.append("â€¢ <b>Legacy</b>:")
+        lines.append("• <b>Legacy</b>:")
         for uid in legacy_ids:
             lines.append(f"  - <code>{uid}</code>")
             uids.add(uid)
 
     if bl:
-        lines.append("â€¢ <b>Blocklist</b>:")
+        lines.append("• <b>Blocklist</b>:")
         now = time.time()
         for k, rec in bl.items():
             try:
@@ -96,24 +93,24 @@ def _build_banned_text_and_kb(lang: str) -> tuple[str, InlineKeyboardMarkup]:
             lines.append(f"  - <code>{uid}</code> ({tag})")
 
     if not lines:
-        text = _tf(lang, "ra.no_banned", "Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ù…Ø³ØªØ®Ø¯Ù…ÙˆÙ† Ù…ØØ¸ÙˆØ±ÙˆÙ†.")
+        text = _tf(lang, "ra.no_banned", "لا يوجد مستخدمون محظورون.")
         kb_b = InlineKeyboardBuilder()
-        kb_b.button(text=_tf(lang, "ra.btn_back", "Ø±Ø¬ÙˆØ¹"), callback_data="ra:open")
+        kb_b.button(text=_tf(lang, "ra.btn_back", "رجوع"), callback_data="ra:open")
         return text, kb_b.as_markup()
 
-    header = "ðŸ“‹ " + _tf(lang, "ra.banned_list_title", "Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙŠÙ† Ø§Ù„Ù…ØØ¸ÙˆØ±ÙŠÙ†")
+    header = "📋 " + _tf(lang, "ra.banned_list_title", "قائمة المستخدمين المحظورين")
     text = header + "\n\n" + "\n".join(lines)
 
     kb_b = InlineKeyboardBuilder()
-    # Ø£Ø²Ø±Ø§Ø± Ø±ÙØ¹ Ø§Ù„ØØ¸Ø± ÙØ±Ø¯ÙŠØ§Ù‹ (ØØªÙ‰ 25 Ø²Ø±Ù‹Ø§ Ù„ØªÙØ§Ø¯ÙŠ Ø§Ù„ØªØ¶Ø®Ù‘Ù…)
+    # أزرار رفع الحظر فردياً (حتى 25 زرًا لتفادي التضخّم)
     for uid in sorted(uids)[:25]:
-        kb_b.button(text=f"âœ… Unban {uid}", callback_data=f"ra:unban_one:{uid}")
+        kb_b.button(text=f"✅ Unban {uid}", callback_data=f"ra:unban_one:{uid}")
     kb_b.adjust(2)
-    kb_b.row(InlineKeyboardButton(text="ðŸ§¹ " + _tf(lang, "ra.btn_unban_all", "Ø±ÙØ¹ Ø§Ù„ØØ¸Ø± Ø¹Ù† Ø§Ù„ÙƒÙ„"), callback_data="ra:unban_all"))
-    kb_b.row(InlineKeyboardButton(text="â¬…ï¸ " + _tf(lang, "ra.btn_back", "Ø±Ø¬ÙˆØ¹"), callback_data="ra:open"))
+    kb_b.row(InlineKeyboardButton(text="🧹 " + _tf(lang, "ra.btn_unban_all", "رفع الحظر عن الكل"), callback_data="ra:unban_all"))
+    kb_b.row(InlineKeyboardButton(text="⬅️ " + _tf(lang, "ra.btn_back", "رجوع"), callback_data="ra:open"))
     return text, kb_b.as_markup()
 
-# Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ù‚Ø¯ÙŠÙ…Ø©
+# إعدادات قديمة
 def _load_settings() -> dict:
     d = _load_json(SETTINGS_FILE, DEFAULTS.copy())
     d.setdefault("enabled", True)
@@ -123,13 +120,13 @@ def _load_settings() -> dict:
     return d
 def _save_settings(d: dict): _save_json(SETTINGS_FILE, d)
 
-# Ø¨Ù„ÙˆÙƒ Ù„ÙŠØ³Øª Ø¬Ø¯ÙŠØ¯Ø©
+# بلوك ليست جديدة
 def _bl_read() -> dict:  return _load_json(BLOCKLIST_FILE, {})
 def _bl_write(d: dict):  _save_json(BLOCKLIST_FILE, d)
 def _bl_unban(uid: int):
     d = _bl_read(); d.pop(str(uid), None); _bl_write(d)
 
-# ØªØ¨Ø±ÙŠØ¯ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙŠÙ†
+# تبريد المستخدمين
 def _state_read() -> dict: return _load_json(STATE_FILE, {"last": {}})
 def _state_write(d: dict): _save_json(STATE_FILE, d)
 def _cooldown_clear(uid: int):
@@ -151,7 +148,7 @@ def _human_left(until_ts: float) -> str:
     if m: parts.append(f"{m}m")
     return " ".join(parts) if parts else f"{rem}s"
 
-# ====== Ø¹Ø±Ø¶ Ø§Ù„Ù„ÙˆØØ© ======
+# ====== عرض اللوحة ======
 async def _safe_edit(msg: Message, text: str, kb: InlineKeyboardMarkup):
     try:
         await msg.edit_text(text, reply_markup=kb, parse_mode="HTML", disable_web_page_preview=True)
@@ -162,58 +159,58 @@ async def _safe_edit(msg: Message, text: str, kb: InlineKeyboardMarkup):
 
 def _panel_text(lang: str, *, viewer_id: int | None = None) -> str:
     st = _load_settings()
-    status = _tf(lang, "ra.enabled_on", "Ù…ÙÙØ¹Ù‘Ù„") if st["enabled"] else _tf(lang, "ra.enabled_off", "Ù…ÙØ¹Ø·Ù‘Ù„")
+    status = _tf(lang, "ra.enabled_on", "مُفعّل") if st["enabled"] else _tf(lang, "ra.enabled_off", "مُعطّل")
 
-    # ØØ§Ù„Ø© ØªÙ†Ø¨ÙŠÙ‡Ø§Øª Ø§Ù„Ø£Ø¯Ù…Ù† Ø§Ù„ØØ§Ù„ÙŠ
+    # حالة تنبيهات الأدمن الحالي
     my_alerts_line = ""
     if viewer_id is not None:
         try:
             muted = alerts_is_muted(viewer_id)
         except Exception:
             muted = False
-        my_alerts_line = f"\nâ€¢ ØªÙ†Ø¨ÙŠÙ‡Ø§ØªÙŠ: <b>{'Ø¥ÙŠÙ‚Ø§Ù' if muted else 'ØªØ´ØºÙŠÙ„'}</b>"
+        my_alerts_line = f"\n• تنبيهاتي: <b>{'إيقاف' if muted else 'تشغيل'}</b>"
 
     return (
-        f"ðŸ›  <b>{_tf(lang, 'ra.title', 'Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø¨Ù„Ø§ØºØ§Øª')}</b>\n\n"
-        f"â€¢ {_tf(lang,'ra.status','Ø§Ù„ØØ§Ù„Ø©')}: <b>{status}</b>\n"
-        f"â€¢ {_tf(lang,'ra.cooldown_days','Ù…Ø¯Ø© Ø§Ù„ØªØ¨Ø±ÙŠØ¯ (Ø£ÙŠØ§Ù…)')}: <code>{st['cooldown_days']}</code>\n"
-        f"â€¢ {_tf(lang,'ra.banned_count','Ø¹Ø¯Ø¯ Ø§Ù„Ù…ØØ¸ÙˆØ±ÙŠÙ†')}: <code>{_blocked_count()}</code>\n"
-        f"<i>Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ù‚Ø¯ÙŠÙ…Ø© (banned[]) Ù…Ø§ ØªØ²Ø§Ù„ Ù…Ø¯Ø¹ÙˆÙ…Ø©ØŒ Ù„ÙƒÙ† ÙŠÙÙØ¶Ù„ Ø§Ù„ØØ¸Ø± Ù…Ù† Ø§Ù„Ø£Ø²Ø±Ø§Ø±/Ø§Ù„Ø£ÙˆØ§Ù…Ø± Ø§Ù„Ø¬Ø¯ÙŠØ¯Ø©.</i>"
+        f"🛠 <b>{_tf(lang, 'ra.title', 'إدارة البلاغات')}</b>\n\n"
+        f"• {_tf(lang,'ra.status','الحالة')}: <b>{status}</b>\n"
+        f"• {_tf(lang,'ra.cooldown_days','مدة التبريد (أيام)')}: <code>{st['cooldown_days']}</code>\n"
+        f"• {_tf(lang,'ra.banned_count','عدد المحظورين')}: <code>{_blocked_count()}</code>\n"
+        f"<i>القائمة القديمة (banned[]) ما تزال مدعومة، لكن يُفضل الحظر من الأزرار/الأوامر الجديدة.</i>"
         f"{my_alerts_line}"
     )
 
 
 def _panel_kb(lang: str, *, viewer_id: int | None = None) -> InlineKeyboardMarkup:
     st = _load_settings()
-    toggle_txt = ("ðŸŸ¢ " + _tf(lang, "ra.btn_disable", "Ø¥ÙŠÙ‚Ø§Ù Ø§Ù„Ø¨Ù„Ø§ØºØ§Øª")) if st["enabled"] \
-                 else ("ðŸ”´ " + _tf(lang, "ra.btn_enable", "ØªØ´ØºÙŠÙ„ Ø§Ù„Ø¨Ù„Ø§ØºØ§Øª"))
+    toggle_txt = ("🟢 " + _tf(lang, "ra.btn_disable", "إيقاف البلاغات")) if st["enabled"] \
+                 else ("🔴 " + _tf(lang, "ra.btn_enable", "تشغيل البلاغات"))
 
-    # ØØ§Ù„Ø© ØªÙ†Ø¨ÙŠÙ‡Ø§Øª Ù‡Ø°Ø§ Ø§Ù„Ø£Ø¯Ù…Ù†
+    # حالة تنبيهات هذا الأدمن
     my_muted = alerts_is_muted(viewer_id) if viewer_id else False
-    my_alerts_txt = ("ðŸ”• " + _tf(lang, "ra.btn_my_alerts_off", "ØªÙ†Ø¨ÙŠÙ‡Ø§ØªÙŠ: Ø¥ÙŠÙ‚Ø§Ù")
+    my_alerts_txt = ("🔕 " + _tf(lang, "ra.btn_my_alerts_off", "تنبيهاتي: إيقاف")
                      if not my_muted else
-                     "ðŸ”” " + _tf(lang, "ra.btn_my_alerts_on", "ØªÙ†Ø¨ÙŠÙ‡Ø§ØªÙŠ: ØªØ´ØºÙŠÙ„"))
+                     "🔔 " + _tf(lang, "ra.btn_my_alerts_on", "تنبيهاتي: تشغيل"))
 
     rows = [
         [
             InlineKeyboardButton(text=toggle_txt, callback_data="ra:toggle"),
-            InlineKeyboardButton(text="â± " + _tf(lang,"ra.btn_cooldown","ØªØºÙŠÙŠØ± Ø§Ù„ØªØ¨Ø±ÙŠØ¯"), callback_data="ra:cooldown"),
+            InlineKeyboardButton(text="⏱ " + _tf(lang,"ra.btn_cooldown","تغيير التبريد"), callback_data="ra:cooldown"),
         ],
         [
-            InlineKeyboardButton(text="ðŸš« " + _tf(lang,"ra.btn_ban","حظر (uid ساعات|perm)"), callback_data="ra:ban"),
-            InlineKeyboardButton(text="â™»ï¸ " + _tf(lang,"ra.btn_unban","Ø±ÙØ¹ Ø§Ù„ØØ¸Ø±"), callback_data="ra:unban"),
+            InlineKeyboardButton(text="🚫 " + _tf(lang,"ra.btn_ban","حظر (uid ساعات|perm)"), callback_data="ra:ban"),
+            InlineKeyboardButton(text="♻️ " + _tf(lang,"ra.btn_unban","رفع الحظر"), callback_data="ra:unban"),
         ],
-        [InlineKeyboardButton(text="ðŸ§½ " + _tf(lang,"ra.btn_clearcd","Ù…Ø³Ø ØªØ¨Ø±ÙŠØ¯ Ù…Ø³ØªØ®Ø¯Ù…"), callback_data="ra:clearcd")],
-        [InlineKeyboardButton(text="ðŸ“‹ " + _tf(lang,"ra.btn_banned_list","Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ù…ØØ¸ÙˆØ±ÙŠÙ†"), callback_data="ra:banned")],
-        # ðŸ‘‡ Ø²Ø± ØªÙ†Ø¨ÙŠÙ‡Ø§ØªÙŠ
+        [InlineKeyboardButton(text="🧽 " + _tf(lang,"ra.btn_clearcd","مسح تبريد مستخدم"), callback_data="ra:clearcd")],
+        [InlineKeyboardButton(text="📋 " + _tf(lang,"ra.btn_banned_list","قائمة المحظورين"), callback_data="ra:banned")],
+        # 👇 زر تنبيهاتي
         [InlineKeyboardButton(text=my_alerts_txt, callback_data="ra:toggle_my_alerts")],
-        [InlineKeyboardButton(text="ðŸ”„ " + _tf(lang,"ra.btn_refresh","ØªØØ¯ÙŠØ« Ø§Ù„Ù„ÙˆØØ©"), callback_data="ra:refresh")],
-        [InlineKeyboardButton(text="â¬…ï¸ " + _tf(lang,"ra.btn_back","Ø±Ø¬ÙˆØ¹"), callback_data="ah:menu")],
+        [InlineKeyboardButton(text="🔄 " + _tf(lang,"ra.btn_refresh","تحديث اللوحة"), callback_data="ra:refresh")],
+        [InlineKeyboardButton(text="⬅️ " + _tf(lang,"ra.btn_back","رجوع"), callback_data="ah:menu")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-# ====== ØØ§Ù„Ø§Øª Ø§Ù„Ø¥Ø¯Ø®Ø§Ù„ ======
+# ====== حالات الإدخال ======
 class RAStates(StatesGroup):
     waiting_ban = State()         # "<uid> <hours|perm>"
     waiting_unban = State()       # "<uid>"
@@ -250,28 +247,28 @@ def alerts_set_muted(uid: int, muted: bool) -> None:
 async def cmd_alerts_off(m: Message):
     lang = L(m.from_user.id)
     if not is_admin(m.from_user.id):
-        return await m.reply(_tf(lang, "admins_only", "Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø¯Ø§Ø© Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·."))
+        return await m.reply(_tf(lang, "admins_only", "هذه الأداة للأدمن فقط."))
     alerts_set_muted(m.from_user.id, True)
-    await m.reply(_tf(lang, "ra.alerts_off_ok", "âœ… ØªÙ… Ø¥ÙŠÙ‚Ø§Ù ØªÙ†Ø¨ÙŠÙ‡Ø§Øª Ø§Ù„Ø¨Ù„Ø§ØºØ§Øª Ù„Ù‡Ø°Ø§ Ø§Ù„ØØ³Ø§Ø¨."))
+    await m.reply(_tf(lang, "ra.alerts_off_ok", "✅ تم إيقاف تنبيهات البلاغات لهذا الحساب."))
 
 @router.message(Command("alerts_on"))
 async def cmd_alerts_on(m: Message):
     lang = L(m.from_user.id)
     if not is_admin(m.from_user.id):
-        return await m.reply(_tf(lang, "admins_only", "Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø¯Ø§Ø© Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·."))
+        return await m.reply(_tf(lang, "admins_only", "هذه الأداة للأدمن فقط."))
     alerts_set_muted(m.from_user.id, False)
-    await m.reply(_tf(lang, "ra.alerts_on_ok", "âœ… ØªÙ… ØªØ´ØºÙŠÙ„ ØªÙ†Ø¨ÙŠÙ‡Ø§Øª Ø§Ù„Ø¨Ù„Ø§ØºØ§Øª Ù„Ù‡Ø°Ø§ Ø§Ù„ØØ³Ø§Ø¨."))
+    await m.reply(_tf(lang, "ra.alerts_on_ok", "✅ تم تشغيل تنبيهات البلاغات لهذا الحساب."))
 
-# ====== ÙØªØ/ØªØØ¯ÙŠØ« Ø§Ù„Ù„ÙˆØØ© ======
+# ====== فتح/تحديث اللوحة ======
 # 1) ra_open
 @router.callback_query(F.data == "ra:open")
 async def ra_open(cb: CallbackQuery):
     lang = L(cb.from_user.id)
     if not is_admin(cb.from_user.id):
-        return await cb.answer(_tf(lang, "admins_only", "Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø¯Ø§Ø© Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·."), show_alert=True)
+        return await cb.answer(_tf(lang, "admins_only", "هذه الأداة للأدمن فقط."), show_alert=True)
     await _safe_edit(
         cb.message,
-        _panel_text(lang, viewer_id=cb.from_user.id),           # <<< Ø£Ø¶Ù viewer_id Ù‡Ù†Ø§
+        _panel_text(lang, viewer_id=cb.from_user.id),           # <<< أضف viewer_id هنا
         _panel_kb(lang, viewer_id=cb.from_user.id)
     )
     await cb.answer()
@@ -281,35 +278,35 @@ async def ra_open(cb: CallbackQuery):
 async def ra_refresh(cb: CallbackQuery):
     lang = L(cb.from_user.id)
     if not is_admin(cb.from_user.id):
-        return await cb.answer(_tf(lang, "admins_only", "Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø¯Ø§Ø© Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·."), show_alert=True)
+        return await cb.answer(_tf(lang, "admins_only", "هذه الأداة للأدمن فقط."), show_alert=True)
     await _safe_edit(
         cb.message,
-        _panel_text(lang, viewer_id=cb.from_user.id),           # <<< ÙˆÙ‡Ù†Ø§
+        _panel_text(lang, viewer_id=cb.from_user.id),           # <<< وهنا
         _panel_kb(lang, viewer_id=cb.from_user.id)
     )
-    await cb.answer("âœ…")
+    await cb.answer("✅")
 
 # 3) ra_toggle
 @router.callback_query(F.data == "ra:toggle")
 async def ra_toggle(cb: CallbackQuery):
     lang = L(cb.from_user.id)
     if not is_admin(cb.from_user.id):
-        return await cb.answer(_tf(lang, "admins_only", "Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø¯Ø§Ø© Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·."), show_alert=True)
+        return await cb.answer(_tf(lang, "admins_only", "هذه الأداة للأدمن فقط."), show_alert=True)
     st = _load_settings(); st["enabled"] = not st.get("enabled", True); _save_settings(st)
     await _safe_edit(
         cb.message,
-        _panel_text(lang, viewer_id=cb.from_user.id),           # <<< ÙˆÙ‡Ù†Ø§
+        _panel_text(lang, viewer_id=cb.from_user.id),           # <<< وهنا
         _panel_kb(lang, viewer_id=cb.from_user.id)
     )
-    await cb.answer("âœ…")
+    await cb.answer("✅")
 
 
-# ====== Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ù…ØØ¸ÙˆØ±ÙŠÙ† (Ù‚Ø¯ÙŠÙ…Ø© + Ø¬Ø¯ÙŠØ¯Ø©) ======
+# ====== قائمة المحظورين (قديمة + جديدة) ======
 @router.callback_query(F.data == "ra:banned")
 async def ra_banned(cb: CallbackQuery):
     lang = L(cb.from_user.id)
     if not is_admin(cb.from_user.id):
-        return await cb.answer(_tf(lang, "admins_only", "Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø¯Ø§Ø© Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·."), show_alert=True)
+        return await cb.answer(_tf(lang, "admins_only", "هذه الأداة للأدمن فقط."), show_alert=True)
 
     text, kb = _build_banned_text_and_kb(lang)
     await _safe_edit(cb.message, text, kb)
@@ -320,74 +317,74 @@ async def ra_banned(cb: CallbackQuery):
 async def ra_unban_all(cb: CallbackQuery):
     lang = L(cb.from_user.id)
     if not is_admin(cb.from_user.id):
-        return await cb.answer(_tf(lang, "admins_only", "Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø¯Ø§Ø© Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·."), show_alert=True)
+        return await cb.answer(_tf(lang, "admins_only", "هذه الأداة للأدمن فقط."), show_alert=True)
 
-    _bl_write({})  # Ø§Ù„Ø¬Ø¯ÙŠØ¯Ø©
+    _bl_write({})  # الجديدة
     st = _load_settings()
-    st["banned"] = []  # Ø§Ù„Ù‚Ø¯ÙŠÙ…Ø©
+    st["banned"] = []  # القديمة
     _save_settings(st)
 
-    # ØØ¯Ù‘Ø« Ø§Ù„Ø¹Ø±Ø¶
+    # حدّث العرض
     text, kb = _build_banned_text_and_kb(lang)
     await _safe_edit(cb.message, text, kb)
-    await cb.answer(_tf(lang, "ra.saved", "ØªÙ… Ø§Ù„ØÙØ¸ âœ…"), show_alert=True)
+    await cb.answer(_tf(lang, "ra.saved", "تم الحفظ ✅"), show_alert=True)
 
 
 @router.callback_query(F.data.startswith("ra:unban_one:"))
 async def ra_unban_one(cb: CallbackQuery):
     lang = L(cb.from_user.id)
     if not is_admin(cb.from_user.id):
-        return await cb.answer(_tf(lang, "admins_only", "Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø¯Ø§Ø© Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·."), show_alert=True)
+        return await cb.answer(_tf(lang, "admins_only", "هذه الأداة للأدمن فقط."), show_alert=True)
 
     try:
         uid = int(cb.data.split(":")[-1])
     except Exception:
         return await cb.answer()
 
-    # Ø§ØØ°Ù Ù…Ù† Ø§Ù„Ù‚Ø§Ø¦Ù…ØªÙŠÙ†
+    # احذف من القائمتين
     _bl_unban(uid)
     st = _load_settings()
     st["banned"] = [x for x in st["banned"] if int(x) != uid]
     _save_settings(st)
 
-    # Ø£Ø¹ÙØ¯ Ø±Ø³Ù… Ø§Ù„Ø´Ø§Ø´Ø© Ø¨Ø±Ø³Ø§Ù„Ø© Ù…ØØ¯Ø«Ø©
+    # أعِد رسم الشاشة برسالة محدثة
     text, kb = _build_banned_text_and_kb(lang)
     await _safe_edit(cb.message, text, kb)
-    await cb.answer(_tf(lang, "ra.saved", "ØªÙ… Ø§Ù„ØÙØ¸ âœ…"), show_alert=True)
-# Ø£Ø¶ÙÙ Ù‡Ø°Ø§ Ø§Ù„Ù‡Ø§Ù†Ø¯Ù„Ø± (Ø£Ùˆ Ø¹Ø¯Ù‘Ù„ Ø§Ù„Ù‚Ø§Ø¦Ù… Ù„ÙŠØµØ¨Ø Ù‡ÙƒØ°Ø§)
+    await cb.answer(_tf(lang, "ra.saved", "تم الحفظ ✅"), show_alert=True)
+# أضِف هذا الهاندلر (أو عدّل القائم ليصبح هكذا)
 @router.callback_query(F.data.in_({"ra:toggle_my_alerts", "rpadm:toggle_my_alerts"}))
 async def ra_toggle_my_alerts(cb: CallbackQuery):
     lang = L(cb.from_user.id)
     if not is_admin(cb.from_user.id):
-        return await cb.answer(_tf(lang, "admins_only", "Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø¯Ø§Ø© Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·."), show_alert=True)
+        return await cb.answer(_tf(lang, "admins_only", "هذه الأداة للأدمن فقط."), show_alert=True)
 
     uid = cb.from_user.id
     muted_now = alerts_is_muted(uid)
     alerts_set_muted(uid, not muted_now)
 
-    # ØØ¯Ù‘Ø« Ø§Ù„Ù„ÙˆØØ© Ø¨Ø§Ù„Ù†Øµ ÙˆØ§Ù„Ø£Ø²Ø±Ø§Ø±
+    # حدّث اللوحة بالنص والأزرار
     await _safe_edit(
         cb.message,
         _panel_text(lang, viewer_id=uid),
         _panel_kb(lang, viewer_id=uid)
     )
 
-    # ØªØ£ÙƒÙŠØ¯
+    # تأكيد
     if muted_now:
-        await cb.message.answer(_tf(lang, "ra.alerts_on_ok", "âœ… ØªÙ… ØªØ´ØºÙŠÙ„ ØªÙ†Ø¨ÙŠÙ‡Ø§Øª Ø§Ù„Ø¨Ù„Ø§ØºØ§Øª Ù„Ù‡Ø°Ø§ Ø§Ù„ØØ³Ø§Ø¨."))
+        await cb.message.answer(_tf(lang, "ra.alerts_on_ok", "✅ تم تشغيل تنبيهات البلاغات لهذا الحساب."))
     else:
-        await cb.message.answer(_tf(lang, "ra.alerts_off_ok", "âœ… ØªÙ… Ø¥ÙŠÙ‚Ø§Ù ØªÙ†Ø¨ÙŠÙ‡Ø§Øª Ø§Ù„Ø¨Ù„Ø§ØºØ§Øª Ù„Ù‡Ø°Ø§ Ø§Ù„ØØ³Ø§Ø¨."))
-    await cb.answer("âœ…")
+        await cb.message.answer(_tf(lang, "ra.alerts_off_ok", "✅ تم إيقاف تنبيهات البلاغات لهذا الحساب."))
+    await cb.answer("✅")
 
-# ====== Ø§Ù„ØØ¸Ø±/ÙÙƒ Ø§Ù„ØØ¸Ø± ======
+# ====== الحظر/فك الحظر ======
 @router.callback_query(F.data == "ra:ban")
 async def ra_ban_start(cb: CallbackQuery, state: FSMContext):
     lang = L(cb.from_user.id)
     if not is_admin(cb.from_user.id):
-        return await cb.answer(_tf(lang, "admins_only", "Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø¯Ø§Ø© Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·."), show_alert=True)
+        return await cb.answer(_tf(lang, "admins_only", "هذه الأداة للأدمن فقط."), show_alert=True)
     await state.set_state(RAStates.waiting_ban)
     await cb.message.answer(
-        _tf(lang, "ra.ask_ban", "Ø£Ø±Ø³Ù„: <code>UID Ø³Ø§Ø¹Ø§Øª</code> Ø£Ùˆ <code>UID perm</code>.\nÙ…Ø«Ø§Ù„: <code>123456 24</code>"),
+        _tf(lang, "ra.ask_ban", "أرسل: <code>UID ساعات</code> أو <code>UID perm</code>.\nمثال: <code>123456 24</code>"),
         parse_mode="HTML"
     )
     await cb.answer()
@@ -396,102 +393,102 @@ async def ra_ban_start(cb: CallbackQuery, state: FSMContext):
 async def ra_ban_save(m: Message, state: FSMContext):
     lang = L(m.from_user.id)
     if not is_admin(m.from_user.id):
-        return await m.reply(_tf(lang, "admins_only", "Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø¯Ø§Ø© Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·."))
+        return await m.reply(_tf(lang, "admins_only", "هذه الأداة للأدمن فقط."))
 
     parts = (m.text or "").split()
     if len(parts) != 2 or not parts[0].isdigit():
-        return await m.reply(_tf(lang, "ra.bad_format", "ØµÙŠØºØ© ØºÙŠØ± ØµØÙŠØØ©. Ù…Ø«Ø§Ù„: 123456 24 Ø£Ùˆ 123456 perm"))
+        return await m.reply(_tf(lang, "ra.bad_format", "صيغة غير صحيحة. مثال: 123456 24 أو 123456 perm"))
     uid = int(parts[0]); dur = parts[1].lower()
 
     if dur == "perm":
         bl = _bl_read(); bl[str(uid)] = True; _bl_write(bl)
         st = _load_settings(); st["banned"] = [x for x in st["banned"] if int(x) != uid]; _save_settings(st)
         await state.clear()
-        return await m.reply(f"ðŸš« ØªÙ… ØØ¸Ø± <code>{uid}</code> Ø¯Ø§Ø¦Ù…Ù‹Ø§.", parse_mode="HTML")
+        return await m.reply(f"🚫 تم حظر <code>{uid}</code> دائمًا.", parse_mode="HTML")
 
     try:
         hours = max(1, int(dur))
     except Exception:
-        return await m.reply(_tf(lang, "ra.invalid_number", "Ù‚ÙŠÙ…Ø© Ø¹Ø¯Ø¯ Ø§Ù„Ø³Ø§Ø¹Ø§Øª ØºÙŠØ± ØµØ§Ù„ØØ©."))
+        return await m.reply(_tf(lang, "ra.invalid_number", "قيمة عدد الساعات غير صالحة."))
 
     until_ts = time.time() + hours * 3600
     bl = _bl_read(); bl[str(uid)] = {"until": until_ts}; _bl_write(bl)
     st = _load_settings(); st["banned"] = [x for x in st["banned"] if int(x) != uid]; _save_settings(st)
     await state.clear()
-    await m.reply(f"ðŸš« ØªÙ… ØØ¸Ø± <code>{uid}</code> Ù„Ù…Ø¯Ø© <b>{hours}</b> Ø³Ø§Ø¹Ø©.", parse_mode="HTML")
+    await m.reply(f"🚫 تم حظر <code>{uid}</code> لمدة <b>{hours}</b> ساعة.", parse_mode="HTML")
 
 @router.callback_query(F.data == "ra:unban")
 async def ra_unban_start(cb: CallbackQuery, state: FSMContext):
     lang = L(cb.from_user.id)
     if not is_admin(cb.from_user.id):
-        return await cb.answer(_tf(lang, "admins_only", "Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø¯Ø§Ø© Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·."), show_alert=True)
+        return await cb.answer(_tf(lang, "admins_only", "هذه الأداة للأدمن فقط."), show_alert=True)
     await state.set_state(RAStates.waiting_unban)
-    await cb.message.answer(_tf(lang, "ra.ask_user_id_unban", "Ø£Ø±Ø³Ù„ Ø±Ù‚Ù… Ù…Ø¹Ø±Ù Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… (UID) Ù„Ø±ÙØ¹ Ø§Ù„ØØ¸Ø±:"))
+    await cb.message.answer(_tf(lang, "ra.ask_user_id_unban", "أرسل رقم معرف المستخدم (UID) لرفع الحظر:"))
     await cb.answer()
 
 @router.message(StateFilter(RAStates.waiting_unban), F.text.regexp(r"^\d{3,15}$"))
 async def ra_unban_save_ok(m: Message, state: FSMContext):
     lang = L(m.from_user.id)
     if not is_admin(m.from_user.id):
-        return await m.reply(_tf(lang, "admins_only", "Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø¯Ø§Ø© Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·."))
+        return await m.reply(_tf(lang, "admins_only", "هذه الأداة للأدمن فقط."))
     uid = int(m.text.strip())
     _bl_unban(uid)
     st = _load_settings(); st["banned"] = [x for x in st["banned"] if int(x) != uid]; _save_settings(st)
     await state.clear()
-    await m.reply(_tf(lang, "ra.saved", "ØªÙ… Ø§Ù„ØÙØ¸ âœ…"))
+    await m.reply(_tf(lang, "ra.saved", "تم الحفظ ✅"))
 
 @router.message(StateFilter(RAStates.waiting_unban))
 async def ra_unban_save_invalid(m: Message, state: FSMContext):
-    lang = L(m.from_user.id); await m.reply(_tf(lang, "ra.invalid_user_id", "Ø§Ù„Ù…Ø¹Ø±Ù‘Ù ØºÙŠØ± ØµØ§Ù„ØØŒ Ø£Ø±Ø³Ù„ Ø±Ù‚Ù…Ù‹Ø§ ÙÙ‚Ø·."))
+    lang = L(m.from_user.id); await m.reply(_tf(lang, "ra.invalid_user_id", "المعرّف غير صالح، أرسل رقمًا فقط."))
 
-# ====== ØªØºÙŠÙŠØ± Ù…Ø¯Ø© Ø§Ù„ØªØ¨Ø±ÙŠØ¯ ======
+# ====== تغيير مدة التبريد ======
 @router.callback_query(F.data == "ra:cooldown")
 async def ra_cooldown_start(cb: CallbackQuery, state: FSMContext):
     lang = L(cb.from_user.id)
     if not is_admin(cb.from_user.id):
-        return await cb.answer(_tf(lang, "admins_only", "Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø¯Ø§Ø© Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·."), show_alert=True)
+        return await cb.answer(_tf(lang, "admins_only", "هذه الأداة للأدمن فقط."), show_alert=True)
     await state.set_state(RAStates.waiting_cooldown)
-    await cb.message.answer(_tf(lang, "ra.ask_cooldown_days", "Ø£Ø±Ø³Ù„ Ø¹Ø¯Ø¯ Ø§Ù„Ø£ÙŠØ§Ù… Ù„Ù„ØªØ¨Ø±ÙŠØ¯ (0 Ù„Ø¥Ù„ØºØ§Ø¡ Ø§Ù„ØªØ¨Ø±ÙŠØ¯):"))
+    await cb.message.answer(_tf(lang, "ra.ask_cooldown_days", "أرسل عدد الأيام للتبريد (0 لإلغاء التبريد):"))
     await cb.answer()
 
 @router.message(StateFilter(RAStates.waiting_cooldown), F.text.regexp(r"^\d{1,3}$"))
 async def ra_cooldown_save_ok(m: Message, state: FSMContext):
     lang = L(m.from_user.id)
     if not is_admin(m.from_user.id):
-        return await m.reply(_tf(lang, "admins_only", "Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø¯Ø§Ø© Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·."))
+        return await m.reply(_tf(lang, "admins_only", "هذه الأداة للأدمن فقط."))
     days = int(m.text.strip())
     if days < 0 or days > 365:
-        return await m.reply(_tf(lang, "ra.invalid_number", "Ø±Ù‚Ù… ØºÙŠØ± ØµØ§Ù„Ø. Ø£Ø¯Ø®Ù„ 0 - 365."))
+        return await m.reply(_tf(lang, "ra.invalid_number", "رقم غير صالح. أدخل 0 - 365."))
     st = _load_settings(); st["cooldown_days"] = days; _save_settings(st)
-    await state.clear(); await m.reply(_tf(lang, "ra.saved", "ØªÙ… Ø§Ù„ØÙØ¸ âœ…"))
+    await state.clear(); await m.reply(_tf(lang, "ra.saved", "تم الحفظ ✅"))
 
 @router.message(StateFilter(RAStates.waiting_cooldown))
 async def ra_cooldown_save_invalid(m: Message, state: FSMContext):
-    lang = L(m.from_user.id); await m.reply(_tf(lang, "ra.invalid_number", "Ø±Ù‚Ù… ØºÙŠØ± ØµØ§Ù„Ø. Ø£Ø¯Ø®Ù„ 0 - 365."))
+    lang = L(m.from_user.id); await m.reply(_tf(lang, "ra.invalid_number", "رقم غير صالح. أدخل 0 - 365."))
 
-# ====== Ù…Ø³Ø ØªØ¨Ø±ÙŠØ¯ Ù…Ø³ØªØ®Ø¯Ù… ======
+# ====== مسح تبريد مستخدم ======
 @router.callback_query(F.data == "ra:clearcd")
 async def ra_clearcd_start(cb: CallbackQuery, state: FSMContext):
     lang = L(cb.from_user.id)
     if not is_admin(cb.from_user.id):
-        return await cb.answer(_tf(lang, "admins_only", "Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø¯Ø§Ø© Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·."), show_alert=True)
+        return await cb.answer(_tf(lang, "admins_only", "هذه الأداة للأدمن فقط."), show_alert=True)
     await state.set_state(RAStates.waiting_clearcd)
-    await cb.message.answer(_tf(lang, "ra.ask_clearcd", "Ø£Ø±Ø³Ù„ UID Ù„Ù…Ø³Ø Ø§Ù„ØªØ¨Ø±ÙŠØ¯ Ù„Ù‡:"))
+    await cb.message.answer(_tf(lang, "ra.ask_clearcd", "أرسل UID لمسح التبريد له:"))
     await cb.answer()
 
 @router.message(StateFilter(RAStates.waiting_clearcd), F.text.regexp(r"^\d{3,15}$"))
 async def ra_clearcd_ok(m: Message, state: FSMContext):
     lang = L(m.from_user.id)
     if not is_admin(m.from_user.id):
-        return await m.reply(_tf(lang, "admins_only", "Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø¯Ø§Ø© Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·."))
+        return await m.reply(_tf(lang, "admins_only", "هذه الأداة للأدمن فقط."))
     uid = int(m.text.strip()); _cooldown_clear(uid)
-    await state.clear(); await m.reply(_tf(lang, "ra.saved", "ØªÙ… Ø§Ù„ØÙØ¸ âœ…"))
+    await state.clear(); await m.reply(_tf(lang, "ra.saved", "تم الحفظ ✅"))
 
 @router.message(StateFilter(RAStates.waiting_clearcd))
 async def ra_clearcd_invalid(m: Message, state: FSMContext):
-    lang = L(m.from_user.id); await m.reply(_tf(lang, "ra.invalid_user_id", "Ø§Ù„Ù…Ø¹Ø±Ù‘Ù ØºÙŠØ± ØµØ§Ù„ØØŒ Ø£Ø±Ø³Ù„ Ø±Ù‚Ù…Ù‹Ø§ ÙÙ‚Ø·."))
+    lang = L(m.from_user.id); await m.reply(_tf(lang, "ra.invalid_user_id", "المعرّف غير صالح، أرسل رقمًا فقط."))
 
-# ====== Ø®Ø±ÙˆØ¬ Ø¨Ø§Ù„Ø£ÙˆØ§Ù…Ø± Ø£Ø«Ù†Ø§Ø¡ Ø£ÙŠ ØØ§Ù„Ø© ======
+# ====== خروج بالأوامر أثناء أي حالة ======
 @router.message(StateFilter(RAStates.waiting_ban), F.text.regexp(r"^/"))
 @router.message(StateFilter(RAStates.waiting_unban), F.text.regexp(r"^/"))
 @router.message(StateFilter(RAStates.waiting_cooldown), F.text.regexp(r"^/"))
@@ -502,5 +499,4 @@ async def ra_any_state_command_exit(m: Message, state: FSMContext):
         from handlers.start import start_handler
         await start_handler(m, state)
     except Exception:
-        await m.reply("ØªÙ… Ø§Ù„Ø¥Ù„ØºØ§Ø¡ ÙˆØ§Ù„Ø¹ÙˆØ¯Ø© Ù„Ù„ØµÙØØ© Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ© âœ… /start")
-
+        await m.reply("تم الإلغاء والعودة للصفحة الرئيسية ✅ /start")

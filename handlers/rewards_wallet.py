@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # handlers/rewards_wallet.py
-
+from __future__ import annotations
 
 import re
 import math

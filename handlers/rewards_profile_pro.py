@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # handlers/rewards_profile_pro.py
-
+from __future__ import annotations
 import logging
 logging.info("Loaded handlers.rewards_profile_pro module")
 

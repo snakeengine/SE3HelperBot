@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # handlers/home_menu.py
-
+from __future__ import annotations
 
 import json
 import logging

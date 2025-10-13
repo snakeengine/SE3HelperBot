@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # handlers/menu_buttons.py
-
+from __future__ import annotations
 
 import re, logging, unicodedata
 from aiogram import Router, F

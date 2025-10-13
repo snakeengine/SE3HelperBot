@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # handlers/rewards_hub.py
-
+from __future__ import annotations
 
 from aiogram import Router, F
 from aiogram.filters import Command

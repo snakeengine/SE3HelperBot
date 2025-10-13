@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # utils/known_users.py
-
+from __future__ import annotations
 
 from pathlib import Path
 from typing import List, Set

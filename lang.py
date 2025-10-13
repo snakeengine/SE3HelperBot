@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # lang.py
-
+from __future__ import annotations
 import json, os, threading
 
 # ===== إعدادات عامة =====

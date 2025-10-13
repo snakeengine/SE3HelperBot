@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # utils/support_inbox.py
-
+from __future__ import annotations
 import json, time
 from pathlib import Path
 from typing import Optional, Dict, Any, Tuple, List

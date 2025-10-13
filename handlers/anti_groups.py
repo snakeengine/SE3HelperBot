@@ -1,8 +1,5 @@
-from __future__ import annotations
-
-from utils.admins import get_admin_ids, is_admin, get_owner_ids
 # handlers/anti_groups.py
-
+from __future__ import annotations
 import os
 import logging
 from aiogram import Router
@@ -11,10 +8,10 @@ from aiogram.enums import ChatType, ChatMemberStatus
 
 router = Router(name="anti_groups")
 
-# Ù‚Ù†Ø§Ø© ÙˆØÙŠØ¯Ø© Ù…Ø³Ù…ÙˆØ Ø¨ÙˆØ¬ÙˆØ¯ Ø§Ù„Ø¨ÙˆØª ÙÙŠÙ‡Ø§ (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)
+# قناة وحيدة مسموح بوجود البوت فيها (اختياري)
 _ALLOWED_CHANNEL_ID = -1001947565627
 
-# ØªÙØ¹ÙŠÙ„/ØªØ¹Ø·ÙŠÙ„ ØªÙ†Ø¨ÙŠÙ‡Ø§Øª Ø§Ù„Ø£Ø¯Ù…Ù†
+# تفعيل/تعطيل تنبيهات الأدمن
 _ADMIN_NOTIFY = os.getenv("ADMIN_NOTIFY", "1").strip().lower() not in {"0", "false", "no"}
 
 def _load_admin_ids() -> list[int]:
@@ -49,10 +46,10 @@ def _chat_kind_label(chat_type: ChatType) -> str:
 
 def _chat_public_link(ev: ChatMemberUpdated) -> str | None:
     """
-    ÙŠØ±Ø¬Ù‘Ø¹ Ø±Ø§Ø¨Ø· ÙŠÙ…ÙƒÙ† Ø§Ù„Ù†Ù‚Ø± Ø¹Ù„ÙŠÙ‡ Ø¥Ù† ØªÙˆÙØ±:
-    - Ù„Ùˆ Ø§Ù„Ù‚Ø±ÙˆØ¨/Ø§Ù„Ù‚Ù†Ø§Ø© Ù„Ù‡Ø§ Ø§Ø³Ù… Ù…Ø³ØªØ®Ø¯Ù… Ø¹Ø§Ù… -> https://t.me/username
-    - Ù„Ùˆ Ø§Ù„Ø¯Ø®ÙˆÙ„ ØªÙ… Ø¹Ø¨Ø± Ø¯Ø¹ÙˆØ© -> invite_link Ù…Ù† Ø§Ù„ØªØØ¯ÙŠØ« Ù†ÙØ³Ù‡
-    ÙˆØ¥Ù„Ø§ ÙŠØ±Ø¬Ù‘Ø¹ None (Ù‚Ø±ÙˆØ¨Ø§Øª Ø®Ø§ØµØ© Ø¨Ø¯ÙˆÙ† Ø±Ø§Ø¨Ø· Ø¹Ø§Ù…).
+    يرجّع رابط يمكن النقر عليه إن توفر:
+    - لو القروب/القناة لها اسم مستخدم عام -> https://t.me/username
+    - لو الدخول تم عبر دعوة -> invite_link من التحديث نفسه
+    وإلا يرجّع None (قروبات خاصة بدون رابط عام).
     """
     chat = ev.chat
     username = getattr(chat, "username", None)
@@ -69,21 +66,21 @@ def _chat_public_link(ev: ChatMemberUpdated) -> str | None:
 @router.my_chat_member()
 async def guard_my_chat_member(event: ChatMemberUpdated):
     """
-    ÙŠÙ…Ù†Ø¹ Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ø¨ÙˆØª Ù„Ù„Ù‚Ø±ÙˆØ¨Ø§Øª/Ø§Ù„Ù‚Ù†ÙˆØ§ØªØŒ ÙˆÙŠØºØ§Ø¯Ø± ÙÙˆØ±Ù‹Ø§ ÙˆÙŠØ±Ø³Ù„ ØªÙ†Ø¨ÙŠÙ‡Ù‹Ø§.
-    ÙŠØ³ØªØ«Ù†ÙŠ Ù‚Ù†Ø§Ø© ÙˆØ§ØØ¯Ø© Ù…ØØ¯Ø¯Ø© Ø¨Ù€ ADMIN_CHANNEL_ID (Ø§Ø®ØªÙŠØ§Ø±ÙŠ).
+    يمنع إضافة البوت للقروبات/القنوات، ويغادر فورًا ويرسل تنبيهًا.
+    يستثني قناة واحدة محددة بـ ADMIN_CHANNEL_ID (اختياري).
     """
     chat = event.chat
     bot = event.bot
 
-    # ÙÙŠ Ø§Ù„Ø®Ø§Øµ: ØªØ¬Ø§Ù‡Ù„
+    # في الخاص: تجاهل
     if chat.type == ChatType.PRIVATE:
         return
 
-    # Ø³Ù…Ø§Ø Ù„Ù‚Ù†Ø§Ø© ÙˆØ§ØØ¯Ø© ÙÙ‚Ø· (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)
+    # سماح لقناة واحدة فقط (اختياري)
     if _ALLOWED_CHANNEL_ID and chat.id == _ALLOWED_CHANNEL_ID:
         return
 
-    # Ø§Ù„ØØ§Ù„Ø© Ø§Ù„Ø¬Ø¯ÙŠØ¯Ø© Ù„Ù„Ø¨ÙˆØª Ø¯Ø§Ø®Ù„ Ø§Ù„Ø¯Ø±Ø¯Ø´Ø©
+    # الحالة الجديدة للبوت داخل الدردشة
     try:
         status = event.new_chat_member.status
     except Exception:
@@ -99,11 +96,11 @@ async def guard_my_chat_member(event: ChatMemberUpdated):
         if inviter:
             name = (inviter.full_name or "Unknown").strip()
             uname = f"@{inviter.username}" if inviter.username else ""
-            # Ø°ÙƒØ± Ù‚Ø§Ø¨Ù„ Ù„Ù„Ù†Ù‚Ø± ØØªÙ‰ Ø¨Ø¯ÙˆÙ† username
+            # ذكر قابل للنقر حتى بدون username
             mention = f'<a href="tg://user?id={inviter.id}">{name}</a>'
-            inviter_line = f"\nðŸ‘¤ Ø¨ÙˆØ§Ø³Ø·Ø©: {mention} {uname} | ID: <code>{inviter.id}</code>"
+            inviter_line = f"\n👤 بواسطة: {mention} {uname} | ID: <code>{inviter.id}</code>"
 
-        link_line = f"\nðŸ”— Ø§Ù„Ø±Ø§Ø¨Ø·: {link}" if link else ""
+        link_line = f"\n🔗 الرابط: {link}" if link else ""
 
         try:
             await bot.leave_chat(chat.id)
@@ -111,10 +108,10 @@ async def guard_my_chat_member(event: ChatMemberUpdated):
             await _notify_admins(
                 bot,
                 (
-                    "ðŸš« ØªÙ… Ù…Ù†Ø¹ Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ø¨ÙˆØª Ø¥Ù„Ù‰ Ù…Ø¬Ù…ÙˆØ¹Ø©/Ù‚Ù†Ø§Ø© ÙˆØºØ§Ø¯Ø± ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‹Ø§.\n"
-                    f"ðŸ·ï¸ Ø§Ù„Ù†ÙˆØ¹: <b>{chat_kind}</b>\n"
-                    f"ðŸ“› Ø§Ù„Ø¹Ù†ÙˆØ§Ù†: <b>{chat_title}</b>\n"
-                    f"ðŸ†” Chat ID: <code>{chat.id}</code>"
+                    "🚫 تم منع إضافة البوت إلى مجموعة/قناة وغادر تلقائيًا.\n"
+                    f"🏷️ النوع: <b>{chat_kind}</b>\n"
+                    f"📛 العنوان: <b>{chat_title}</b>\n"
+                    f"🆔 Chat ID: <code>{chat.id}</code>"
                     f"{link_line}"
                     f"{inviter_line}"
                 )
@@ -124,13 +121,12 @@ async def guard_my_chat_member(event: ChatMemberUpdated):
             await _notify_admins(
                 bot,
                 (
-                    "âš ï¸ Ù…ØØ§ÙˆÙ„Ø© Ù…Ù†Ø¹ Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ø¨ÙˆØª Ù„ÙƒÙ† ØØ¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ Ø§Ù„Ø®Ø±ÙˆØ¬.\n"
-                    f"ðŸ·ï¸ Ø§Ù„Ù†ÙˆØ¹: <b>{chat_kind}</b>\n"
-                    f"ðŸ“› Ø§Ù„Ø¹Ù†ÙˆØ§Ù†: <b>{chat_title}</b>\n"
-                    f"ðŸ†” Chat ID: <code>{chat.id}</code>"
+                    "⚠️ محاولة منع إضافة البوت لكن حدث خطأ أثناء الخروج.\n"
+                    f"🏷️ النوع: <b>{chat_kind}</b>\n"
+                    f"📛 العنوان: <b>{chat_title}</b>\n"
+                    f"🆔 Chat ID: <code>{chat.id}</code>"
                     f"{link_line}\n"
-                    f"ðŸ§¯ Ø§Ù„Ø®Ø·Ø£: <code>{e}</code>"
+                    f"🧯 الخطأ: <code>{e}</code>"
                     f"{inviter_line}"
                 )
             )
-

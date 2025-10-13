@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # utils/smart_edit.py
-
+from __future__ import annotations
 from aiogram.types import Message
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest

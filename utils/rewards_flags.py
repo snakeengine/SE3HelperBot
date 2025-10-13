@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # utils/rewards_flags.py
-
+from __future__ import annotations
 import json, os
 from pathlib import Path
 from utils.paths import BASE  # ← المهم

@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # middlewares/vip_rate_limit.py
-
+from __future__ import annotations
 
 import os
 import time

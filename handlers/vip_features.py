@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # handlers/vip_features.py
-
+from __future__ import annotations
 
 import os, asyncio, time, json, datetime as dt, re, logging, random, contextlib
 from typing import Optional, Tuple, List, Dict

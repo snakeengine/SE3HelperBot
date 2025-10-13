@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # utils/admin_log.py
-
+from __future__ import annotations
 
 import os
 from typing import Optional, Iterable, Sequence, Union

@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # utils/secrets.py
-
+from __future__ import annotations
 import os, json
 from pathlib import Path
 

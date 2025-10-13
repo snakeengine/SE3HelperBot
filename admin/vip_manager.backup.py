@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from utils.admins import get_admin_ids, is_admin, get_owner_ids
-
-
 import os, re, time
 from aiogram import Router, F
 from aiogram.filters import Command
@@ -15,7 +12,7 @@ from aiogram.exceptions import TelegramBadRequest
 
 from lang import t, get_user_lang
 
-# Ù…Ø®Ø²Ù† VIP + Ø§Ù„ØØ¸Ø±
+# مخزن VIP + الحظر
 try:
     from utils.vip_store import (
         is_vip, add_vip, list_vips,
@@ -45,7 +42,7 @@ except Exception:
 
 router = Router(name="admin_vip_manager")
 
-# ===== Ø¥Ø¹Ø¯Ø§Ø¯ Ø§Ù„Ø£Ø¯Ù…Ù† =====
+# ===== إعداد الأدمن =====
 def _load_admin_ids() -> set[int]:
     raw = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
     s = set()
@@ -60,10 +57,10 @@ def _load_admin_ids() -> set[int]:
 ADMIN_IDS = _load_admin_ids()
 def _is_admin(user_id: int) -> bool: return user_id in ADMIN_IDS
 
-# Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø¹Ø§Ù…Ø©
+# إعدادات عامة
 VIP_DEFAULT_DAYS = int(os.getenv("VIP_DEFAULT_DAYS", "30"))
 
-# ===== ØªØÙ‚Ù‚ App ID =====
+# ===== تحقق App ID =====
 _SNAKE_ONLY = os.getenv("SNAKE_ONLY", "0").strip() not in ("0", "false", "False", "")
 _SNAKE_PATTERNS = [
     r"com\.snake\.[A-Za-z0-9._\-]{2,60}",
@@ -98,7 +95,7 @@ def _fmt_dt(ts: int | None) -> str:
     except Exception:
         return "-"
 
-# ===== Ø¯Ø§Ù„Ø© ØªØØ±ÙŠØ± Ø¢Ù…Ù†Ø© Ù„ØªØ¬Ù†Ù‘Ø¨ message is not modified =====
+# ===== دالة تحرير آمنة لتجنّب message is not modified =====
 async def safe_edit_text(msg, text, reply_markup=None, parse_mode=None, disable_web_page_preview=True):
     try:
         return await msg.edit_text(
@@ -121,7 +118,7 @@ async def safe_edit_text(msg, text, reply_markup=None, parse_mode=None, disable_
 class _AddFSM(StatesGroup):
     waiting_uid = State()
     waiting_app = State()
-    waiting_confirm = State()  # ØªØ£ÙƒÙŠØ¯ Ù†Ù‚Ù„ App ID Ø£Ø«Ù†Ø§Ø¡ Ø§Ù„Ø¥Ø¶Ø§ÙØ© Ø§Ù„ÙŠØ¯ÙˆÙŠØ©
+    waiting_confirm = State()  # تأكيد نقل App ID أثناء الإضافة اليدوية
 
 class _RemoveByAppFSM(StatesGroup):
     waiting_app = State()
@@ -134,29 +131,29 @@ class _CustomDaysFSM(StatesGroup):
     waiting_days = State()
 
 class _ReassignPendFSM(StatesGroup):
-    waiting_confirm = State()  # ØªØ£ÙƒÙŠØ¯ Ù†Ù‚Ù„ App ID Ø£Ø«Ù†Ø§Ø¡ Ù‚Ø¨ÙˆÙ„ Ø§Ù„Ø·Ù„Ø¨Ø§Øª
+    waiting_confirm = State()  # تأكيد نقل App ID أثناء قبول الطلبات
 
-# ===== Ù‚ÙˆØ§Ø¦Ù… ÙˆÙ„ÙˆØØ§Øª =====
+# ===== قوائم ولوحات =====
 def _menu_kb(lang: str):
     kb = InlineKeyboardBuilder()
     kb.row(
-        InlineKeyboardButton(text="ž• " + t(lang, "admin.vip.add_btn"), callback_data="vipadm:add"),
-        InlineKeyboardButton(text="ž– " + t(lang, "admin.vip.remove_btn_by_app"), callback_data="vipadm:remove_by_app"),
+        InlineKeyboardButton(text="➕ " + t(lang, "admin.vip.add_btn"), callback_data="vipadm:add"),
+        InlineKeyboardButton(text="➖ " + t(lang, "admin.vip.remove_btn_by_app"), callback_data="vipadm:remove_by_app"),
     )
     kb.row(
-        InlineKeyboardButton(text="ðŸ“œ " + t(lang, "admin.vip.list_btn"), callback_data="vipadm:list"),
-        InlineKeyboardButton(text="³ " + t(lang, "admin.vip.pending_btn"), callback_data="vipadm:pending"),
+        InlineKeyboardButton(text="📜 " + t(lang, "admin.vip.list_btn"), callback_data="vipadm:list"),
+        InlineKeyboardButton(text="⏳ " + t(lang, "admin.vip.pending_btn"), callback_data="vipadm:pending"),
     )
-    kb.row(InlineKeyboardButton(text="¬…ï¸ " + t(lang, "admin.back"), callback_data="ah:menu"))
+    kb.row(InlineKeyboardButton(text="⬅️ " + t(lang, "admin.back"), callback_data="ah:menu"))
     return kb.as_markup()
 
 def _toolbar_list(lang: str):
     kb = InlineKeyboardBuilder()
-    kb.button(text="ðŸ”Ž " + t(lang, "admin.vip.search_btn"), callback_data="vipadm:search")
-    kb.button(text="ðŸ”„ " + t(lang, "admin.refresh"), callback_data="vipadm:list")
-    kb.button(text="ðŸ§¹ " + t(lang, "admin.vip.clear_all_btn"), callback_data="vipadm:clear_all_confirm")
+    kb.button(text="🔎 " + t(lang, "admin.vip.search_btn"), callback_data="vipadm:search")
+    kb.button(text="🔄 " + t(lang, "admin.refresh"), callback_data="vipadm:list")
+    kb.button(text="🧹 " + t(lang, "admin.vip.clear_all_btn"), callback_data="vipadm:clear_all_confirm")
     kb.adjust(3)
-    kb.row(InlineKeyboardButton(text="¬…ï¸ " + t(lang, "admin.back"), callback_data="vipadm:menu"))
+    kb.row(InlineKeyboardButton(text="⬅️ " + t(lang, "admin.back"), callback_data="vipadm:menu"))
     return kb.as_markup()
 
 def _user_row_line(uid: str, meta: dict) -> str:
@@ -165,7 +162,7 @@ def _user_row_line(uid: str, meta: dict) -> str:
     exp   = (meta or {}).get("expiry_ts")
     exp_s = _fmt_date(exp)
     adder_s = f"by:{adder}" if adder else "by:-"
-    return f"€¢ <code>{app}</code> €” UID <a href=\\"tg://user?id={uid}\">{uid}</a> ({adder_s}, exp:{exp_s})"
+    return f"• <code>{app}</code> — UID <a href=\"tg://user?id={uid}\">{uid}</a> ({adder_s}, exp:{exp_s})"
 
 async def _render_list(cb_msg, lang: str):
     d = list_vips() or {"users": {}}
@@ -173,38 +170,38 @@ async def _render_list(cb_msg, lang: str):
     if not users:
         return await safe_edit_text(
             cb_msg,
-            "ðŸ“œ <b>" + t(lang, "admin.vip.list_title") + "</b>\n" + t(lang, "admin.vip.list_empty"),
+            "📜 <b>" + t(lang, "admin.vip.list_title") + "</b>\n" + t(lang, "admin.vip.list_empty"),
             reply_markup=_toolbar_list(lang),
             parse_mode=ParseMode.HTML
         )
 
-    # ØªØ±ØªÙŠØ¨ ØØ³Ø¨ app_id
+    # ترتيب حسب app_id
     items = []
     for uid, meta in users.items():
         items.append((str(uid), meta))
     items.sort(key=lambda x: str((x[1] or {}).get("app_id", "")).lower())
 
     lines = [_user_row_line(uid, meta) for uid, meta in items[:200]]
-    text = "ðŸ“œ <b>" + t(lang, "admin.vip.list_title") + "</b>\n" + "\n".join(lines)
+    text = "📜 <b>" + t(lang, "admin.vip.list_title") + "</b>\n" + "\n".join(lines)
 
-    # ÙƒÙŠØ¨ÙˆØ±Ø¯
+    # كيبورد
     kb = InlineKeyboardBuilder()
     kb.row(
-        InlineKeyboardButton(text="ðŸ”Ž " + t(lang, "admin.vip.search_btn"), callback_data="vipadm:search"),
-        InlineKeyboardButton(text="ðŸ”„ " + t(lang, "admin.refresh"), callback_data="vipadm:list"),
-        InlineKeyboardButton(text="ðŸ§¹ " + t(lang, "admin.vip.clear_all_btn"), callback_data="vipadm:clear_all_confirm"),
+        InlineKeyboardButton(text="🔎 " + t(lang, "admin.vip.search_btn"), callback_data="vipadm:search"),
+        InlineKeyboardButton(text="🔄 " + t(lang, "admin.refresh"), callback_data="vipadm:list"),
+        InlineKeyboardButton(text="🧹 " + t(lang, "admin.vip.clear_all_btn"), callback_data="vipadm:clear_all_confirm"),
     )
     for uid, meta in items[:20]:
         kb.row(
-            InlineKeyboardButton(text=f"„¹ï¸ {uid}", callback_data=f"vipadm:details:{uid}"),
-            InlineKeyboardButton(text="ž• +30d", callback_data=f"vipadm:extend:{uid}:30"),
-            InlineKeyboardButton(text="ž• +90d", callback_data=f"vipadm:extend:{uid}:90"),
+            InlineKeyboardButton(text=f"ℹ️ {uid}", callback_data=f"vipadm:details:{uid}"),
+            InlineKeyboardButton(text="➕ +30d", callback_data=f"vipadm:extend:{uid}:30"),
+            InlineKeyboardButton(text="➕ +90d", callback_data=f"vipadm:extend:{uid}:90"),
         )
         kb.row(
-            InlineKeyboardButton(text="ðŸ—‘ï¸ " + t(lang, "admin.vip.remove_one_btn"), callback_data=f"vipadm:remove_uid:{uid}"),
-            InlineKeyboardButton(text="›” " + t(lang, "admin.vip.ban_btn"), callback_data=f"vipadm:ban:{uid}"),
+            InlineKeyboardButton(text="🗑️ " + t(lang, "admin.vip.remove_one_btn"), callback_data=f"vipadm:remove_uid:{uid}"),
+            InlineKeyboardButton(text="⛔ " + t(lang, "admin.vip.ban_btn"), callback_data=f"vipadm:ban:{uid}"),
         )
-    kb.row(InlineKeyboardButton(text="¬…ï¸ " + t(lang, "admin.back"), callback_data="vipadm:menu"))
+    kb.row(InlineKeyboardButton(text="⬅️ " + t(lang, "admin.back"), callback_data="vipadm:menu"))
 
     await safe_edit_text(
         cb_msg,
@@ -217,17 +214,17 @@ async def _render_list(cb_msg, lang: str):
 def _details_kb(lang: str, uid: int, app_id: str):
     kb = InlineKeyboardBuilder()
     kb.row(
-        InlineKeyboardButton(text="ž• +30d", callback_data=f"vipadm:extend:{uid}:30"),
-        InlineKeyboardButton(text="ž• +90d", callback_data=f"vipadm:extend:{uid}:90"),
+        InlineKeyboardButton(text="➕ +30d", callback_data=f"vipadm:extend:{uid}:30"),
+        InlineKeyboardButton(text="➕ +90d", callback_data=f"vipadm:extend:{uid}:90"),
     )
     kb.row(
-        InlineKeyboardButton(text="ðŸ—‘ï¸ " + t(lang, "admin.vip.remove_one_btn"), callback_data=f"vipadm:remove_uid:{uid}"),
-        InlineKeyboardButton(text="›” " + t(lang, "admin.vip.ban_btn"), callback_data=f"vipadm:ban:{uid}"),
+        InlineKeyboardButton(text="🗑️ " + t(lang, "admin.vip.remove_one_btn"), callback_data=f"vipadm:remove_uid:{uid}"),
+        InlineKeyboardButton(text="⛔ " + t(lang, "admin.vip.ban_btn"), callback_data=f"vipadm:ban:{uid}"),
     )
-    kb.row(InlineKeyboardButton(text="¬…ï¸ " + t(lang, "admin.back"), callback_data="vipadm:list"))
+    kb.row(InlineKeyboardButton(text="⬅️ " + t(lang, "admin.back"), callback_data="vipadm:list"))
     return kb.as_markup()
 
-# ===== ÙØªØ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© =====
+# ===== فتح القائمة =====
 @router.message(Command("vipadm"))
 async def vipadm_cmd(msg: Message):
     if not _is_admin(msg.from_user.id):
@@ -235,7 +232,7 @@ async def vipadm_cmd(msg: Message):
         return await msg.answer(t(l, "admins_only"))
     l = get_user_lang(msg.from_user.id) or "en"
     await msg.answer(
-        f"ðŸ‘‘ <b>{t(l, 'admin.vip.title')}</b>\n{t(l, 'admin.vip.desc.app_based')}",
+        f"👑 <b>{t(l, 'admin.vip.title')}</b>\n{t(l, 'admin.vip.desc.app_based')}",
         reply_markup=_menu_kb(l),
         parse_mode=ParseMode.HTML
     )
@@ -249,12 +246,12 @@ async def vipadm_menu(cb: CallbackQuery):
     await cb.answer()
     await safe_edit_text(
         cb.message,
-        f"ðŸ‘‘ <b>{t(l, 'admin.vip.title')}</b>\n{t(l, 'admin.vip.desc.app_based')}",
+        f"👑 <b>{t(l, 'admin.vip.title')}</b>\n{t(l, 'admin.vip.desc.app_based')}",
         reply_markup=_menu_kb(l),
         parse_mode=ParseMode.HTML
     )
 
-# ===== Ø¥Ø¶Ø§ÙØ© VIP (UID + APP_ID) =====
+# ===== إضافة VIP (UID + APP_ID) =====
 @router.callback_query(F.data == "vipadm:add")
 async def vipadm_add(cb: CallbackQuery, state: FSMContext):
     if not _is_admin(cb.from_user.id):
@@ -292,8 +289,8 @@ async def vipadm_add_app(msg: Message, state: FSMContext):
 
         kb = InlineKeyboardBuilder()
         kb.row(
-            InlineKeyboardButton(text="œ… Ù†Ø¹Ù…", callback_data="vipadm:reassign_yes"),
-            InlineKeyboardButton(text="Œ " + t(l, "app.remove_confirm_no"), callback_data="vipadm:reassign_no"),
+            InlineKeyboardButton(text="✅ نعم", callback_data="vipadm:reassign_yes"),
+            InlineKeyboardButton(text="❌ " + t(l, "app.remove_confirm_no"), callback_data="vipadm:reassign_no"),
         )
         return await msg.answer(
             t(l, "admin.vip.app_in_use").format(old_uid=owner) + "\n" +
@@ -306,7 +303,7 @@ async def vipadm_add_app(msg: Message, state: FSMContext):
     exp = (get_vip_meta(uid) or {}).get("expiry_ts")
     return await msg.answer(
         t(l, "admin.vip.added").format(user_id=uid, app_id=app) +
-        (f"\nðŸ—“ï¸ {t(l,'vip.expires_on')}: {_fmt_date(exp)}" if exp else "")
+        (f"\n🗓️ {t(l,'vip.expires_on')}: {_fmt_date(exp)}" if exp else "")
     )
 
 @router.callback_query(F.data == "vipadm:reassign_yes")
@@ -344,7 +341,7 @@ async def vipadm_reassign_no(cb: CallbackQuery, state: FSMContext):
     await cb.answer()
     await cb.message.answer(t(l, "admin.vip.cancelled"))
 
-# ===== Ø¥Ø²Ø§Ù„Ø© VIP €” Ø¨Ø§Ù„Ù€ App ID =====
+# ===== إزالة VIP — بالـ App ID =====
 @router.callback_query(F.data == "vipadm:remove_by_app")
 async def vipadm_remove_by_app(cb: CallbackQuery, state: FSMContext):
     if not _is_admin(cb.from_user.id):
@@ -367,7 +364,7 @@ async def vipadm_remove_by_app_recv(msg: Message, state: FSMContext):
     if uid is None:
         suggestions = search_vips_by_app_prefix(app)
         if suggestions:
-            lines = "\n".join([f"€¢ <code>{a}</code> €” UID <code>{u}</code>" for u, a in suggestions.items()])
+            lines = "\n".join([f"• <code>{a}</code> — UID <code>{u}</code>" for u, a in suggestions.items()])
             return await msg.answer(
                 t(l, "admin.vip.not_found_app_with_suggestions").format(app_id=app) + "\n" + lines,
                 parse_mode=ParseMode.HTML
@@ -379,7 +376,7 @@ async def vipadm_remove_by_app_recv(msg: Message, state: FSMContext):
         return await msg.answer(t(l, "admin.vip.not_found_app").format(app_id=app))
     await msg.answer(t(l, "admin.vip.removed_by_app").format(app_id=app, user_id=uid))
 
-# ===== Ø¹Ø±Ø¶ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ù…ÙˆØ³Ù‘Ø¹Ø© =====
+# ===== عرض القائمة الموسّعة =====
 @router.callback_query(F.data == "vipadm:list")
 async def vipadm_list(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
@@ -389,7 +386,7 @@ async def vipadm_list(cb: CallbackQuery):
     await cb.answer()
     await _render_list(cb.message, l)
 
-# ===== ØªÙØ§ØµÙŠÙ„ Ù…Ø´ØªØ±Ùƒ =====
+# ===== تفاصيل مشترك =====
 @router.callback_query(F.data.startswith("vipadm:details:"))
 async def vipadm_details(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
@@ -407,16 +404,16 @@ async def vipadm_details(cb: CallbackQuery):
     exp = _fmt_dt(meta.get("expiry_ts"))
     ts  = _fmt_dt(meta.get("ts"))
     adder = meta.get("added_by", "-")
-    bl = "œ…" if is_blocked(uid) else "Œ"
+    bl = "✅" if is_blocked(uid) else "❌"
 
     text = (
-        f"ðŸ‘‘ <b>{t(l, 'admin.vip.sub_details')}</b>\n"
-        f"ðŸ‘¤ UID: <a href=\\"tg://user?id={uid}\">{uid}</a>\n"
-        f"ðŸ†” SNAKE ID: <code>{app}</code>\n"
-        f"ðŸ—“ï¸ {t(l,'vip.expires_on')}: <code>{exp}</code>\n"
-        f"ðŸ•’ {t(l,'admin.vip.added_at')}: <code>{ts}</code>\n"
-        f"ðŸ‘®€™‚ï¸ {t(l,'admin.vip.added_by')}: <code>{adder}</code>\n"
-        f"›” {t(l,'admin.vip.blocked')}: {bl}\n"
+        f"👑 <b>{t(l, 'admin.vip.sub_details')}</b>\n"
+        f"👤 UID: <a href=\"tg://user?id={uid}\">{uid}</a>\n"
+        f"🆔 SNAKE ID: <code>{app}</code>\n"
+        f"🗓️ {t(l,'vip.expires_on')}: <code>{exp}</code>\n"
+        f"🕒 {t(l,'admin.vip.added_at')}: <code>{ts}</code>\n"
+        f"👮‍♂️ {t(l,'admin.vip.added_by')}: <code>{adder}</code>\n"
+        f"⛔ {t(l,'admin.vip.blocked')}: {bl}\n"
     )
     await cb.answer()
     await safe_edit_text(
@@ -427,7 +424,7 @@ async def vipadm_details(cb: CallbackQuery):
         disable_web_page_preview=True
     )
 
-# ===== Ø§Ù„Ø·Ù„Ø¨Ø§Øª Ø§Ù„Ù…Ø¹Ù„Ù‘Ù‚Ø© =====
+# ===== الطلبات المعلّقة =====
 @router.callback_query(F.data == "vipadm:pending")
 async def vipadm_pending(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
@@ -451,21 +448,21 @@ async def vipadm_pending(cb: CallbackQuery):
     for uid, meta in list(items.items())[:20]:
         app = (meta or {}).get("app_id", "-")
         ts  = (meta or {}).get("ts")
-        ticket = (meta or {}).get("ticket_id", "€”")
+        ticket = (meta or {}).get("ticket_id", "—")
         when = _fmt_dt(ts)
-        lines.append(f"€¢ <code>{app}</code> €” UID <code>{uid}</code> €” ðŸŽ« <code>{ticket}</code> €” {when}")
+        lines.append(f"• <code>{app}</code> — UID <code>{uid}</code> — 🎫 <code>{ticket}</code> — {when}")
         kb.row(
-            InlineKeyboardButton(text=f"œ… {app}", callback_data=f"vipadm:approve:{uid}"),
-            InlineKeyboardButton(text=f"Œ {app}", callback_data=f"vipadm:reject:{uid}"),
-            InlineKeyboardButton(text="ž• +30d", callback_data=f"vipadm:extend:{uid}:30"),
-            InlineKeyboardButton(text="±", callback_data=f"vipadm:approvec:{uid}"),
+            InlineKeyboardButton(text=f"✅ {app}", callback_data=f"vipadm:approve:{uid}"),
+            InlineKeyboardButton(text=f"❌ {app}", callback_data=f"vipadm:reject:{uid}"),
+            InlineKeyboardButton(text="➕ +30d", callback_data=f"vipadm:extend:{uid}:30"),
+            InlineKeyboardButton(text="⏱", callback_data=f"vipadm:approvec:{uid}"),
         )
-    kb.row(InlineKeyboardButton(text="ðŸ”„ " + t(l, "admin.refresh"), callback_data="vipadm:pending"))
-    kb.row(InlineKeyboardButton(text="¬…ï¸ " + t(l, "admin.back"), callback_data="vipadm:menu"))
+    kb.row(InlineKeyboardButton(text="🔄 " + t(l, "admin.refresh"), callback_data="vipadm:pending"))
+    kb.row(InlineKeyboardButton(text="⬅️ " + t(l, "admin.back"), callback_data="vipadm:menu"))
     await cb.answer()
     await safe_edit_text(
         cb.message,
-        "³ <b>" + t(l, "admin.vip.pending_title") + "</b>\n" + "\n".join(lines),
+        "⏳ <b>" + t(l, "admin.vip.pending_title") + "</b>\n" + "\n".join(lines),
         reply_markup=kb.as_markup(),
         parse_mode=ParseMode.HTML
     )
@@ -488,15 +485,15 @@ async def vipadm_approve(cb: CallbackQuery, state: FSMContext):
 
     app_id = pend.get("app_id", "-")
 
-    # ØªØÙ‚Ù‚ Ø§Ù„ØªÙƒØ±Ø§Ø± Ù‚Ø¨Ù„ Ø§Ù„Ø¥Ø¶Ø§ÙØ©
+    # تحقق التكرار قبل الإضافة
     owner = find_uid_by_app(app_id)
     if owner is not None and int(owner) != uid:
         await state.set_state(_ReassignPendFSM.waiting_confirm)
         await state.update_data(mode="default", uid=uid, old_uid=int(owner), app=app_id, days=VIP_DEFAULT_DAYS)
         kb = InlineKeyboardBuilder()
         kb.row(
-            InlineKeyboardButton(text="œ… Ù†Ø¹Ù…", callback_data="vipadm:reassign_pend_yes"),
-            InlineKeyboardButton(text="Œ " + t(l, "app.remove_confirm_no"), callback_data="vipadm:reassign_pend_no"),
+            InlineKeyboardButton(text="✅ نعم", callback_data="vipadm:reassign_pend_yes"),
+            InlineKeyboardButton(text="❌ " + t(l, "app.remove_confirm_no"), callback_data="vipadm:reassign_pend_no"),
         )
         return await cb.message.answer(
             t(l, "admin.vip.app_in_use").format(old_uid=owner) + "\n" +
@@ -504,14 +501,14 @@ async def vipadm_approve(cb: CallbackQuery, state: FSMContext):
             reply_markup=kb.as_markup()
         )
 
-    # Ù„Ø§ ØªØ¶Ø§Ø±Ø¨ †’ Ù†ÙÙ‘Ø° Ø§Ù„Ù‚Ø¨ÙˆÙ„
+    # لا تضارب → نفّذ القبول
     pop_pending(uid)
     add_vip(uid, app_id, added_by=cb.from_user.id, days=VIP_DEFAULT_DAYS)
 
     try:
         exp = (get_vip_meta(uid) or {}).get("expiry_ts")
         exp_str = _fmt_date(exp)
-        await cb.bot.send_message(uid, t(l, "vip.user.approved") + (f"\nðŸ—“ï¸ {t(l,'vip.expires_on')}: {exp_str}" if exp_str != "-" else ""))
+        await cb.bot.send_message(uid, t(l, "vip.user.approved") + (f"\n🗓️ {t(l,'vip.expires_on')}: {exp_str}" if exp_str != "-" else ""))
     except Exception:
         pass
 
@@ -588,15 +585,15 @@ async def vipadm_approve_custom_recv(msg: Message, state: FSMContext):
 
     app_id = pend.get("app_id", "-")
 
-    # ØªØÙ‚Ù‚ Ø§Ù„ØªÙƒØ±Ø§Ø± Ù‚Ø¨Ù„ Ø§Ù„Ø¥Ø¶Ø§ÙØ©
+    # تحقق التكرار قبل الإضافة
     owner = find_uid_by_app(app_id)
     if owner is not None and int(owner) != uid:
         await state.set_state(_ReassignPendFSM.waiting_confirm)
         await state.update_data(mode="custom", uid=uid, old_uid=int(owner), app=app_id, days=days)
         kb = InlineKeyboardBuilder()
         kb.row(
-            InlineKeyboardButton(text="œ… Ù†Ø¹Ù…", callback_data="vipadm:reassign_pend_yes"),
-            InlineKeyboardButton(text="Œ " + t(l, "app.remove_confirm_no"), callback_data="vipadm:reassign_pend_no"),
+            InlineKeyboardButton(text="✅ نعم", callback_data="vipadm:reassign_pend_yes"),
+            InlineKeyboardButton(text="❌ " + t(l, "app.remove_confirm_no"), callback_data="vipadm:reassign_pend_no"),
         )
         return await msg.answer(
             t(l, "admin.vip.app_in_use").format(old_uid=owner) + "\n" +
@@ -604,7 +601,7 @@ async def vipadm_approve_custom_recv(msg: Message, state: FSMContext):
             reply_markup=kb.as_markup()
         )
 
-    # Ù„Ø§ ØªØ¶Ø§Ø±Ø¨ †’ Ù†ÙÙ‘Ø° Ø§Ù„Ù‚Ø¨ÙˆÙ„
+    # لا تضارب → نفّذ القبول
     pop_pending(uid)
     add_vip(uid, app_id, added_by=msg.from_user.id, days=days)
 
@@ -613,14 +610,14 @@ async def vipadm_approve_custom_recv(msg: Message, state: FSMContext):
 
     await msg.answer(
         t(l, "admin.vip.added_custom").format(user_id=uid, app_id=app_id, days=days) +
-        (f"\nðŸ—“ï¸ {t(l,'vip.expires_on')}: {exp_str}" if exp_str != "-" else "")
+        (f"\n🗓️ {t(l,'vip.expires_on')}: {exp_str}" if exp_str != "-" else "")
     )
     try:
-        await msg.bot.send_message(uid, t(l, "vip.user.approved") + f"\nðŸ—“ï¸ {t(l,'vip.expires_on')}: {exp_str}")
+        await msg.bot.send_message(uid, t(l, "vip.user.approved") + f"\n🗓️ {t(l,'vip.expires_on')}: {exp_str}")
     except Exception:
         pass
 
-# ===== Ø¥Ø¹Ø§Ø¯Ø© ØªØ¹ÙŠÙŠÙ† Ù…Ù„ÙƒÙŠØ© App ID Ø£Ø«Ù†Ø§Ø¡ Ù‚Ø¨ÙˆÙ„ Ø§Ù„Ø·Ù„Ø¨Ø§Øª =====
+# ===== إعادة تعيين ملكية App ID أثناء قبول الطلبات =====
 @router.callback_query(F.data == "vipadm:reassign_pend_yes")
 async def vipadm_reassign_pend_yes(cb: CallbackQuery, state: FSMContext):
     if not _is_admin(cb.from_user.id):
@@ -655,11 +652,11 @@ async def vipadm_reassign_pend_yes(cb: CallbackQuery, state: FSMContext):
     await cb.answer("OK")
     await cb.message.answer(
         t(l, "admin.vip.app_reassigned").format(app_id=app, old_uid=old_uid, new_uid=uid) +
-        (f"\nðŸ—“ï¸ {t(l,'vip.expires_on')}: {exp_str}" if exp_str != "-" else "")
+        (f"\n🗓️ {t(l,'vip.expires_on')}: {exp_str}" if exp_str != "-" else "")
     )
 
     try:
-        await cb.bot.send_message(uid, t(l, "vip.user.approved") + f"\nðŸ—“ï¸ {t(l,'vip.expires_on')}: {exp_str}")
+        await cb.bot.send_message(uid, t(l, "vip.user.approved") + f"\n🗓️ {t(l,'vip.expires_on')}: {exp_str}")
     except Exception:
         pass
 
@@ -672,7 +669,7 @@ async def vipadm_reassign_pend_no(cb: CallbackQuery, state: FSMContext):
     await cb.answer()
     await cb.message.answer(t(l, "admin.vip.cancelled"))
 
-# ===== ØªÙ…Ø¯ÙŠØ¯ / Ø¥Ø²Ø§Ù„Ø© / ØØ¸Ø± =====
+# ===== تمديد / إزالة / حظر =====
 @router.callback_query(F.data.startswith("vipadm:extend:"))
 async def vipadm_extend(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
@@ -688,11 +685,11 @@ async def vipadm_extend(cb: CallbackQuery):
 
     ok = extend_vip_days(uid, days)
     if not ok:
-        return await cb.answer("Œ", show_alert=True)
+        return await cb.answer("❌", show_alert=True)
 
     exp = (get_vip_meta(uid) or {}).get("expiry_ts")
-    await cb.answer("œ…")
-    await cb.message.answer(f"œ… UID {uid} +{days}d †’ ðŸ—“ï¸ {_fmt_date(exp)}")
+    await cb.answer("✅")
+    await cb.message.answer(f"✅ UID {uid} +{days}d → 🗓️ {_fmt_date(exp)}")
 
 @router.callback_query(F.data.startswith("vipadm:remove_uid:"))
 async def vipadm_remove_uid(cb: CallbackQuery):
@@ -708,12 +705,12 @@ async def vipadm_remove_uid(cb: CallbackQuery):
     meta = get_vip_meta(uid) or {}
     app = meta.get("app_id")
     if not app:
-        return await cb.answer("Œ", show_alert=True)
+        return await cb.answer("❌", show_alert=True)
 
     if not remove_vip_by_app(app):
-        return await cb.answer("Œ", show_alert=True)
+        return await cb.answer("❌", show_alert=True)
 
-    await cb.message.answer(f"ðŸ—‘ï¸ {t(l,'admin.vip.removed_by_app').format(app_id=app, user_id=uid)}")
+    await cb.message.answer(f"🗑️ {t(l,'admin.vip.removed_by_app').format(app_id=app, user_id=uid)}")
     await vipadm_list(cb)
 
 @router.callback_query(F.data.startswith("vipadm:ban:"))
@@ -728,10 +725,10 @@ async def vipadm_ban(cb: CallbackQuery):
         return await cb.answer(t(l, "vip.admin.bad_payload"), show_alert=True)
 
     add_block(uid, reason="admin")
-    await cb.message.answer(f"›” ØªÙ… ØØ¸Ø± UID {uid} ÙˆØ¥Ø²Ø§Ù„ØªÙ‡ Ù…Ù† VIP.")
+    await cb.message.answer(f"⛔ تم حظر UID {uid} وإزالته من VIP.")
     await vipadm_list(cb)
 
-# ===== Ø¨ØØ« =====
+# ===== بحث =====
 @router.callback_query(F.data == "vipadm:search")
 async def vipadm_search(cb: CallbackQuery, state: FSMContext):
     if not _is_admin(cb.from_user.id):
@@ -748,24 +745,24 @@ async def vipadm_search_recv(msg: Message, state: FSMContext):
     pref = (msg.text or "").strip()
     await state.clear()
     if not pref:
-        return await msg.answer("€”")
+        return await msg.answer("—")
 
     matches = search_vips_by_app_prefix(pref)
     if not matches:
         return await msg.answer(t(l, "admin.vip.search_no_results"))
 
-    lines = [f"€¢ <code>{app}</code> €” UID <code>{uid}</code>" for uid, app in matches.items()]
+    lines = [f"• <code>{app}</code> — UID <code>{uid}</code>" for uid, app in matches.items()]
     kb = InlineKeyboardBuilder()
     for uid in list(matches.keys())[:20]:
         kb.row(
-            InlineKeyboardButton(text=f"„¹ï¸ {uid}", callback_data=f"vipadm:details:{uid}"),
-            InlineKeyboardButton(text="ž• +30d", callback_data=f"vipadm:extend:{uid}:30"),
-            InlineKeyboardButton(text="ðŸ—‘ï¸", callback_data=f"vipadm:remove_uid:{uid}"),
+            InlineKeyboardButton(text=f"ℹ️ {uid}", callback_data=f"vipadm:details:{uid}"),
+            InlineKeyboardButton(text="➕ +30d", callback_data=f"vipadm:extend:{uid}:30"),
+            InlineKeyboardButton(text="🗑️", callback_data=f"vipadm:remove_uid:{uid}"),
         )
     kb.row(InlineKeyboardButton(text=t(l, "admin.back"), callback_data="vipadm:list"))
-    await msg.answer("Ù†ØªØ§Ø¦Ø¬ Ø§Ù„Ø¨ØØ«:\n" + "\n".join(lines), reply_markup=kb.as_markup(), parse_mode=ParseMode.HTML)
+    await msg.answer("نتائج البحث:\n" + "\n".join(lines), reply_markup=kb.as_markup(), parse_mode=ParseMode.HTML)
 
-# ===== ØØ°Ù Ø§Ù„ÙƒÙ„ =====
+# ===== حذف الكل =====
 @router.callback_query(F.data == "vipadm:clear_all_confirm")
 async def vipadm_clear_all_confirm(cb: CallbackQuery):
     if not _is_admin(cb.from_user.id):
@@ -774,7 +771,7 @@ async def vipadm_clear_all_confirm(cb: CallbackQuery):
     l = get_user_lang(cb.from_user.id) or "en"
     kb = InlineKeyboardBuilder()
     kb.row(
-        InlineKeyboardButton(text="ðŸ§¹ " + t(l, "admin.vip.clear_all_yes"), callback_data="vipadm:clear_all"),
+        InlineKeyboardButton(text="🧹 " + t(l, "admin.vip.clear_all_yes"), callback_data="vipadm:clear_all"),
         InlineKeyboardButton(text=t(l, "app.remove_confirm_no"), callback_data="vipadm:list"),
     )
     await cb.message.answer(t(l, "admin.vip.clear_all_confirm"), reply_markup=kb.as_markup())
@@ -787,6 +784,5 @@ async def vipadm_clear_all(cb: CallbackQuery):
         return await cb.answer(t(l, "admins_only"), show_alert=True)
     l = get_user_lang(cb.from_user.id) or "en"
     n = remove_all_vips()
-    await cb.message.answer(f"ðŸ§¹ ØªÙ… ØØ°Ù {n} Ù…Ù† Ù…Ø´ØªØ±ÙƒÙŠ VIP.")
+    await cb.message.answer(f"🧹 تم حذف {n} من مشتركي VIP.")
     await vipadm_list(cb)
-

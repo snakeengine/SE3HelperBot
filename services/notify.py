@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # services/notify.py
-
+from __future__ import annotations
 from typing import Iterable, Optional, Sequence, Dict, Any, List
 import asyncio
 import logging

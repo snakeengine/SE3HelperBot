@@ -1,8 +1,5 @@
-from __future__ import annotations
-
-from utils.admins import get_admin_ids, is_admin, get_owner_ids
 # handlers/security_status.py
-
+from __future__ import annotations
 
 import os, json, datetime, logging
 from aiogram import Router, F
@@ -13,7 +10,7 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.enums import ParseMode
 from lang import t, get_user_lang
 
-# Ø¯Ø¹Ù… Ø§Ù„Ù…Ù†Ø·Ù‚Ø© Ø§Ù„Ø²Ù…Ù†ÙŠØ© (Python 3.9+). ÙÙŠ ØØ§Ù„ Ø¹Ø¯Ù… ØªÙˆÙØ±Ù‡Ø§ Ù†Ø³ØªØ®Ø¯Ù… ØªØ¹ÙˆÙŠØ¶ +3
+# دعم المنطقة الزمنية (Python 3.9+). في حال عدم توفرها نستخدم تعويض +3
 try:
     from zoneinfo import ZoneInfo  # Python 3.9+
 except Exception:
@@ -21,11 +18,11 @@ except Exception:
 
 router = Router()
 
-# ========= Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø¹Ø§Ù…Ø© / Ø£Ø¯Ù…Ù† =========
+# ========= إعدادات عامة / أدمن =========
 _admin_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
-ADMIN_IDS = get_admin_ids()
+ADMIN_IDS = [int(x) for x in str(_admin_env).split(",") if str(x).strip().isdigit()]
 if not ADMIN_IDS:
-    ADMIN_IDS = get_admin_ids()
+    ADMIN_IDS = [7360982123]
 
 def is_admin(uid: int) -> bool:
     return uid in ADMIN_IDS
@@ -33,10 +30,10 @@ def is_admin(uid: int) -> bool:
 def L(user_id: int) -> str:
     return (get_user_lang(user_id) or "ar").lower()
 
-# Ø¥Ø¸Ù‡Ø§Ø± Ø²Ø± "Ù„ÙˆØØ© ØªØÙƒÙ… Ø§Ù„Ø£Ù…Ø§Ù†" Ø¯Ø§Ø®Ù„ Ø´Ø§Ø´Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…ØŸ Ø§ÙØªØ±Ø§Ø¶ÙŠÙ‹Ø§: Ù…Ø®ÙÙŠ
+# إظهار زر "لوحة تحكم الأمان" داخل شاشة المستخدم؟ افتراضيًا: مخفي
 SHOW_INLINE_ADMIN = False
 
-# ========= Ù…Ù„Ù Ø§Ù„ØØ§Ù„Ø© =========
+# ========= ملف الحالة =========
 DATA_FILE = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "data", "security_status.json"))
 
 DEFAULT_GAMES = {
@@ -97,14 +94,14 @@ def _set_game(code: str, status: str, note: str | None, by: int):
     _save(data)
     return data
 
-# === Ø£Ø¯Ø§Ø© ØªÙ†Ø³ÙŠÙ‚ Ø§Ù„ÙˆÙ‚Øª ===
+# === أداة تنسيق الوقت ===
 def _baghdad_tz():
     return ZoneInfo("Asia/Baghdad") if ZoneInfo else datetime.timezone(datetime.timedelta(hours=3))
 
 def _format_updated_at(dt_iso: str | None) -> str:
     """
-    ÙŠØ¹Ø±Ø¶ Ø¢Ø®Ø± ØªØØ¯ÙŠØ« Ø¨ØµÙŠØºØ©: 12-08-2025 14:05 UTC
-    Ù†Ø¹ØªÙ…Ø¯ Ø¯Ø§Ø¦Ù…Ù‹Ø§ Ø¹Ù„Ù‰ UTC Ù„ØªØ¬Ù†Ø¨ Ù…Ø´Ø§ÙƒÙ„ Ø§Ù„Ù…Ù†Ø§Ø·Ù‚ Ø§Ù„Ø²Ù…Ù†ÙŠØ©.
+    يعرض آخر تحديث بصيغة: 12-08-2025 14:05 UTC
+    نعتمد دائمًا على UTC لتجنب مشاكل المناطق الزمنية.
     """
     if not dt_iso:
         return "-"
@@ -113,7 +110,7 @@ def _format_updated_at(dt_iso: str | None) -> str:
         if s.endswith("Z"):
             s = s[:-1]
         dt_utc = datetime.datetime.fromisoformat(s)
-        # ØªØ£ÙƒØ¯ Ø£Ù†Ù‡Ø§ UTC
+        # تأكد أنها UTC
         if dt_utc.tzinfo is None:
             dt_utc = dt_utc.replace(tzinfo=datetime.timezone.utc)
         else:
@@ -123,15 +120,15 @@ def _format_updated_at(dt_iso: str | None) -> str:
         return dt_iso or "-"
 
 def _now_ping_str() -> str:
-    # ÙˆÙ‚Øª Ù„ØØ¸ÙŠ Ø¨ØµÙŠØºØ© UTC: 17:40:12 12-08-2025 UTC
+    # وقت لحظي بصيغة UTC: 17:40:12 12-08-2025 UTC
     return datetime.datetime.now(tz=datetime.timezone.utc).strftime("%H:%M:%S %d-%m-%Y") + " UTC"
 
-# ========= Ø®Ø±Ø§Ø¦Ø· Ø§Ù„ØØ§Ù„Ø§Øª =========
+# ========= خرائط الحالات =========
 STATUS_ORDER = ["safe", "warn", "down"]
 STATUS_ICON = {
-    "safe": "âœ…",
-    "warn": "âš ï¸",
-    "down": "âŒ",
+    "safe": "✅",
+    "warn": "⚠️",
+    "down": "❌",
 }
 
 def status_human(lang: str, st: str) -> str:
@@ -142,10 +139,10 @@ def status_human(lang: str, st: str) -> str:
     }[st]
     return STATUS_ICON.get(st, "") + " " + t(lang, key)
 
-# ========= Ù…Ø³Ø§Ø¹Ø¯: ØªØ¹Ø¯ÙŠÙ„ Ø°ÙƒÙŠ Ø£Ùˆ Ø¥Ø±Ø³Ø§Ù„ Ø¬Ø¯ÙŠØ¯ =========
+# ========= مساعد: تعديل ذكي أو إرسال جديد =========
 async def _smart_edit_or_send(msg: Message, text: str, reply_markup=None):
     try:
-        # Ø¬Ø±Ù‘Ø¨ ØªØ¹Ø¯ÙŠÙ„ Ù†Øµ
+        # جرّب تعديل نص
         if msg.text is not None:
             return await msg.edit_text(
                 text,
@@ -153,14 +150,14 @@ async def _smart_edit_or_send(msg: Message, text: str, reply_markup=None):
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True,
             )
-        # Ø¬Ø±Ù‘Ø¨ ØªØ¹Ø¯ÙŠÙ„ ÙˆØµÙ Ø§Ù„ÙˆØ³Ø§Ø¦Ø·
+        # جرّب تعديل وصف الوسائط
         if msg.caption is not None:
             return await msg.edit_caption(
                 caption=text,
                 reply_markup=reply_markup,
                 parse_mode=ParseMode.HTML,
             )
-        # Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ù†Øµ/ÙˆØµÙ â†’ Ø£Ø±Ø³Ù„ Ø±Ø³Ø§Ù„Ø© Ø¬Ø¯ÙŠØ¯Ø©
+        # لا يوجد نص/وصف → أرسل رسالة جديدة
         return await msg.answer(
             text,
             reply_markup=reply_markup,
@@ -180,19 +177,19 @@ async def _smart_edit_or_send(msg: Message, text: str, reply_markup=None):
             )
         raise
 
-# ========= ÙˆØ§Ø¬Ù‡Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… =========
+# ========= واجهة المستخدم =========
 def _kb_main(lang: str, as_admin: bool, *, src: str) -> InlineKeyboardBuilder:
     """
-    src âˆˆ {'main','vip'}
-    - main â†’ Ø²Ø± Ø§Ù„Ø±Ø¬ÙˆØ¹ back_to_menu
-    - vip  â†’ Ø²Ø± Ø§Ù„Ø±Ø¬ÙˆØ¹ vip:open_tools
-    Ù†ØØ§ÙØ¸ Ø¹Ù„Ù‰ src ÙÙŠ Ø¬Ù…ÙŠØ¹ Ø§Ù„Ø£Ø²Ø±Ø§Ø±.
+    src ∈ {'main','vip'}
+    - main → زر الرجوع back_to_menu
+    - vip  → زر الرجوع vip:open_tools
+    نحافظ على src في جميع الأزرار.
     """
     kb = InlineKeyboardBuilder()
     data = _load()
     games = data.get("games", {})
 
-    # Ù†Ø¨Ù†ÙŠ Ø§Ù„Ø£Ø²Ø±Ø§Ø± Ø£ÙˆÙ„Ø§Ù‹
+    # نبني الأزرار أولاً
     game_buttons: list[InlineKeyboardButton] = []
     for code, g in games.items():
         name = g.get("name", {}).get(lang, g.get("name", {}).get("en", code))
@@ -201,7 +198,7 @@ def _kb_main(lang: str, as_admin: bool, *, src: str) -> InlineKeyboardBuilder:
             InlineKeyboardButton(text=f"{icon} {name}", callback_data=f"sec:game:{code}:{src}")
         )
 
-    # Ù†Ø±ØªÙ‘Ø¨ 2Ã—2
+    # نرتّب 2×2
     i = 0
     while i < len(game_buttons):
         a = game_buttons[i]
@@ -213,14 +210,14 @@ def _kb_main(lang: str, as_admin: bool, *, src: str) -> InlineKeyboardBuilder:
             kb.row(a, width=1)
             i += 1
 
-    # Ø²Ø± ØªØØ¯ÙŠØ«
-    kb.row(InlineKeyboardButton(text="ðŸ”„ " + t(lang, "sec.btn_refresh"), callback_data=f"sec:refresh:{src}"), width=1)
+    # زر تحديث
+    kb.row(InlineKeyboardButton(text="🔄 " + t(lang, "sec.btn_refresh"), callback_data=f"sec:refresh:{src}"), width=1)
 
-    # Ø²Ø± Ù„ÙˆØØ© Ø§Ù„ØªØÙƒÙ… (Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø· Ø¥Ø°Ø§ Ù…ÙÙØ¹Ù‘Ù„)
+    # زر لوحة التحكم (للأدمن فقط إذا مُفعّل)
     if as_admin and SHOW_INLINE_ADMIN:
         kb.row(InlineKeyboardButton(text=t(lang, "sec.btn_admin_panel"), callback_data="sec:admin"), width=1)
 
-    # Ø±Ø¬ÙˆØ¹ ØØ³Ø¨ Ø§Ù„Ù…ØµØ¯Ø±
+    # رجوع حسب المصدر
     back_cb = "vip:open_tools" if src == "vip" else "back_to_menu"
     kb.row(InlineKeyboardButton(text=t(lang, "sec.btn_back"), callback_data=back_cb), width=1)
     return kb
@@ -229,12 +226,12 @@ def _kb_admin(lang: str) -> InlineKeyboardBuilder:
     data = _load()
     kb = InlineKeyboardBuilder()
 
-    MARK_ON, MARK_OFF = "â—", "â—‹"
+    MARK_ON, MARK_OFF = "●", "○"
 
-    # Ø²Ø± ØªØØ¯ÙŠØ« Ù„ÙˆØØ© Ø§Ù„ØªØÙƒÙ…
-    kb.row(InlineKeyboardButton(text="ðŸ”„ " + t(lang, "sec.btn_refresh"), callback_data="sec:adm_refresh"), width=1)
+    # زر تحديث لوحة التحكم
+    kb.row(InlineKeyboardButton(text="🔄 " + t(lang, "sec.btn_refresh"), callback_data="sec:adm_refresh"), width=1)
 
-    # === Ø§Ù„ØØ§Ù„Ø© Ø§Ù„Ø¹Ø§Ù…Ø© ===
+    # === الحالة العامة ===
     g_status = data.get("global", {}).get("status", "safe")
     kb.row(
         InlineKeyboardButton(
@@ -244,32 +241,32 @@ def _kb_admin(lang: str) -> InlineKeyboardBuilder:
         width=1
     )
 
-    # ØµÙ Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„ØØ§Ù„Ø© Ø§Ù„Ø¹Ø§Ù…Ø© (3 Ø£Ø²Ø±Ø§Ø±)
+    # صف اختيار الحالة العامة (3 أزرار)
     glob_row = [
-        InlineKeyboardButton(text=f"{MARK_ON if g_status=='safe' else MARK_OFF} âœ…", callback_data="sec:adm:glob:safe"),
-        InlineKeyboardButton(text=f"{MARK_ON if g_status=='warn' else MARK_OFF} âš ï¸", callback_data="sec:adm:glob:warn"),
-        InlineKeyboardButton(text=f"{MARK_ON if g_status=='down' else MARK_OFF} âŒ", callback_data="sec:adm:glob:down"),
+        InlineKeyboardButton(text=f"{MARK_ON if g_status=='safe' else MARK_OFF} ✅", callback_data="sec:adm:glob:safe"),
+        InlineKeyboardButton(text=f"{MARK_ON if g_status=='warn' else MARK_OFF} ⚠️", callback_data="sec:adm:glob:warn"),
+        InlineKeyboardButton(text=f"{MARK_ON if g_status=='down' else MARK_OFF} ❌", callback_data="sec:adm:glob:down"),
     ]
     kb.row(*glob_row, width=3)
 
-    # ÙØ§ØµÙ„
-    kb.row(InlineKeyboardButton(text="â€” " + t(lang, "sec.admin.games") + " â€”", callback_data="sec:nop"), width=1)
+    # فاصل
+    kb.row(InlineKeyboardButton(text="— " + t(lang, "sec.admin.games") + " —", callback_data="sec:nop"), width=1)
 
-    # === Ø§Ù„Ø£Ù„Ø¹Ø§Ø¨ ===
+    # === الألعاب ===
     games = data.get("games", {})
     for code, g in games.items():
         name = g.get("name", {}).get(lang, g.get("name", {}).get("en", code))
         cur = g.get("status", "safe")
-        kb.row(InlineKeyboardButton(text=f"ðŸŽ® {name} {STATUS_ICON.get(cur,'')}", callback_data="sec:nop"), width=1)
+        kb.row(InlineKeyboardButton(text=f"🎮 {name} {STATUS_ICON.get(cur,'')}", callback_data="sec:nop"), width=1)
 
         row = [
-            InlineKeyboardButton(text=f"{MARK_ON if cur=='safe' else MARK_OFF} âœ…", callback_data=f"sec:adm:{code}:safe"),
-            InlineKeyboardButton(text=f"{MARK_ON if cur=='warn' else MARK_OFF} âš ï¸", callback_data=f"sec:adm:{code}:warn"),
-            InlineKeyboardButton(text=f"{MARK_ON if cur=='down' else MARK_OFF} âŒ", callback_data=f"sec:adm:{code}:down"),
+            InlineKeyboardButton(text=f"{MARK_ON if cur=='safe' else MARK_OFF} ✅", callback_data=f"sec:adm:{code}:safe"),
+            InlineKeyboardButton(text=f"{MARK_ON if cur=='warn' else MARK_OFF} ⚠️", callback_data=f"sec:adm:{code}:warn"),
+            InlineKeyboardButton(text=f"{MARK_ON if cur=='down' else MARK_OFF} ❌", callback_data=f"sec:adm:{code}:down"),
         ]
         kb.row(*row, width=3)
 
-    # Ø±Ø¬ÙˆØ¹ Ø¥Ù„Ù‰ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© (Ø¹Ø§Ù…Ù‘Ø©)
+    # رجوع إلى القائمة (عامّة)
     kb.row(InlineKeyboardButton(text=t(lang, "sec.btn_back_list"), callback_data="sec:back_list:main"), width=1)
     return kb
 
@@ -278,16 +275,16 @@ def _main_text(lang: str, *, ping_now: bool = False) -> str:
     g = d.get("global", {})
     st = g.get("status", "safe")
 
-    # Ù…Ù„Ø§ØØ¸Ø© Ø§ÙØªØ±Ø§Ø¶ÙŠØ© Ø¥Ø°Ø§ ÙØ§Ø±ØºØ©
+    # ملاحظة افتراضية إذا فارغة
     note = g.get("note")
     if not note or str(note).strip() == "":
         note = t(lang, "sec.no_note")
 
     updated_at = _format_updated_at(g.get("updated_at"))
-    ping_line = f"\nâ± {t(lang, 'sec.ping_now')}: <code>{_now_ping_str()}</code>" if ping_now else ""
+    ping_line = f"\n⏱ {t(lang, 'sec.ping_now')}: <code>{_now_ping_str()}</code>" if ping_now else ""
 
     return (
-        f"ðŸ›¡ <b>{t(lang, 'sec.title')}</b>\n"
+        f"🛡 <b>{t(lang, 'sec.title')}</b>\n"
         f"{t(lang, 'sec.global_status')}: {status_human(lang, st)}\n"
         f"{t(lang, 'sec.note')}: <i>{note}</i>\n"
         f"{t(lang, 'sec.updated')}: <code>{updated_at}</code>{ping_line}\n\n"
@@ -302,7 +299,7 @@ def _game_text(lang: str, code: str) -> str:
     name = g.get("name", {}).get(lang, g.get("name", {}).get("en", code))
     st = g.get("status", "safe")
 
-    # Ù…Ù„Ø§ØØ¸Ø© Ø§ÙØªØ±Ø§Ø¶ÙŠØ© Ø¥Ø°Ø§ ÙØ§Ø±ØºØ©
+    # ملاحظة افتراضية إذا فارغة
     note = g.get("note")
     if not note or str(note).strip() == "":
         note = t(lang, "sec.no_note")
@@ -313,9 +310,9 @@ def _game_text(lang: str, code: str) -> str:
         f"{t(lang, 'sec.note')}: <i>{note}</i>"
     )
 
-# ====== Ù†Ù‚Ø§Ø· Ø§Ù„Ø¯Ø®ÙˆÙ„ ======
+# ====== نقاط الدخول ======
 
-# ÙØªØ Ù…Ù† Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ© Ø£Ùˆ Ù…Ù† VIP
+# فتح من القائمة الرئيسية أو من VIP
 @router.callback_query(F.data.in_({"security_status", "security_status:vip"}))
 async def security_menu(cb: CallbackQuery):
     lang = L(cb.from_user.id)
@@ -325,7 +322,7 @@ async def security_menu(cb: CallbackQuery):
     await _smart_edit_or_send(cb.message, text, kb)
     await cb.answer()
 
-# ØªØØ¯ÙŠØ« Ø§Ù„Ø´Ø§Ø´Ø© Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ© (ÙŠØØ§ÙØ¸ Ø¹Ù„Ù‰ Ù…ØµØ¯Ø± Ø§Ù„ÙØªØ)
+# تحديث الشاشة الرئيسية (يحافظ على مصدر الفتح)
 @router.callback_query(F.data.regexp(r"^sec:refresh:(vip|main)$"))
 async def security_refresh(cb: CallbackQuery):
     lang = L(cb.from_user.id)
@@ -341,7 +338,7 @@ async def security_refresh(cb: CallbackQuery):
         else:
             raise
 
-# Ø¹Ø±Ø¶ Ù„Ø¹Ø¨Ø© Ù…Ø¹ÙŠÙ‘Ù†Ø© (Ù…Ø¹ Ø±Ø¬ÙˆØ¹ Ø¥Ù„Ù‰ Ù†ÙØ³ Ø§Ù„Ù…ØµØ¯Ø±)
+# عرض لعبة معيّنة (مع رجوع إلى نفس المصدر)
 @router.callback_query(F.data.regexp(r"^sec:game:([^:]+):(vip|main)$"))
 async def security_game(cb: CallbackQuery):
     lang = L(cb.from_user.id)
@@ -354,7 +351,7 @@ async def security_game(cb: CallbackQuery):
     await _smart_edit_or_send(cb.message, text, kb.as_markup())
     await cb.answer()
 
-# Ø±Ø¬ÙˆØ¹ Ø¥Ù„Ù‰ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© (ÙŠØØ§ÙØ¸ Ø¹Ù„Ù‰ Ø§Ù„Ù…ØµØ¯Ø±)
+# رجوع إلى القائمة (يحافظ على المصدر)
 @router.callback_query(F.data.regexp(r"^sec:back_list:(vip|main)$"))
 async def security_back_list(cb: CallbackQuery):
     lang = L(cb.from_user.id)
@@ -364,24 +361,24 @@ async def security_back_list(cb: CallbackQuery):
     await _smart_edit_or_send(cb.message, text, kb)
     await cb.answer()
 
-# ====== Ù„ÙˆØØ© ØªØÙƒÙ… Ø§Ù„Ø£Ø¯Ù…Ù† (Ø¥Ù†Ù„Ø§ÙŠÙ†) ======
+# ====== لوحة تحكم الأدمن (إنلاين) ======
 @router.callback_query(F.data == "sec:admin")
 async def security_admin(cb: CallbackQuery):
     lang = L(cb.from_user.id)
     if not is_admin(cb.from_user.id):
         return await cb.answer(t(lang, "sec.admin.only_admin"), show_alert=True)
-    text = "ðŸ›  " + t(lang, "sec.admin.title")
+    text = "🛠 " + t(lang, "sec.admin.title")
     kb = _kb_admin(lang).as_markup()
     await _smart_edit_or_send(cb.message, text, kb)
     await cb.answer()
 
-# ØªØØ¯ÙŠØ« Ù„ÙˆØØ© Ø§Ù„ØªØÙƒÙ…
+# تحديث لوحة التحكم
 @router.callback_query(F.data == "sec:adm_refresh")
 async def security_admin_refresh(cb: CallbackQuery):
     lang = L(cb.from_user.id)
     if not is_admin(cb.from_user.id):
         return await cb.answer(t(lang, "sec.admin.only_admin"), show_alert=True)
-    text = "ðŸ›  " + t(lang, "sec.admin.title")
+    text = "🛠 " + t(lang, "sec.admin.title")
     kb = _kb_admin(lang).as_markup()
     try:
         await _smart_edit_or_send(cb.message, text, kb)
@@ -409,7 +406,7 @@ async def security_admin_action(cb: CallbackQuery):
     else:
         _set_game(scope_or_code, status, None, cb.from_user.id)
 
-    text = "ðŸ›  " + t(lang, "sec.admin.updated_ok")
+    text = "🛠 " + t(lang, "sec.admin.updated_ok")
     kb = _kb_admin(lang).as_markup()
     await _smart_edit_or_send(cb.message, text, kb)
     await cb.answer()
@@ -418,7 +415,7 @@ async def security_admin_action(cb: CallbackQuery):
 async def security_nop(cb: CallbackQuery):
     await cb.answer()
 
-# ====== Ø£ÙˆØ§Ù…Ø± Ø£Ø¯Ù…Ù† (Ù†ØµÙŠØ©) ======
+# ====== أوامر أدمن (نصية) ======
 # /sec_set safe|warn|down [note...]
 @router.message(Command("sec_set"))
 async def cmd_sec_set(m: Message):
@@ -447,4 +444,3 @@ async def cmd_sec_game(m: Message):
     note = toks[3] if len(toks) > 3 else None
     _set_game(code, status, note, m.from_user.id)
     await m.reply(t(lang, "sec.admin.updated_ok"))
-

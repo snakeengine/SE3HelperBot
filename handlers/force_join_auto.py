@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # handlers/force_join_auto.py
-
+from __future__ import annotations
 import logging
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, ChatMemberUpdated, User

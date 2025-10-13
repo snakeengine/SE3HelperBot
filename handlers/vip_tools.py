@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # handlers/vip_tools.py
-
+from __future__ import annotations
 
 import os, time, asyncio, logging, secrets
 from contextlib import suppress

@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # utils/alerts_policy.py
-
+from __future__ import annotations
 
 import json, time, os, random, datetime as dt
 from pathlib import Path

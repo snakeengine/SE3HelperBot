@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # 📁 handlers/reseller.py
-
+from __future__ import annotations
 
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message, InlineKeyboardMarkup, InlineKeyboardButton

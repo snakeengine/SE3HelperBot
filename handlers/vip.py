@@ -1,8 +1,5 @@
-from __future__ import annotations
-
-from utils.admins import get_admin_ids, is_admin, get_owner_ids
 # handlers/vip.py
-
+from __future__ import annotations
 
 import os, re, time, json
 from pathlib import Path
@@ -16,7 +13,7 @@ from aiogram.types import (
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest
-from aiogram.filters import StateFilter  # Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ø§Ø³ØªÙŠØ±Ø§Ø¯
+from aiogram.filters import StateFilter  # إضافة الاستيراد
 
 from lang import t, get_user_lang
 from utils.vip_store import (
@@ -27,7 +24,7 @@ from utils.vip_store import (
 
 router = Router(name="vip_router")
 
-# ===== ØªØ®Ø²ÙŠÙ† Ø±Ø³Ø§Ø¦Ù„ Ø§Ù„Ø¥Ø¯Ù…Ù† Ø§Ù„Ù…Ø±ØªØ¨Ø·Ø© Ø¨Ø§Ù„Ø·Ù„Ø¨Ø§Øª =====
+# ===== تخزين رسائل الإدمن المرتبطة بالطلبات =====
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 ADMIN_MSGS_FILE = DATA_DIR / "vip_admin_msgs.json"
@@ -65,7 +62,7 @@ def _admin_msgs_pop(uid: int) -> dict | None:
 def _admin_msgs_clear(uid: int) -> None:
     _admin_msgs_pop(uid)
 
-# ---- Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø¹Ø§Ù…Ø© ----
+# ---- إعدادات عامة ----
 VIP_DEFAULT_DAYS = int(os.getenv("VIP_DEFAULT_DAYS", "30"))
 
 def _load_admin_ids() -> set[int]:
@@ -87,7 +84,7 @@ def _ulang(uid: int) -> str:
 def _admin_only(cb: CallbackQuery) -> bool:
     return bool(cb.from_user and (cb.from_user.id in ADMIN_IDS))
 
-# ====== Ù…Ø³Ø§Ø¹Ø¯ ØªØ±Ø¬Ù…Ø© Ø¨ÙÙˆÙ„Ø¨Ø§Ùƒ ======
+# ====== مساعد ترجمة بفولباك ======
 def _tr(lang: str, key: str, en: str, ar: str) -> str:
     v = t(lang, key)
     if isinstance(v, str) and v.strip() and v != key:
@@ -101,7 +98,7 @@ def _tr_fmt(lang: str, key: str, en: str, ar: str, **fmt) -> str:
     except Exception:
         return base
 
-# ---- Ø§Ù„ØªØÙ‚Ù‚ Ù…Ù† SNAKE ID ----
+# ---- التحقق من SNAKE ID ----
 _RX_NUMERIC = re.compile(r"^\d{4,10}$")
 _RX_GENERIC = re.compile(r"^[A-Za-z0-9._\-]{3,80}$")
 def _is_valid_app_id(text: str) -> bool:
@@ -130,7 +127,7 @@ def _humanize_seconds(s: int) -> str:
     if r: parts.append(f"{r}s")
     return " ".join(parts) if parts else "0s"
 
-# ---- ÙØØµ ÙˆØ¬ÙˆØ¯ Ù†ÙØ³ Ø§Ù„Ù…Ø¹Ø±Ù ÙÙŠ Ø§Ù„Ø·Ù„Ø¨Ø§Øª Ø§Ù„Ù…Ø¹Ù„Ù‘Ù‚Ø© Ù„Ø£ÙŠ Ù…Ø³ØªØ®Ø¯Ù… ----
+# ---- فحص وجود نفس المعرف في الطلبات المعلّقة لأي مستخدم ----
 def _is_app_in_pending(app_id: str) -> tuple[bool, int | None]:
     try:
         from utils.vip_store import _safe_read, PENDING_FILE  # type: ignore
@@ -145,7 +142,7 @@ def _is_app_in_pending(app_id: str) -> tuple[bool, int | None]:
         pass
     return False, None
 
-# ===================== Ù‡ÙŠÙ„Ø¨Ø± Ø°ÙƒÙŠ Ù„Ù„Ø¹Ø±Ø¶ =====================
+# ===================== هيلبر ذكي للعرض =====================
 async def _smart_show(cb: CallbackQuery, text: str, *, reply_markup=None,
                       parse_mode: ParseMode = ParseMode.HTML):
     m = cb.message
@@ -158,28 +155,28 @@ async def _smart_show(cb: CallbackQuery, text: str, *, reply_markup=None,
     except TelegramBadRequest:
         return await m.answer(text, reply_markup=reply_markup, parse_mode=parse_mode, disable_web_page_preview=True)
 
-# ---- ØØ§Ù„Ø§Øª ----
+# ---- حالات ----
 class VipApplyFSM(StatesGroup):
     waiting_app_id = State()
     confirm_terms  = State()
-    waiting_seller = State()   # Ø¬Ø¯ÙŠØ¯: Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ø¨Ø§Ø¦Ø¹
-    waiting_proof  = State()   # Ø¬Ø¯ÙŠØ¯: Ø¥Ø«Ø¨Ø§Øª Ø§Ù„Ø¯ÙØ¹
+    waiting_seller = State()   # جديد: معلومات البائع
+    waiting_proof  = State()   # جديد: إثبات الدفع
 
 class AdminCustomSecsFSM(StatesGroup):
     waiting_secs = State()
 
-# ---- Ù„ÙˆØØ§Øª ----
+# ---- لوحات ----
 def _vip_menu_kb(lang: str, *, is_member: bool, has_pending: bool):
     kb = InlineKeyboardBuilder()
     if is_member:
-        kb.button(text="âš¡ " + t(lang, "vip.tools.title"), callback_data="vip:open_tools")
+        kb.button(text="⚡ " + t(lang, "vip.tools.title"), callback_data="vip:open_tools")
         kb.button(text=t(lang, "vip.btn.info"), callback_data="vip:info")
         kb.adjust(1)
     else:
         kb.button(text=t(lang, "vip.btn.apply"), callback_data="vip:apply")
         if has_pending:
-            kb.button(text="ðŸ“¨ " + t(lang, "vip.btn.track"), callback_data="vip:track")
-            kb.button(text="â›” " + t(lang, "vip.btn.cancel"), callback_data="vip:cancel")
+            kb.button(text="📨 " + t(lang, "vip.btn.track"), callback_data="vip:track")
+            kb.button(text="⛔ " + t(lang, "vip.btn.cancel"), callback_data="vip:cancel")
         kb.adjust(1)
     return kb.as_markup()
 
@@ -189,22 +186,22 @@ def _admin_review_kb(user_id: int, app_id: str, lang: str) -> InlineKeyboardMark
     kb.button(text=t(lang, "vip.admin.reject"), callback_data=f"vip:reject:{user_id}")
     kb.button(text=t(lang, "vip.admin.custom_secs"), callback_data=f"vip:approve_secs:{user_id}")
     kb.adjust(3)
-    kb.row(InlineKeyboardButton(text=f"ðŸ‘¤ {t(lang, 'vip.admin.user')} {user_id}", callback_data="vip:noop"))
-    kb.row(InlineKeyboardButton(text=f"ðŸ†” {t(lang, 'vip.admin.app_id')}: {app_id}", callback_data="vip:noop"))
+    kb.row(InlineKeyboardButton(text=f"👤 {t(lang, 'vip.admin.user')} {user_id}", callback_data="vip:noop"))
+    kb.row(InlineKeyboardButton(text=f"🆔 {t(lang, 'vip.admin.app_id')}: {app_id}", callback_data="vip:noop"))
     return kb.as_markup()
 
-# ===== Ù†Ù‚Ø§Ø· Ø§Ù„Ø¯Ø®ÙˆÙ„ =====
+# ===== نقاط الدخول =====
 
-# Ù†Øµ ØØ± Ù„Ø§ ÙŠØ¨Ø¯Ø£ Ø¨Ø´Ø±Ø·Ø© Ù…Ø§Ø¦Ù„Ø© (Ù„ÙŠØ³ Ø£Ù…Ø±Ø§Ù‹)
+# نص حر لا يبدأ بشرطة مائلة (ليس أمراً)
 CMD_FREE_TEXT = F.text.func(lambda s: isinstance(s, str) and not s.lstrip().startswith("/"))
 
-# Ø£Ù…Ø± Ø¥Ù„ØºØ§Ø¡ Ø¹Ø§Ù… Ù„Ø£ÙŠ ØØ§Ù„Ø© VIP
+# أمر إلغاء عام لأي حالة VIP
 @router.message(Command("cancel"))
 async def vip_cancel_cmd(m: Message, state: FSMContext):
     if await state.get_state():
         await state.clear()
         lang = get_user_lang(m.from_user.id) or "ar"
-        await m.reply(t(lang, "vip.cancelled") or "ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø§Ù„Ø¹Ù…Ù„ÙŠØ©. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ø³ØªØ®Ø¯Ø§Ù… /start Ø£Ùˆ /help.")
+        await m.reply(t(lang, "vip.cancelled") or "تم إلغاء العملية. يمكنك استخدام /start أو /help.")
 
 @router.message(Command("vip"))
 async def vip_cmd(msg: Message, state: FSMContext):
@@ -217,7 +214,7 @@ async def vip_cmd(msg: Message, state: FSMContext):
         meta = get_vip_meta(msg.from_user.id) or {}
         expiry_str = _fmt_ts(meta.get("expiry_ts"), date_only=True)
         if expiry_str != "-":
-            header.append(f"ðŸ—“ï¸ {t(lang, 'vip.expires_on')}: {expiry_str}")
+            header.append(f"🗓️ {t(lang, 'vip.expires_on')}: {expiry_str}")
     await msg.answer(
         "\n".join(header) + "\n" +
         (t(lang, "vip.menu.subscribed") if member else t(lang, "vip.menu.not_subscribed")),
@@ -231,11 +228,11 @@ async def vip_status_cmd(msg: Message):
     if is_vip(msg.from_user.id):
         meta = get_vip_meta(msg.from_user.id) or {}
         expiry_str = _fmt_ts(meta.get("expiry_ts"), date_only=True)
-        suffix = f"\nðŸ—“ï¸ {t(lang, 'vip.expires_on')}: {expiry_str}" if expiry_str != "-" else ""
+        suffix = f"\n🗓️ {t(lang, 'vip.expires_on')}: {expiry_str}" if expiry_str != "-" else ""
         return await msg.answer(t(lang, "vip.status.ok") + suffix)
     pend = get_pending(msg.from_user.id)
     if pend:
-        ticket = pend.get("ticket_id", "â€”")
+        ticket = pend.get("ticket_id", "—")
         when = _fmt_ts(pend.get("ts"))
         appid = pend.get("app_id", "-")
         return await msg.answer(
@@ -250,7 +247,7 @@ async def vip_track_cmd(msg: Message):
     pend = get_pending(msg.from_user.id)
     if not pend:
         return await msg.answer(t(lang, "vip.track.none"))
-    ticket = pend.get("ticket_id", "â€”")
+    ticket = pend.get("ticket_id", "—")
     when = _fmt_ts(pend.get("ts"))
     appid = pend.get("app_id", "-")
     await msg.answer(
@@ -269,7 +266,7 @@ async def vip_open(cb: CallbackQuery, state: FSMContext):
         meta = get_vip_meta(cb.from_user.id) or {}
         expiry_str = _fmt_ts(meta.get("expiry_ts"), date_only=True)
         if expiry_str != "-":
-            header.append(f"ðŸ—“ï¸ {t(lang, 'vip.expires_on')}: {expiry_str}")
+            header.append(f"🗓️ {t(lang, 'vip.expires_on')}: {expiry_str}")
     text = "\n".join(header) + "\n" + (t(lang, "vip.menu.subscribed") if member else t(lang, "vip.menu.not_subscribed"))
     await _smart_show(
         cb,
@@ -279,7 +276,7 @@ async def vip_open(cb: CallbackQuery, state: FSMContext):
     )
     await cb.answer()
 
-# ===== Ù…Ø³Ø§Ø± Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… =====
+# ===== مسار التقديم =====
 @router.callback_query(F.data == "vip:apply")
 async def vip_apply(cb: CallbackQuery, state: FSMContext):
     lang = get_user_lang(cb.from_user.id) or "en"
@@ -314,7 +311,7 @@ async def vip_receive_appid(msg: Message, state: FSMContext):
         expiry_str = _fmt_ts(meta.get("expiry_ts"), date_only=True)
         return await msg.answer(
             t(lang, "vip.menu.subscribed") +
-            (f"\nðŸ—“ï¸ {t(lang,'vip.expires_on')}: {expiry_str}" if expiry_str != "-" else "")
+            (f"\n🗓️ {t(lang,'vip.expires_on')}: {expiry_str}" if expiry_str != "-" else "")
         )
 
     owner = find_uid_by_app(app_id)
@@ -325,27 +322,27 @@ async def vip_receive_appid(msg: Message, state: FSMContext):
             expiry_str = _fmt_ts(meta.get("expiry_ts"), date_only=True)
             return await msg.answer(
                 _tr(lang, "vip.appid.already_owned_you",
-                    "âœ… This ID already belongs to you and your VIP is active.",
-                    "âœ… Ù‡Ø°Ø§ Ø§Ù„Ù…Ø¹Ø±Ù Ù…Ø³ØªØ®Ø¯Ù… Ù„Ø¯ÙŠÙƒ Ø¨Ø§Ù„ÙØ¹Ù„ ÙˆØ§Ø´ØªØ±Ø§ÙƒÙƒ ÙØ¹Ù‘Ø§Ù„.")
-                + (f"\nðŸ—“ï¸ {t(lang,'vip.expires_on')}: {expiry_str}" if expiry_str != "-" else "")
+                    "✅ This ID already belongs to you and your VIP is active.",
+                    "✅ هذا المعرف مستخدم لديك بالفعل واشتراكك فعّال.")
+                + (f"\n🗓️ {t(lang,'vip.expires_on')}: {expiry_str}" if expiry_str != "-" else "")
             )
         else:
             return await msg.answer(
                 _tr(lang, "vip.appid.used_by_other",
-                    "âš ï¸ This SNAKE ID is already linked to another account. If you are the owner, contact support.",
-                    "âš ï¸ Ù‡Ø°Ø§ SNAKE ID Ù…Ø³ØªØ®Ø¯Ù… Ù„Ø¯Ù‰ ØØ³Ø§Ø¨ Ø¢Ø®Ø±. Ø¥Ù† ÙƒÙ†Øª Ø§Ù„Ù…Ø§Ù„Ùƒ Ø§Ù„ØÙ‚ÙŠÙ‚ÙŠØŒ ØªÙˆØ§ØµÙ„ Ù…Ø¹ Ø§Ù„Ø¯Ø¹Ù….")
+                    "⚠️ This SNAKE ID is already linked to another account. If you are the owner, contact support.",
+                    "⚠️ هذا SNAKE ID مستخدم لدى حساب آخر. إن كنت المالك الحقيقي، تواصل مع الدعم.")
             )
 
     in_pend, pend_uid = _is_app_in_pending(app_id)
     if in_pend:
         if pend_uid == user_id:
             return await msg.answer(_tr(lang, "vip.pending.same_app",
-                                        "â„¹ï¸ You already have a pending request with this ID. Please wait.",
-                                        "â„¹ï¸ Ù„Ø¯ÙŠÙƒ Ø·Ù„Ø¨ Ù‚ÙŠØ¯ Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø© Ø¨Ù‡Ø°Ø§ Ø§Ù„Ù…Ø¹Ø±Ù Ø¨Ø§Ù„ÙØ¹Ù„. ÙŠØ±Ø¬Ù‰ Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø±."))
+                                        "ℹ️ You already have a pending request with this ID. Please wait.",
+                                        "ℹ️ لديك طلب قيد المراجعة بهذا المعرف بالفعل. يرجى الانتظار."))
         else:
             return await msg.answer(_tr(lang, "vip.pending.other_user",
-                                        "â³ Another user has a pending request with the same ID. Please wait or contact support.",
-                                        "â³ Ù‡Ù†Ø§Ùƒ Ø·Ù„Ø¨ Ø¢Ø®Ø± Ù‚ÙŠØ¯ Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø© Ø¨Ù†ÙØ³ Ø§Ù„Ù…Ø¹Ø±Ù Ù…Ù† Ù…Ø³ØªØ®Ø¯Ù… Ù…Ø®ØªÙ„Ù. ÙŠØ±Ø¬Ù‰ Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø± Ø£Ùˆ Ø§Ù„ØªÙˆØ§ØµÙ„ Ù…Ø¹ Ø§Ù„Ø¯Ø¹Ù…."))
+                                        "⏳ Another user has a pending request with the same ID. Please wait or contact support.",
+                                        "⏳ هناك طلب آخر قيد المراجعة بنفس المعرف من مستخدم مختلف. يرجى الانتظار أو التواصل مع الدعم."))
 
     if get_pending(user_id):
         await state.clear()
@@ -361,7 +358,7 @@ async def vip_receive_appid(msg: Message, state: FSMContext):
     kb.adjust(2)
     await msg.answer(warn_text, reply_markup=kb.as_markup(), parse_mode=ParseMode.HTML)
 
-# ===== ØªØ£ÙƒÙŠØ¯/Ø¥Ù„ØºØ§Ø¡ =====
+# ===== تأكيد/إلغاء =====
 @router.callback_query(F.data == "vip:apply_abort")
 async def vip_apply_abort(cb: CallbackQuery, state: FSMContext):
     lang = get_user_lang(cb.from_user.id) or "en"
@@ -387,7 +384,7 @@ async def vip_apply_abort(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "vip:apply_confirm")
 async def vip_apply_confirm(cb: CallbackQuery, state: FSMContext):
-    """Ø¨Ø¹Ø¯ Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø© Ø¹Ù„Ù‰ Ø§Ù„ØªØØ°ÙŠØ± Ù†Ø·Ù„Ø¨: 1) Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ø¨Ø§Ø¦Ø¹ØŒ 2) Ø¥Ø«Ø¨Ø§Øª Ø§Ù„Ø¯ÙØ¹."""
+    """بعد الموافقة على التحذير نطلب: 1) معلومات البائع، 2) إثبات الدفع."""
     lang = get_user_lang(cb.from_user.id) or "en"
     data = await state.get_data()
     app_id = normalize_app_id(str(data.get("pending_app_id", "")))
@@ -396,22 +393,22 @@ async def vip_apply_confirm(cb: CallbackQuery, state: FSMContext):
         await cb.answer(t(lang, "vip.apply.stale_or_invalid"), show_alert=True)
         return
 
-    # Ù†Ø¸Ù‘Ù Ø§Ù„ÙƒÙŠØ¨ÙˆØ±Ø¯ Ø§Ù„Ù‚Ø¯ÙŠÙ…
+    # نظّف الكيبورد القديم
     try:
         await cb.message.edit_reply_markup()
     except Exception:
         pass
 
-    # Ø§Ù†ØªÙ‚Ù„ Ù„Ø·Ù„Ø¨ Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ø¨Ø§Ø¦Ø¹
+    # انتقل لطلب معلومات البائع
     await state.set_state(VipApplyFSM.waiting_seller)
     await cb.message.answer(
         _tr(lang, "vip.apply.ask_seller",
             "Send the seller ID/number you paid to (e.g. @seller or 9665xxxx).",
-            "Ø£Ø±Ø³Ù„ Ù…Ø¹Ø±Ù/Ø±Ù‚Ù… Ø§Ù„Ø¨Ø§Ø¦Ø¹ Ø§Ù„Ø°ÙŠ Ø¯ÙØ¹Øª Ù„Ù‡ (Ù…Ø«Ø§Ù„: @seller Ø£Ùˆ 9665xxxx).")
+            "أرسل معرف/رقم البائع الذي دفعت له (مثال: @seller أو 9665xxxx).")
     )
     await cb.answer()
 
-# ===== Ø§Ø³ØªÙ„Ø§Ù… Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ø¨Ø§Ø¦Ø¹ =====
+# ===== استلام معلومات البائع =====
 @router.message(StateFilter(VipApplyFSM.waiting_seller), CMD_FREE_TEXT)
 async def vip_apply_seller(msg: Message, state: FSMContext):
     lang = get_user_lang(msg.from_user.id) or "en"
@@ -419,9 +416,9 @@ async def vip_apply_seller(msg: Message, state: FSMContext):
     if not raw:
         return await msg.reply(_tr(lang, "vip.apply.bad_seller",
                                    "Please send a valid seller username or number.",
-                                   "Ø£Ø±Ø³Ù„ Ø§Ø³Ù… Ù…Ø³ØªØ®Ø¯Ù… Ø£Ùˆ Ø±Ù‚Ù… Ø¨Ø§Ø¦Ø¹ ØµØÙŠØ."))
+                                   "أرسل اسم مستخدم أو رقم بائع صحيح."))
 
-    # Ù‚Ø¨ÙˆÙ„ @username Ø£Ùˆ Ø±Ù‚Ù… (Ù…Ø¹ + Ø§Ø®ØªÙŠØ§Ø±ÙŠ) Ø£Ùˆ t.me/username
+    # قبول @username أو رقم (مع + اختياري) أو t.me/username
     s = raw
     m = re.match(r"^(?:https?://)?t\.me/(@?[A-Za-z0-9_]{3,})/?$", s, re.IGNORECASE)
     if m:
@@ -432,7 +429,7 @@ async def vip_apply_seller(msg: Message, state: FSMContext):
     if not (is_username or is_numeric):
         return await msg.reply(_tr(lang, "vip.apply.bad_seller",
                                    "Please send a valid seller username or number.",
-                                   "Ø£Ø±Ø³Ù„ Ø§Ø³Ù… Ù…Ø³ØªØ®Ø¯Ù… Ø£Ùˆ Ø±Ù‚Ù… Ø¨Ø§Ø¦Ø¹ ØµØÙŠØ."))
+                                   "أرسل اسم مستخدم أو رقم بائع صحيح."))
 
     seller_val = num if is_numeric else (s if s.startswith("@") else f"@{s}")
 
@@ -441,10 +438,10 @@ async def vip_apply_seller(msg: Message, state: FSMContext):
     await msg.reply(
         _tr(lang, "vip.apply.ask_proof",
             "Send a payment confirmation screenshot now (photo or file). You may add a note in the caption.",
-            "Ø£Ø±Ø³Ù„ Ø§Ù„Ø¢Ù† Ù„Ù‚Ø·Ø© Ø´Ø§Ø´Ø© Ù„ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ø¯ÙØ¹ (ØµÙˆØ±Ø© Ø£Ùˆ Ù…Ù„Ù). ÙŠÙ…ÙƒÙ†Ùƒ Ø¥Ø¶Ø§ÙØ© Ù…Ù„Ø§ØØ¸Ø© ÙÙŠ Ø§Ù„ØªØ¹Ù„ÙŠÙ‚.")
+            "أرسل الآن لقطة شاشة لتأكيد الدفع (صورة أو ملف). يمكنك إضافة ملاحظة في التعليق.")
     )
 
-# ===== Ø§Ø³ØªÙ„Ø§Ù… Ø¥Ø«Ø¨Ø§Øª Ø§Ù„Ø¯ÙØ¹ =====
+# ===== استلام إثبات الدفع =====
 @router.message(
     VipApplyFSM.waiting_proof,
     F.content_type.in_({ContentType.PHOTO, ContentType.DOCUMENT})
@@ -458,12 +455,12 @@ async def vip_apply_proof(msg: Message, state: FSMContext):
         await state.clear()
         return await msg.reply(t(lang, "vip.apply.stale_or_invalid"))
 
-    # Ø¬Ù‡Ù‘Ø² Ø§Ù„Ø¥Ø«Ø¨Ø§Øª
+    # جهّز الإثبات
     proof_kind = "photo" if msg.photo else "document"
     file_id = msg.photo[-1].file_id if msg.photo else msg.document.file_id
     caption = msg.caption or ""
 
-    # Ø£Ù†Ø´Ø¦ ØªØ°ÙƒØ±Ø©/Ø·Ù„Ø¨ Ù…Ø¹Ù„Ù‘Ù‚ Ø«Ù… Ø£Ø®Ø·ÙØ± Ø§Ù„Ø¥Ø¯Ù…Ù†ÙŠÙ† Ù…Ø¹ Ø§Ù„Ø¥Ø«Ø¨Ø§Øª
+    # أنشئ تذكرة/طلب معلّق ثم أخطِر الإدمنين مع الإثبات
     user_id = msg.from_user.id
     if get_pending(user_id):
         await state.clear()
@@ -478,10 +475,10 @@ async def vip_apply_proof(msg: Message, state: FSMContext):
             al = _ulang(admin_id)
             head = (
                 f"{t(al, 'vip.admin.new_request_title')}\n"
-                f"ðŸŽ« <b>{t(al, 'vip.ticket_id')}</b>: <code>{ticket_id}</code>\n"
-                f"ðŸ‘¤ {t(al, 'vip.admin.user')}: <code>{user_id}</code>\n"
-                f"ðŸ†” {t(al, 'vip.admin.app_id')}: <code>{app_id}</code>\n"
-                f"ðŸ§¾ " + _tr(al, "vip.admin.seller_line", "Seller:", "Ø§Ù„Ø¨Ø§Ø¦Ø¹:") + f" <code>{seller}</code>\n\n"
+                f"🎫 <b>{t(al, 'vip.ticket_id')}</b>: <code>{ticket_id}</code>\n"
+                f"👤 {t(al, 'vip.admin.user')}: <code>{user_id}</code>\n"
+                f"🆔 {t(al, 'vip.admin.app_id')}: <code>{app_id}</code>\n"
+                f"🧾 " + _tr(al, "vip.admin.seller_line", "Seller:", "البائع:") + f" <code>{seller}</code>\n\n"
                 f"{t(al, 'vip.admin.instructions')}"
             )
             header_msg = await msg.bot.send_message(
@@ -491,7 +488,7 @@ async def vip_apply_proof(msg: Message, state: FSMContext):
             _admin_msgs_add(user_id, admin_id, header_msg.message_id, ticket_id)
 
             proof_caption = (
-                _tr(al, "vip.admin.payment_proof", "Payment proof", "Ø¥Ø«Ø¨Ø§Øª Ø§Ù„Ø¯ÙØ¹") +
+                _tr(al, "vip.admin.payment_proof", "Payment proof", "إثبات الدفع") +
                 (f"\n{caption}" if caption else "")
             )
             if proof_kind == "photo":
@@ -515,8 +512,8 @@ async def vip_apply_proof(msg: Message, state: FSMContext):
     await msg.answer(
         _tr_fmt(
             lang, "vip.apply.sent_with_ticket_ext",
-            "âœ… Your request was submitted.\nðŸŽ« Ticket: <code>{ticket}</code>\nðŸ“Œ Submitted: {when}",
-            "âœ… ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø·Ù„Ø¨Ùƒ.\nðŸŽ« Ø±Ù‚Ù… Ø§Ù„ØªØ°ÙƒØ±Ø©: <code>{ticket}</code>\nðŸ“Œ ÙˆÙ‚Øª Ø§Ù„Ø¥Ø±Ø³Ø§Ù„: {when}",
+            "✅ Your request was submitted.\n🎫 Ticket: <code>{ticket}</code>\n📌 Submitted: {when}",
+            "✅ تم إرسال طلبك.\n🎫 رقم التذكرة: <code>{ticket}</code>\n📌 وقت الإرسال: {when}",
             ticket=ticket_id, when=submitted_at
         ),
         parse_mode=ParseMode.HTML
@@ -528,10 +525,10 @@ async def vip_apply_proof_invalid(msg: Message, state: FSMContext):
     await msg.reply(
         _tr(lang, "vip.apply.bad_proof",
             "Please send a photo or a file as payment proof.",
-            "ÙØ¶Ù„Ù‹Ø§ Ø£Ø±Ø³Ù„ ØµÙˆØ±Ø© Ø£Ùˆ Ù…Ù„ÙÙ‹Ø§ ÙƒØ¥Ø«Ø¨Ø§Øª Ø¯ÙØ¹.")
+            "فضلًا أرسل صورة أو ملفًا كإثبات دفع.")
     )
 
-# ===== Ø²Ø± ØªØªØ¨Ù‘Ø¹ Ù…Ù† Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© =====
+# ===== زر تتبّع من القائمة =====
 @router.callback_query(F.data == "vip:track")
 async def vip_track_btn(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
@@ -539,7 +536,7 @@ async def vip_track_btn(cb: CallbackQuery):
     if not pend:
         await cb.answer(t(lang, "vip.track.none"), show_alert=True)
         return
-    ticket = pend.get("ticket_id", "â€”")
+    ticket = pend.get("ticket_id", "—")
     when = _fmt_ts(pend.get("ts"))
     appid = pend.get("app_id", "-")
     await cb.message.answer(
@@ -548,7 +545,7 @@ async def vip_track_btn(cb: CallbackQuery):
     )
     await cb.answer()
 
-# ===== Ø¥Ù„ØºØ§Ø¡ Ø§Ù„Ø·Ù„Ø¨ =====
+# ===== إلغاء الطلب =====
 @router.callback_query(F.data == "vip:cancel")
 async def vip_cancel(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
@@ -557,7 +554,7 @@ async def vip_cancel(cb: CallbackQuery):
         await cb.answer(t(lang, "vip.cancel.no_pending"), show_alert=True)
         return
 
-    ticket_id = pend.get("ticket_id", "â€”")
+    ticket_id = pend.get("ticket_id", "—")
     user_id = cb.from_user.id
 
     pop_pending(user_id)
@@ -602,7 +599,7 @@ async def vip_cancel(cb: CallbackQuery):
     except Exception:
         pass
 
-# ===== Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª Ø§Ù„Ø£Ø¯Ù…Ù† =====
+# ===== إجراءات الأدمن =====
 @router.callback_query(F.data.startswith("vip:approve:"))
 async def vip_approve(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
@@ -623,8 +620,8 @@ async def vip_approve(cb: CallbackQuery):
     owner = find_uid_by_app(app_id)
     if owner is not None and int(owner) != user_id:
         await cb.answer(_tr(lang, "vip.appid.taken_during",
-                            "âš ï¸ This ID is now linked to another account. Process stopped.",
-                            "âš ï¸ Ù‡Ø°Ø§ Ø§Ù„Ù…Ø¹Ø±Ù Ø£ØµØ¨Ø Ù…Ø³ØªØ®Ø¯Ù…Ù‹Ø§ Ù„ØØ³Ø§Ø¨ Ø¢Ø®Ø±. Ø£ÙˆÙ‚ÙÙ†Ø§ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡."),
+                            "⚠️ This ID is now linked to another account. Process stopped.",
+                            "⚠️ هذا المعرف أصبح مستخدمًا لحساب آخر. أوقفنا الإجراء."),
                         show_alert=True)
         return
 
@@ -636,12 +633,12 @@ async def vip_approve(cb: CallbackQuery):
     meta = get_vip_meta(user_id) or {}
     exp_str = _fmt_ts(meta.get("expiry_ts"), date_only=True)
 
-    # Ø¥Ø´Ø¹Ø§Ø± Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø¨Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø©
+    # إشعار المستخدم بالموافقة
     try:
         u_lang = _ulang(user_id)
         msg = _tr_fmt(u_lang, "vip.user.approved",
-                      "âœ… Your VIP was activated.\nðŸ“… Expires on: {exp}",
-                      "âœ… ØªÙ… ØªÙØ¹ÙŠÙ„ Ø§Ø´ØªØ±Ø§Ùƒ VIP Ø§Ù„Ø®Ø§Øµ Ø¨Ùƒ.\nðŸ“… ÙŠÙ†ØªÙ‡ÙŠ ÙÙŠ: {exp}",
+                      "✅ Your VIP was activated.\n📅 Expires on: {exp}",
+                      "✅ تم تفعيل اشتراك VIP الخاص بك.\n📅 ينتهي في: {exp}",
                       exp=exp_str)
         await cb.bot.send_message(user_id, msg, parse_mode=ParseMode.HTML)
     except Exception:
@@ -649,9 +646,9 @@ async def vip_approve(cb: CallbackQuery):
 
     note = t(lang, "vip.admin.approved_note").format(user_id=user_id, app_id=app_id)
     if ticket_id:
-        note += f"\nðŸŽ« {t(lang, 'vip.ticket_id')}: <code>{ticket_id}</code>"
+        note += f"\n🎫 {t(lang, 'vip.ticket_id')}: <code>{ticket_id}</code>"
     if exp_str != "-":
-        note += f"\nðŸ—“ï¸ {t(lang,'vip.expires_on')}: <b>{exp_str}</b>"
+        note += f"\n🗓️ {t(lang,'vip.expires_on')}: <b>{exp_str}</b>"
 
     await _smart_show(cb, note, parse_mode=ParseMode.HTML)
     await cb.answer()
@@ -683,12 +680,12 @@ async def vip_reject(cb: CallbackQuery):
 
     note = t(lang, "vip.admin.rejected_note").format(user_id=user_id)
     if ticket_id:
-        note += f"\nðŸŽ« {t(lang, 'vip.ticket_id')}: <code>{ticket_id}</code>"
+        note += f"\n🎫 {t(lang, 'vip.ticket_id')}: <code>{ticket_id}</code>"
 
     await _smart_show(cb, note, parse_mode=ParseMode.HTML)
     await cb.answer()
 
-# ===== Ù…ÙˆØ§ÙÙ‚Ø© Ø¨Ù…Ø¯Ø© Ù…Ø®ØµÙ‘ØµØ© =====
+# ===== موافقة بمدة مخصّصة =====
 @router.callback_query(F.data.startswith("vip:approve_secs:"))
 async def vip_approve_secs_start(cb: CallbackQuery, state: FSMContext):
     lang = get_user_lang(cb.from_user.id) or "en"
@@ -708,7 +705,7 @@ async def vip_approve_secs_start(cb: CallbackQuery, state: FSMContext):
     await state.update_data(pending_uid=user_id, app_id=app_id)
     await cb.message.answer(_tr(lang, "vip.admin.ask_secs",
                                 "Enter subscription duration in **seconds** (e.g. 2592000 for 30 days).",
-                                "Ø£Ø¯Ø®Ù„ Ù…Ø¯Ø© Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ Ø§Ù„Ù…Ø·Ù„ÙˆØ¨Ø© **Ø¨Ø§Ù„Ø«ÙˆØ§Ù†ÙŠ** (Ù…Ø«Ù„: 2592000 Ù„Ù…Ø¯Ø© 30 ÙŠÙˆÙ…)."),
+                                "أدخل مدة الاشتراك المطلوبة **بالثواني** (مثل: 2592000 لمدة 30 يوم)."),
                             parse_mode=ParseMode.MARKDOWN)
     await cb.answer()
 
@@ -723,7 +720,7 @@ async def vip_approve_secs_recv(msg: Message, state: FSMContext):
     except Exception:
         return await msg.answer(_tr(lang, "vip.admin.bad_secs",
                                     "Invalid value. Send seconds only (1 .. 315360000).",
-                                    "Ù‚ÙŠÙ…Ø© ØºÙŠØ± ØµØÙŠØØ©. Ø£Ø¯Ø®Ù„ Ø¹Ø¯Ø¯ Ø§Ù„Ø«ÙˆØ§Ù†ÙŠ ÙÙ‚Ø· (1 .. 315360000)."))
+                                    "قيمة غير صحيحة. أدخل عدد الثواني فقط (1 .. 315360000)."))
 
     data = await state.get_data()
     uid = int(data.get("pending_uid", 0))
@@ -736,8 +733,8 @@ async def vip_approve_secs_recv(msg: Message, state: FSMContext):
     owner = find_uid_by_app(app_id)
     if owner is not None and int(owner) != uid:
         return await msg.answer(_tr(lang, "vip.appid.taken_during",
-                                    "âš ï¸ This ID is now linked to another account. Process cancelled.",
-                                    "âš ï¸ Ù‡Ø°Ø§ Ø§Ù„Ù…Ø¹Ø±Ù Ø£ØµØ¨Ø Ù…Ø³ØªØ®Ø¯Ù…Ù‹Ø§ Ù„ØØ³Ø§Ø¨ Ø¢Ø®Ø±. Ø§Ù„Ø¹Ù…Ù„ÙŠØ© Ø£ÙÙ„ØºÙŠØª."))
+                                    "⚠️ This ID is now linked to another account. Process cancelled.",
+                                    "⚠️ هذا المعرف أصبح مستخدمًا لحساب آخر. العملية أُلغيت."))
 
     pop_pending(uid)
     _admin_msgs_clear(uid)
@@ -750,11 +747,11 @@ async def vip_approve_secs_recv(msg: Message, state: FSMContext):
 
     await msg.answer(
         _tr_fmt(lang, "vip.admin.custom_secs_done_admin",
-                "âœ… Approved UID <code>{uid}</code> on SNAKE ID <code>{app_id}</code>\nâ± Added: <b>{human}</b>\n{expiry}",
-                "âœ… ØªÙ… Ù‚Ø¨ÙˆÙ„ UID <code>{uid}</code> Ø¹Ù„Ù‰ SNAKE ID <code>{app_id}</code>\nâ± Ø§Ù„Ù…Ø¯Ø© Ø§Ù„Ù…Ø¶Ø§ÙØ©: <b>{human}</b>\n{expiry}",
+                "✅ Approved UID <code>{uid}</code> on SNAKE ID <code>{app_id}</code>\n⏱ Added: <b>{human}</b>\n{expiry}",
+                "✅ تم قبول UID <code>{uid}</code> على SNAKE ID <code>{app_id}</code>\n⏱ المدة المضافة: <b>{human}</b>\n{expiry}",
                 uid=uid, app_id=app_id,
                 human=human,
-                expiry=(f"ðŸ—“ï¸ {t(lang,'vip.expires_on')}: <b>{exp_str}</b>" if exp_str != "-" else "")
+                expiry=(f"🗓️ {t(lang,'vip.expires_on')}: <b>{exp_str}</b>" if exp_str != "-" else "")
         ),
         parse_mode=ParseMode.HTML
     )
@@ -765,16 +762,16 @@ async def vip_approve_secs_recv(msg: Message, state: FSMContext):
             uid,
             _tr_fmt(
                 u_lang, "vip.admin.custom_secs_done_user",
-                "âœ… Your request was approved and VIP activated.\nâ± Duration: {human}\n{expiry}",
-                "âœ… ØªÙ… Ù‚Ø¨ÙˆÙ„ Ø·Ù„Ø¨Ùƒ ÙˆØªÙØ¹ÙŠÙ„ Ø§Ø´ØªØ±Ø§ÙƒÙƒ.\nâ± Ø§Ù„Ù…Ø¯Ø©: {human}\n{expiry}",
+                "✅ Your request was approved and VIP activated.\n⏱ Duration: {human}\n{expiry}",
+                "✅ تم قبول طلبك وتفعيل اشتراكك.\n⏱ المدة: {human}\n{expiry}",
                 human=human,
-                expiry=(f"ðŸ—“ï¸ {t(u_lang,'vip.expires_on')}: {exp_str}" if exp_str != "-" else "")
+                expiry=(f"🗓️ {t(u_lang,'vip.expires_on')}: {exp_str}" if exp_str != "-" else "")
             )
         )
     except Exception:
         pass
 
-# ===== Ù…Ø¹Ù„ÙˆÙ…Ø§Øª/Ù…ÙŠØ²Ø§Øª =====
+# ===== معلومات/ميزات =====
 @router.callback_query(F.data == "vip:info")
 async def vip_info(cb: CallbackQuery):
     lang = get_user_lang(cb.from_user.id) or "en"
@@ -785,11 +782,10 @@ async def vip_info(cb: CallbackQuery):
     exp_str = _fmt_ts(meta.get("expiry_ts"), date_only=True)
     text = t(lang, "vip.info.text")
     if exp_str != "-":
-        text += f"\nðŸ—“ï¸ {t(lang,'vip.expires_on')}: {exp_str}"
+        text += f"\n🗓️ {t(lang,'vip.expires_on')}: {exp_str}"
     await cb.message.answer(text)
     await cb.answer()
 
 @router.callback_query(F.data == "vip:noop")
 async def vip_noop(cb: CallbackQuery):
     await cb.answer()
-

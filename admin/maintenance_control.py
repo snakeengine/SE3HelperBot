@@ -1,4 +1,3 @@
-from utils.admins import get_admin_ids, is_admin, get_owner_ids
 # admin/maintenance_control.py
 import os
 from aiogram import Router, F
@@ -25,45 +24,45 @@ ADMIN_IDS = _load_admin_ids()
 
 def _status_text() -> str:
     return (
-        "ðŸ› ï¸ <b>Maintenance Mode</b>\n"
-        f"Ø§Ù„ØØ§Ù„Ø©: {'âœ… <b>Ù‚ÙŠØ¯ Ø§Ù„ØµÙŠØ§Ù†Ø©</b>' if is_enabled() else 'ðŸŸ¢ <b>ÙŠØ¹Ù…Ù„</b>'}"
+        "🛠️ <b>Maintenance Mode</b>\n"
+        f"الحالة: {'✅ <b>قيد الصيانة</b>' if is_enabled() else '🟢 <b>يعمل</b>'}"
     )
 
 def _kb():
     b = InlineKeyboardBuilder()
     b.row(
-        InlineKeyboardButton(text="âœ… ØªØ´ØºÙŠÙ„ Ø§Ù„ØµÙŠØ§Ù†Ø©", callback_data="maint:on"),
-        InlineKeyboardButton(text="ðŸŸ¢ Ø¥ÙŠÙ‚Ø§Ù Ø§Ù„ØµÙŠØ§Ù†Ø©", callback_data="maint:off"),
+        InlineKeyboardButton(text="✅ تشغيل الصيانة", callback_data="maint:on"),
+        InlineKeyboardButton(text="🟢 إيقاف الصيانة", callback_data="maint:off"),
     )
     b.row(
-        InlineKeyboardButton(text="ðŸ” ØªØ¨Ø¯ÙŠÙ„", callback_data="maint:toggle"),
-        InlineKeyboardButton(text="ðŸ“Š Ø§Ù„ØØ§Ù„Ø©", callback_data="maint:status"),
+        InlineKeyboardButton(text="🔁 تبديل", callback_data="maint:toggle"),
+        InlineKeyboardButton(text="📊 الحالة", callback_data="maint:status"),
     )
     return b.as_markup()
 
-# Ø£Ù…Ø± Ø³Ø±ÙŠØ¹
+# أمر سريع
 @router.message(Command("maintenance"))
 async def maintenance_cmd(msg: Message):
     if not msg.from_user or msg.from_user.id not in ADMIN_IDS:
         return
     await msg.answer(_status_text(), reply_markup=_kb())
 
-# Ø£ÙˆØ§Ù…Ø± Ù…Ø®ØªØµØ±Ø© Ø¥Ø¶Ø§ÙÙŠØ© (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)
+# أوامر مختصرة إضافية (اختياري)
 @router.message(Command("maint_on"))
 async def maint_on(msg: Message):
     if not msg.from_user or msg.from_user.id not in ADMIN_IDS:
         return
     set_enabled(True)
-    await msg.answer("âœ… ØªÙ… ØªÙØ¹ÙŠÙ„ ÙˆØ¶Ø¹ Ø§Ù„ØµÙŠØ§Ù†Ø©.\n" + _status_text(), reply_markup=_kb())
+    await msg.answer("✅ تم تفعيل وضع الصيانة.\n" + _status_text(), reply_markup=_kb())
 
 @router.message(Command("maint_off"))
 async def maint_off(msg: Message):
     if not msg.from_user or msg.from_user.id not in ADMIN_IDS:
         return
     set_enabled(False)
-    await msg.answer("ðŸŸ¢ ØªÙ… Ø¥Ù„ØºØ§Ø¡ ÙˆØ¶Ø¹ Ø§Ù„ØµÙŠØ§Ù†Ø©.\n" + _status_text(), reply_markup=_kb())
+    await msg.answer("🟢 تم إلغاء وضع الصيانة.\n" + _status_text(), reply_markup=_kb())
 
-# Ø£Ø²Ø±Ø§Ø± Ø§Ù„ØªØÙƒÙ…
+# أزرار التحكم
 @router.callback_query(F.data.startswith("maint:"))
 async def maintenance_cb(cb: CallbackQuery):
     if not cb.from_user or cb.from_user.id not in ADMIN_IDS:
@@ -83,9 +82,8 @@ async def maintenance_cb(cb: CallbackQuery):
     elif action == "status":
         await cb.answer("OK")
 
-    # ØªØØ¯ÙŠØ« Ø§Ù„Ø±Ø³Ø§Ù„Ø©
+    # تحديث الرسالة
     try:
         await cb.message.edit_text(_status_text(), reply_markup=_kb())
     except Exception:
         await cb.message.answer(_status_text(), reply_markup=_kb())
-

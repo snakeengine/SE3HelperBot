@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # handlers/alerts_user.py
-
+from __future__ import annotations
 import json, asyncio, time, datetime
 from pathlib import Path
 from typing import Dict, Any, List

@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # services/inventory_keys_adapter.py
-
+from __future__ import annotations
 import os
 from typing import Iterable, List, Dict, Optional
 from aiogram import Bot

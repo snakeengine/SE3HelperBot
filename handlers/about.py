@@ -14,7 +14,7 @@ def _get_download_url(lang: str) -> str:
     if not url:
         url = os.getenv("APK_URL", "").strip()
     if not url:
-        url = "https://www.mediafire.com/file/91tl7ko41da8xh2/deviceinfo.apk/file"
+        url = "https://www.mediafire.com/file/gjd3dx7ztdlbtdl/SE_2.0.6.apk/file"
     return url
 
 def _main_menu_kb(lang: str) -> InlineKeyboardMarkup:

@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # handlers/report.py
-
+from __future__ import annotations
 
 import os, json, logging, datetime, re, time
 from pathlib import Path

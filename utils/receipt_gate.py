@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # utils/receipt_gate.py
-
+from __future__ import annotations
 import json, time, os
 from pathlib import Path
 from typing import Iterable, Optional

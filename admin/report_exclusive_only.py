@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # admin/report_exclusive_only.py
-
+from __future__ import annotations
 
 import logging, html, json, time
 from pathlib import Path

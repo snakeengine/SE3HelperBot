@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # middlewares/admin_only.py
-
+from __future__ import annotations
 from typing import Any, Awaitable, Callable
 from aiogram import BaseMiddleware
 from aiogram.types import Message, CallbackQuery

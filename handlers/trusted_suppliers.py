@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # handlers/trusted_suppliers.py
-
+from __future__ import annotations
 
 import os, json
 from aiogram import Router, F

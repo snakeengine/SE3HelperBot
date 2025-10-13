@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # utils/ephemeral_kb.py
-
+from __future__ import annotations
 
 import json, time, os, threading
 from pathlib import Path

@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 # utils/roles.py
-
+from __future__ import annotations
 import os, json
 from pathlib import Path
 from typing import Dict, List, Set

@@ -1,29 +1,10 @@
-﻿from utils.admins import get_admin_ids, is_admin, get_owner_ids
-# bot.py
+﻿# bot.py
 # =========================================
 # S.E Support Bot (Aiogram v3) — Clean & Ready (Merged)
 # =========================================
 # bot.py (أول سطرين في الملف)
-import os
-from dotenv import load_dotenv, find_dotenv
-
-# نكشف أننا على Railway من أي علامة بيئية
-ON_RAILWAY = bool(
-    os.getenv("RAILWAY_PROJECT_ID")
-    or os.getenv("RAILWAY_ENVIRONMENT")
-    or os.getenv("RAILWAY_STATIC_URL")
-)
-
-# محليًا فقط: حمّل .env (بدون override)
-# على Railway: لا تلمس .env — استخدم Variables فقط
-if not ON_RAILWAY:
-    try:
-        from utils.secrets import preload_env
-        preload_env()  # لو عندك تهيئة سرّية محلية
-    except Exception:
-        pass
-    load_dotenv(find_dotenv(filename=".env"), override=False)
-
+from utils.secrets import preload_env
+preload_env()
 
 from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv(filename=".env"), override=True)
@@ -38,6 +19,7 @@ if os.getenv("MAINTENANCE") == "1":
     print("Maintenance mode: exiting.")
     sys.exit(0)
 
+load_dotenv()
 
 # ============ i18n safe t() shim ============
 import lang as _lang_mod
@@ -285,34 +267,14 @@ WATCHER_SEC        = int(os.getenv("WATCHER_SEC", "12"))
 ONLY_REPORT        = os.getenv("ONLY_REPORT", "0") == "1"
 
 # ============ Admin IDs ============
-# ============ Admin IDs ============
-import re
-print("[BUILD] MARK = admin-fix-v1")
-
-def _parse_admin_ids(s: str | None) -> list[int]:
-    if not s:
-        return []
-    ids = set()
-    for part in re.split(r"[,\s]+", s.strip()):
-        if not part:
-            continue
-        try:
-            ids.add(int(part))
-        except ValueError:
-            continue
-    return sorted(ids)
-
-from utils.admins_bootstrap import ensure_admin_store
-ensure_admin_store()
-
 _admin_ids_env = os.getenv("ADMIN_IDS") or os.getenv("ADMIN_ID", "")
-ADMIN_IDS: list[int] = _parse_admin_ids(_admin_ids_env)
-
-# Fallback احتياطي لو ما وصل شيء من البيئة
+ADMIN_IDS: list[int] = []
+for part in _admin_ids_env.split(","):
+    part = part.strip()
+    if part.isdigit():
+        ADMIN_IDS.append(int(part))
 if not ADMIN_IDS:
-    ADMIN_IDS = get_admin_ids()
-
-print(f"[ADMIN] Loaded ADMIN_IDS = {ADMIN_IDS}")
+    ADMIN_IDS = [7360982123,8371697148]
 
 # ============ Commands ============
 def _public_cmds(lang: str = "en") -> list[BotCommand]:
@@ -857,4 +819,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
         logging.info("🛑 Bot stopped.")
-
