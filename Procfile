@@ -1,1 +1,0 @@
-start: /app/.venv/bin/python bot.py
