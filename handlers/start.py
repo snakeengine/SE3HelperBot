@@ -10,6 +10,7 @@ from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
 from aiogram.filters import CommandStart, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.enums import ParseMode
+from utils.rewards_store import register_referral
 
 from utils.known_users import add_known_user
 from lang import t, get_user_lang
@@ -95,6 +96,24 @@ CB = {
     "TRUSTED_SUPPLIERS": "trusted_suppliers",
     "VIP_BUY_INTERNAL": "shop:sevip",
 }
+
+def _L(uid: int) -> str:
+    try:
+        return get_user_lang(uid) or "ar"
+    except Exception:
+        return "ar"
+
+def _fb(lang: str, ar: str, en: str) -> str:
+    return en if str(lang).startswith("en") else ar
+
+def _tt(lang: str, key: str, ar_fallback: str, en_fallback: str) -> str:
+    try:
+        v = t(lang, key)
+        if isinstance(v, str) and v.strip() and v != key:
+            return v
+    except Exception:
+        pass
+    return _fb(lang, ar_fallback, en_fallback)
 
 # ===== إعدادات الأدمن =====
 def _load_admin_ids() -> set[int]:
@@ -256,6 +275,56 @@ async def _serve_home(message: Message):
                     pass
 
             asyncio.create_task(_vip_bg())
+
+    # ===== إحالات: ref_<inviter> =====
+    try:
+        parts2 = (message.text or "").strip().split(maxsplit=1)
+        p2 = parts2[1].strip() if len(parts2) > 1 else ""
+    except Exception:
+        p2 = ""
+
+    inviter = None
+    if p2.startswith("ref_"):
+        try:
+            inviter = int(p2.split("ref_", 1)[1])
+        except Exception:
+            inviter = None
+
+    if inviter and inviter != user.user_id:
+        res = register_referral(inviter, user.user_id)
+        if res.get("ok"):
+            # إشعار المنضم (بلغة المنضم)
+            lang_joiner = get_user_lang(user.user_id) or "ar"
+            try:
+                await message.answer(
+                    (t(lang_joiner, "rwd.ref.joiner_award") or
+                     ("🎉 Join bonus added: +{n} points."
+                      if str(lang_joiner).startswith("en")
+                      else "🎉 تمت إضافة مكافأة الانضمام: +{n} نقطة.")
+                    ).format(n=int(res.get("joiner_awarded") or 0))
+                )
+            except Exception:
+                pass
+
+            # عند كل 5 دعوات ناجحة: إشعار الداعي
+            inviter_aw = int(res.get("inviter_awarded") or 0)
+            if inviter_aw > 0:
+                lang_inviter = get_user_lang(inviter) or "ar"
+                try:
+                    await message.bot.send_message(
+                        inviter,
+                        (t(lang_inviter, "rwd.ref.inviter_milestone") or
+                         ("👥 Congrats! You've reached {count} successful invites.\n🎁 Milestone reward: +{n} points."
+                          if str(lang_inviter).startswith("en")
+                          else "👥 تهانينا! وصلت إلى {count} دعوة ناجحة.\n🎁 مكافأة المستوى: +{n} نقاط.")
+                        ).format(
+                            count=int(res.get("inviter_ref_count") or 0),
+                            n=inviter_aw
+                        )
+                    )
+                except Exception:
+                    pass
+
 
 # ===== زر رجوع عام =====
 @router.callback_query(F.data.in_({"back_to_menu", "home"}))

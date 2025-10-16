@@ -19,6 +19,9 @@ USERS_FILE  = DATA_DIR / "users.json"
 ORDERS_FILE = DATA_DIR / "orders.json"
 ITEMS_FILE  = DATA_DIR / "items.json"
 
+# ملف إحالات جديد
+REFS_FILE   = DATA_DIR / "referrals.json"
+
 # ترحيل ملفات قديمة من المسار النسبي data/rewards/* إلى المسار الدائم
 try:
     _old_dir = Path("data") / "rewards"
@@ -32,6 +35,10 @@ try:
         _old = _old_dir / "items.json"
         if _old.exists() and not ITEMS_FILE.exists():
             ITEMS_FILE.write_text(_old.read_text(encoding="utf-8"), encoding="utf-8")
+        # ترحيل referrals.json إن وجد
+        _old = _old_dir / "referrals.json"
+        if _old.exists() and not REFS_FILE.exists():
+            REFS_FILE.write_text(_old.read_text(encoding="utf-8"), encoding="utf-8")
 except Exception:
     pass
 
@@ -106,6 +113,13 @@ def _load(path: Path, default):
 
 def _now() -> int:
     return int(time.time())
+
+# ===== تهيئة إحالات من .env =====
+# مكافأة المنضمّ (Joiner) عند نجاح الإحالة (لكل مستخدم جديد)
+_REF_JOINER_BONUS = int(os.getenv("REF_JOINER_BONUS", "0") or "0")
+# مكافأة الداعي (Inviter) عند كل N إحالات ناجحة
+_REF_MILESTONE_N = max(1, int(os.getenv("REF_MILESTONE_N", "5") or "5"))
+_REF_MILESTONE_POINTS = int(os.getenv("REF_MILESTONE_POINTS", "5") or "5")
 
 # ===== USERS =====
 def _load_users() -> Dict[str, Any]:
@@ -537,3 +551,111 @@ def list_blocked_users(offset: int = 0, limit: int = 20):
     total = len(entries)
     items = entries[offset: offset + limit]
     return items, total
+
+# ==================================================================
+# ======================== نظام الإحالات ============================
+# ==================================================================
+
+def _load_refs() -> Dict[str, Any]:
+    """
+    بنية التخزين:
+    {
+      "by_joiner": {"<joiner_id>": <inviter_id>, ...},
+      "stats": {
+         "<inviter_id>": {
+             "count": <int>,          # إجمالي الدعوات الناجحة
+             "list": [<joiner_id>, ...]  # IDs لمن انضمّوا عبره (فريد)
+         }
+      }
+    }
+    """
+    data = _load(REFS_FILE, {})
+    if not isinstance(data, dict):
+        data = {}
+    data.setdefault("by_joiner", {})
+    data.setdefault("stats", {})
+    return data
+
+def _save_refs(store: Dict[str, Any]) -> None:
+    _atomic_write(REFS_FILE, store)
+
+def get_ref_count(uid: int) -> int:
+    """إجمالي الدعوات الناجحة لمستخدم معيّن."""
+    db = _load_refs()
+    st = db.get("stats", {}).get(str(int(uid))) or {}
+    try:
+        return int(st.get("count", 0))
+    except Exception:
+        return 0
+
+def register_referral(inviter: int, joiner: int) -> Dict[str, Any]:
+    """
+    تسجيل إحالة عند دخول مستخدم برابط ref_<inviter>.
+    - تمنح مكافأة للمنضمّ (REF_JOINER_BONUS) إن وُجدت.
+    - تمنح مكافأة milestone للداعي كل REF_MILESTONE_N (REF_MILESTONE_POINTS).
+    تعاد تفاصيل التنفيذ بدون تعليق أقفال متداخلة.
+    """
+    inviter = int(inviter); joiner = int(joiner)
+    if inviter <= 0 or joiner <= 0:
+        return {"ok": False, "reason": "bad_ids", "already": False}
+    if inviter == joiner:
+        return {"ok": False, "reason": "self_ref", "already": False}
+
+    # ⚠️ هذه يجب أن تكون خارج القفل حتى لا يحدث deadlock
+    ensure_user(inviter)
+    ensure_user(joiner)
+
+    joiner_aw = int(_REF_JOINER_BONUS) if _REF_JOINER_BONUS > 0 else 0
+    inviter_aw = 0
+    ref_count = 0
+    already = False
+
+    # التعامل مع ملف الإحالات تحت القفل فقط
+    with _LOCK:
+        refs = _load_refs()
+        by_joiner: Dict[str, Any] = refs.get("by_joiner", {})
+        stats: Dict[str, Any] = refs.get("stats", {})
+
+        jkey = str(joiner)
+        if jkey in by_joiner:
+            already = True
+            inviter_id = int(by_joiner.get(jkey))
+            cur_count = int((stats.get(str(inviter_id)) or {}).get("count", 0))
+            ref_count = cur_count if inviter_id == inviter else int((stats.get(str(inviter)) or {}).get("count", 0))
+        else:
+            # تسجيل الإحالة
+            by_joiner[jkey] = inviter
+            s = stats.get(str(inviter)) or {"count": 0, "list": []}
+            lst = list(s.get("list") or [])
+            if joiner not in lst:
+                lst.append(joiner)
+            s["list"] = lst
+            s["count"] = int(len(lst))
+            stats[str(inviter)] = s
+            refs["by_joiner"] = by_joiner
+            refs["stats"] = stats
+            _save_refs(refs)
+
+            ref_count = int(s["count"])
+            # تحديد مكافأة milestone الآن (سنصرفها بعد فك القفل)
+            if _REF_MILESTONE_POINTS > 0 and _REF_MILESTONE_N > 0:
+                if ref_count % _REF_MILESTONE_N == 0:
+                    inviter_aw = int(_REF_MILESTONE_POINTS)
+
+            already = False
+
+    # ✅ صرف النقاط بعد فك القفل (هذه الدوال تستخدم _LOCK داخليًا)
+    if not already:
+        if joiner_aw > 0:
+            add_points(joiner, joiner_aw, reason=f"referral_joiner:{inviter}", typ="bonus")
+        if inviter_aw > 0:
+            add_points(inviter, inviter_aw, reason=f"referral_milestone:{ref_count}", typ="bonus")
+
+    return {
+        "ok": True,
+        "reason": "already_registered" if already else "registered",
+        "already": already,
+        "joiner_awarded": 0 if already else joiner_aw,
+        "inviter_awarded": 0 if already else inviter_aw,
+        "inviter_ref_count": ref_count,
+    }

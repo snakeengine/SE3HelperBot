@@ -573,6 +573,7 @@ def register_routers(dp: Dispatcher):
     dp.include_router(inventory_admin_router);   logging.info("Loaded handlers.inventory_admin")
     dp.message.outer_middleware(StarsPayMiddleware())
     dp.include_router(features_router)
+    
 
     dp.message.outer_middleware(ForceJoinMiddleware())
     dp.callback_query.outer_middleware(ForceJoinMiddleware())
@@ -586,6 +587,7 @@ def register_routers(dp: Dispatcher):
     dp.include_router(admin_center_router)
     dp.include_router(promo_panel_ui_router)
     dp.update.outer_middleware(StopAllMiddleware())
+
 
 
 

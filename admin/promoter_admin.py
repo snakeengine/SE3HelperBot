@@ -14,6 +14,7 @@ from aiogram.exceptions import TelegramBadRequest
 from lang import t, get_user_lang
 
 router = Router(name="promoter_admin")
+
 log = logging.getLogger(__name__)
 
 DATA_DIR = Path("data"); DATA_DIR.mkdir(parents=True, exist_ok=True)

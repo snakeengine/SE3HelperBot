@@ -138,27 +138,35 @@ def _now() -> int:
     return int(time.time())
 
 # ===== API لـ start.py =====
-def is_promoter(uid: int) -> bool:
+def is_promoter(uid: int | str) -> bool:
     """
-    آمنة بالكامل—لا ترمي KeyError حتى لو كان الملف بصيغ قديمة.
-    يعتبر المستخدم مروّجًا إن وُجد سجل له ولم يكن محظورًا،
-    ويحترم مفتاح active إن كان موجودًا.
+    يعتبر المستخدم مروّجًا فقط إذا كانت حالته ضمن {approved, active, enabled}
+    ولم يكن محظورًا حتى الآن. يدعم banned_until.
     """
     d = _load_store()
     u = d.get("users", {}).get(str(uid))
-    if not u:
+    if not isinstance(u, dict):
         return False
-    if isinstance(u, dict):
-        if u.get("banned") is True:
-            return False
-        if "active" in u and not u["active"]:
-            return False
-        status = u.get("status")
-        if status and status not in ("approved", "active", "enabled"):
-            # لو النظام عندك يعتمد "approved" فقط، السطر التالي يكفي:
-            return status == "approved"
-    # إن لم تُحدد حالة، نعدّه مفعّلًا لوجوده في القائمة
-    return True
+
+    # حظر مؤقت
+    now = int(time.time())
+    if int(u.get("banned_until", 0) or 0) > now:
+        return False
+    if u.get("banned") is True:  # توافق مع صيغ قديمة
+        return False
+
+    # علم تفعيل (إن وجد)
+    if "active" in u and not bool(u["active"]):
+        return False
+
+    # حالة صريحة
+    status = str(u.get("status", "")).lower()
+    if status:
+        return status in {"approved", "active", "enabled"}
+
+    # بدون حالة صريحة: لا نعتبره مروّجًا (تجنّب True صامتة)
+    return False
+
 
 # ===== ترجمة مبسطة (ثنائية fallback) =====
 def L(uid: int) -> str:
