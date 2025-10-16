@@ -173,12 +173,12 @@ from aiogram import Router, F
 from aiogram.types import CallbackQuery
 from aiogram.fsm.context import FSMContext
 # --- Promo system (Free SEVIP) ---
-from handlers.promo_free_sevip import router as promo_free_router        # واجهة المستخدم للترويج (الشروط/المنصات/الرابط/اللقطة/الكود)
-from handlers.promo_flow_extras import router as promo_flow_router       # أدوات الإدارة + فتح الدردشة + جمع Snake ID
-from admin.promo_panel_ui import router as promo_panel_ui_router
+#from handlers.promo_free_sevip import router as promo_free_router        # واجهة المستخدم للترويج (الشروط/المنصات/الرابط/اللقطة/الكود)
+#from handlers.promo_flow_extras import router as promo_flow_router       # أدوات الإدارة + فتح الدردشة + جمع Snake ID
+#from admin.promo_panel_ui import router as promo_panel_ui_router
          # (اختياري) لوحة مراجعة الطلبات
 # لا تستورد promo_open/terms/choose_platform كدوال منفصلة — هذه مُسجّلة داخل الراوترات
-from admin.promo_panel_ui import router as promo_panel_ui_router
+#from admin.promo_panel_ui import router as promo_panel_ui_router
 from handlers import paydiag as _paydiag
 
 # الصحيح:
@@ -581,11 +581,11 @@ def register_routers(dp: Dispatcher):
     dp.include_router(debug_storage_router)
     dp.update.middleware(SeenUserMiddleware())        # applies على كل التحديثات
 
-    dp.include_router(promo_free_router)
-    dp.include_router(promo_flow_router)
+    #dp.include_router(promo_free_router)
+    #dp.include_router(promo_flow_router)
 
     dp.include_router(admin_center_router)
-    dp.include_router(promo_panel_ui_router)
+    #dp.include_router(promo_panel_ui_router)
     dp.update.outer_middleware(StopAllMiddleware())
 
 

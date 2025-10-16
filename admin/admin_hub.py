@@ -1,4 +1,4 @@
-# admin/admin_hub.py
+﻿# admin/admin_hub.py
 from __future__ import annotations
 
 import os, json, time, re, io, csv, aiosqlite
@@ -22,7 +22,6 @@ from utils.admins import ADMIN_IDS as DYN_ADMIN_IDS, is_admin as _is_admin
 from admin.admin_roles_panel import _panel_text as adm_panel_text, _kb_main as adm_kb_main
 from lang import t, get_user_lang
 from utils.paths import BASE
-from admin.promo_panel_ui import kb_panel_home as promo_kb_panel_home
 
 from services.orders import DB_PATH, DB_IS_URI
 
@@ -936,32 +935,7 @@ async def ah_menu(cb: CallbackQuery):
             raise
     await cb.answer()
 
-@router.callback_query(F.data == "ah:promo")
-async def ah_open_promo(cb: CallbackQuery):
-    """يفتح لوحة إدارة SEVIP (Promo Panel) عند الضغط على زر لوحة SEVIP في الهَب."""
-    if not _is_admin(cb.from_user.id):
-        l = get_user_lang(cb.from_user.id) or "en"
-        return await cb.answer(tt(l, "admins_only", "للمشرفين فقط"), show_alert=True)
 
-    lang = get_user_lang(cb.from_user.id) or "en"
-    text = "🛠️ " + tt(lang, "promo.panel.title", "لوحة إدارة SEVIP") + " — " + tt(lang, "promo.panel.pick", "اختر فلترًا:")
-
-    try:
-        await cb.message.edit_text(
-            text,
-            reply_markup=promo_kb_panel_home(),
-            parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True
-        )
-    except TelegramBadRequest:
-        # إذا تعذر التعديل (رسالة قديمة/تم حذفها)، أرسل رسالة جديدة
-        await cb.message.answer(
-            text,
-            reply_markup=promo_kb_panel_home(),
-            parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True
-        )
-    await cb.answer()
 
 # ---- المتجر: الشاشة الرئيسية
 @router.callback_query(F.data == "ah:shop")
