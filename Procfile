@@ -1,1 +1,1 @@
-﻿start: python bot.py
+﻿start: sh -lc 'mkdir -p /data/se3_data ./data; [ -f /data/se3_data/promoters.json ] || printf "{\n  \"users\": {},\n  \"settings\": {}\n}\n" > /data/se3_data/promoters.json; [ -f /data/se3_data/promo_store.json ] || printf "{}" > /data/se3_data/promo_store.json; rm -f ./data/promoters.json ./data/promo_store.json; ln -sf /data/se3_data/promoters.json ./data/promoters.json; ln -sf /data/se3_data/promo_store.json ./data/promo_store.json; /app/.venv/bin/python bot.py'
