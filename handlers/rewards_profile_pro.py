@@ -11,7 +11,7 @@ from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.exceptions import TelegramBadRequest
-
+import os
 from lang import t, get_user_lang
 from .rewards_gate import require_membership
 from utils.rewards_store import (
@@ -19,6 +19,7 @@ from utils.rewards_store import (
     get_user as _get_user_row,
     get_history,
     purge_user_history,          # ✅ نستعمله للحذف الحقيقي
+    get_ref_count,
 )
 
 try:
@@ -294,13 +295,18 @@ async def _build_profile_text(obj: Message | CallbackQuery) -> str:
         except Exception:
             pass
 
-    # لقطة من مخزن الجوائز
+    # لقطة من مخزن الجوائز (للإحصاءات الأخرى فقط)
     snap = _get_store_snapshot(uid) or {}
     created = _format_ts(snap.get("created_at"), lang)
     earned  = snap.get("earned")
     spent   = snap.get("spent")
     streak  = snap.get("streak")
-    ref_count = snap.get("ref_count")
+
+    # 👇 عدّاد الإحالات الحقيقي + تلميح الميلستون
+    inv_cnt = int(get_ref_count(uid) or 0)
+    REF_MILESTONE_N = int(os.getenv("REF_MILESTONE_N", "5") or 5)
+    to_next_ms = (REF_MILESTONE_N - (inv_cnt % REF_MILESTONE_N)) % REF_MILESTONE_N
+    ms_hint = "🎉" if (inv_cnt > 0 and to_next_ms == 0) else f"({to_next_ms} {_fb(lang,'للوصول للتالية','to next')})"
 
     # بناء النص
     lines: list[str] = []
@@ -330,8 +336,10 @@ async def _build_profile_text(obj: Message | CallbackQuery) -> str:
         extra.append("⬇️ " + _tt(lang, "rwd.profile.spent", _fb(lang, "منفق: {n}", "Spent: {n}")).format(n=spent))
     if streak:
         extra.append("🔥 " + _tt(lang, "rwd.profile.streak", _fb(lang, "سلسلة يومية: {n}", "Daily streak: {n}")).format(n=streak))
-    if ref_count is not None:
-        extra.append("👥 " + _tt(lang, "rwd.profile.referrals", _fb(lang, "دعوات: {n}", "Invites: {n}")).format(n=ref_count))
+
+    # 👇 عرض الدعوات مع تلميح الميلستون
+    extra.append("👥 " + _tt(lang, "rwd.profile.referrals", _fb(lang, "دعواتك: {n}", "Invites: {n}")).format(n=inv_cnt) + f" {ms_hint}")
+
     if created != "—":
         extra.append("📅 " + _tt(lang, "rwd.profile.joined", _fb(lang, "تاريخ الانضمام: ", "Joined: ")) + created)
 
@@ -340,6 +348,7 @@ async def _build_profile_text(obj: Message | CallbackQuery) -> str:
         lines.extend(extra)
 
     return "\n".join(lines)
+
 
 def _render_history_lines(lang: str, rows: List[Dict[str, Any]]) -> str:
     if not rows:
